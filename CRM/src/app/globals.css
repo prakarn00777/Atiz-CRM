@@ -22,11 +22,11 @@
 }
 
 @utility glass-card {
-  @apply bg-slate-800/70 backdrop-blur-xl border border-white/10 rounded-3xl;
+  @apply bg-slate-800/70 backdrop-blur-xl border border-white/10 rounded-2xl;
 }
 
 @utility btn {
-  @apply px-4 py-2 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center gap-2;
+  @apply px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-2;
 }
 
 @utility btn-primary {
@@ -39,4 +39,31 @@
 
 @utility input-field {
   @apply w-full px-4 py-3 bg-black/20 border border-white/10 rounded-xl text-white focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all;
+}
+
+@layer utilities {
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(99, 102, 241, 0.3) rgba(255, 255, 255, 0.05);
+    scroll-behavior: auto;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(99, 102, 241, 0.3);
+    border-radius: 10px;
+    transition: background 0.2s ease;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(99, 102, 241, 0.5);
+  }
 }

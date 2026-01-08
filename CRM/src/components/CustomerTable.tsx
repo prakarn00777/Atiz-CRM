@@ -1,6 +1,14 @@
 "use client";
 
-import { Plus, Edit2, Trash2, ExternalLink } from "lucide-react";
+import { useState } from "react";
+import { Search, Edit2, Trash2, MapPin, Filter, Plus, ExternalLink, Clock } from "lucide-react";
+import CustomSelect from "./CustomSelect";
+
+interface Branch {
+    name: string;
+    isMain: boolean;
+    address?: string;
+}
 
 interface Customer {
     id: number;
@@ -8,6 +16,11 @@ interface Customer {
     link: string;
     package: string;
     status: string;
+    branches?: Branch[];
+    createdBy?: string;
+    createdAt?: string;
+    modifiedBy?: string;
+    modifiedAt?: string;
 }
 
 interface CustomerTableProps {
@@ -18,70 +31,197 @@ interface CustomerTableProps {
 }
 
 export default function CustomerTable({ customers, onEdit, onDelete, onAdd }: CustomerTableProps) {
+    const [searchTerm, setSearchTerm] = useState("");
+    const [statusFilter, setStatusFilter] = useState("all");
+    const [packageFilter, setPackageFilter] = useState("all");
+
+    // Filter logic
+    const filteredCustomers = customers.filter((c) => {
+        const matchesSearch =
+            c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            c.link.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            `DE${c.id.toString().padStart(4, "0")}`.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesStatus = statusFilter === "all" || c.status === statusFilter;
+        const matchesPackage = packageFilter === "all" || c.package === packageFilter;
+
+        return matchesSearch && matchesStatus && matchesPackage;
+    });
+
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center">
-                <h1 className="text-3xl font-bold tracking-tight">จัดการข้อมูลลูกค้า</h1>
-                <button onClick={onAdd} className="btn btn-primary px-6">
-                    <Plus className="w-5 h-5" />
-                    <span>เพิ่มลูกค้า</span>
-                </button>
+            <div>
+                <h1 className="text-3xl font-bold tracking-tight mb-4">จัดการข้อมูลลูกค้า</h1>
+            </div>
+
+            {/* Search, Filters, and Add Button */}
+            <div className="flex flex-col md:flex-row gap-4 items-end md:items-center justify-between">
+                <div className="flex flex-col md:flex-row gap-3 items-end md:items-center w-full md:w-auto">
+                    <div className="relative w-full md:w-64">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                        <input
+                            type="text"
+                            placeholder="Search..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="input-field pl-9 py-1.5 text-xs h-9"
+                        />
+                    </div>
+
+                    <div className="flex gap-3 w-full md:w-auto">
+                        <div className="relative">
+                            <CustomSelect
+                                options={[
+                                    { value: "all", label: "สถานะทั้งหมด" },
+                                    { value: "ใช้งาน", label: "ใช้งาน" },
+                                    { value: "รอการใช้งาน", label: "รอการใช้งาน" },
+                                    { value: "ยกเลิก", label: "ยกเลิก" },
+                                ]}
+                                value={statusFilter}
+                                onChange={setStatusFilter}
+                                className="w-[160px]"
+                                placeholder="สถานะ"
+                                icon={<Filter className="w-3.5 h-3.5" />}
+                            />
+                        </div>
+
+                        <div className="relative">
+                            <CustomSelect
+                                options={[
+                                    { value: "all", label: "ทุกแพ็คเกจ" },
+                                    { value: "Starter", label: "Starter" },
+                                    { value: "Standard", label: "Standard" },
+                                    { value: "Elite", label: "Elite" },
+                                ]}
+                                value={packageFilter}
+                                onChange={setPackageFilter}
+                                className="w-[160px]"
+                                placeholder="แพ็คเกจ"
+                                icon={<Filter className="w-3.5 h-3.5" />}
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                <div className="flex-shrink-0">
+                    <button onClick={onAdd} className="btn btn-primary px-4 py-2 h-9">
+                        <Plus className="w-4 h-4" />
+                        <span>เพิ่มลูกค้า</span>
+                    </button>
+                </div>
             </div>
 
             <div className="glass-card overflow-hidden border-indigo-500/5">
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left">
+                    <table className="w-full text-left border-collapse">
                         <thead>
-                            <tr className="bg-white/5 text-slate-400 text-sm uppercase tracking-wider">
-                                <th className="px-6 py-4 font-semibold">ชื่อร้าน/คลินิก</th>
-                                <th className="px-6 py-4 font-semibold">แพ็คเกจ</th>
-                                <th className="px-6 py-4 font-semibold">สถานะ</th>
-                                <th className="px-6 py-4 font-semibold text-right">จัดการ</th>
+                            <tr className="bg-white/5 text-slate-400 text-xs uppercase tracking-wider border-b border-white/5">
+                                <th className="px-4 py-3 font-semibold w-[5%] text-center">No.</th>
+                                <th className="px-4 py-3 font-semibold w-[10%] text-center">ID</th>
+                                <th className="px-4 py-3 font-semibold w-[20%]">Clinic/Shop Name</th>
+                                <th className="px-4 py-3 font-semibold w-[20%]">Link</th>
+                                <th className="px-4 py-3 font-semibold w-[10%] text-center">Package</th>
+                                <th className="px-4 py-3 font-semibold w-[10%] text-center">Status</th>
+                                <th className="px-4 py-3 font-semibold w-[10%] text-center">Branches</th>
+                                <th className="px-4 py-3 font-semibold w-[15%]">Modified By</th>
+                                <th className="px-4 py-3 font-semibold w-[15%] text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5">
-                            {customers.map((c) => (
-                                <tr key={c.id} className="group hover:bg-white/[0.02] transition-colors">
-                                    <td className="px-6 py-4">
-                                        <div className="font-semibold text-slate-200">{c.name}</div>
-                                        <a
-                                            href={c.link}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 mt-1 opacity-60 group-hover:opacity-100 transition-opacity"
-                                        >
-                                            {c.link} <ExternalLink className="w-3 h-3" />
-                                        </a>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <span className="text-sm text-slate-300">{c.package}</span>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${c.status === "ใช้งาน" ? "bg-emerald-500/10 text-emerald-400" :
+                            {filteredCustomers.length > 0 ? (
+                                filteredCustomers.map((c, index) => (
+                                    <tr key={c.id} className="group hover:bg-white/[0.02] transition-colors h-14">
+                                        <td className="px-4 py-3 text-center">
+                                            <span className="text-xs text-slate-500">{index + 1}</span>
+                                        </td>
+                                        <td className="px-4 py-3 text-center">
+                                            <span className="text-xs font-mono text-slate-400">
+                                                DE{c.id.toString().padStart(4, "0")}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <div className="font-semibold text-slate-200 text-xs truncate max-w-[150px]" title={c.name}>
+                                                {c.name}
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <a
+                                                href={c.link}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-xs text-indigo-400 hover:text-indigo-300 hover:underline truncate block max-w-[150px]"
+                                                title={c.link}
+                                            >
+                                                {c.link}
+                                            </a>
+                                        </td>
+                                        <td className="px-4 py-3 text-center">
+                                            <span className="text-xs text-slate-300 font-medium">{c.package}</span>
+                                        </td>
+                                        <td className="px-4 py-3 text-center">
+                                            <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap ${c.status === "ใช้งาน" ? "bg-emerald-500/10 text-emerald-400" :
                                                 c.status === "รอการใช้งาน" ? "bg-amber-500/10 text-amber-400" :
                                                     "bg-rose-500/10 text-rose-400"
-                                            }`}>
-                                            {c.status}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 text-right">
-                                        <div className="flex justify-end gap-2">
-                                            <button
-                                                onClick={() => onEdit(c)}
-                                                className="p-2 rounded-lg hover:bg-white/5 text-slate-400 hover:text-white transition-colors"
-                                            >
-                                                <Edit2 className="w-4 h-4" />
-                                            </button>
-                                            <button
-                                                onClick={() => onDelete(c.id)}
-                                                className="p-2 rounded-lg hover:bg-rose-500/10 text-slate-400 hover:text-rose-400 transition-colors"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                        </div>
+                                                }`}>
+                                                {c.status}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3 text-center">
+                                            {c.branches && c.branches.length > 0 ? (
+                                                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800 border border-white/10 group-hover:border-indigo-500/30 transition-colors">
+                                                    <MapPin className="w-3 h-3 text-indigo-400" />
+                                                    <span className="text-xs font-medium text-slate-300">
+                                                        {c.branches.length} <span className="text-slate-500 text-[10px] ml-0.5">สาขา</span>
+                                                    </span>
+                                                </div>
+                                            ) : (
+                                                <span className="text-xs text-slate-600">-</span>
+                                            )}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            {c.modifiedBy ? (
+                                                <div className="flex items-start gap-2">
+                                                    <Clock className="w-3.5 h-3.5 text-slate-500 mt-0.5 flex-shrink-0" />
+                                                    <div className="flex flex-col">
+                                                        <span className="text-xs font-medium text-slate-300">{c.modifiedBy}</span>
+                                                        <span className="text-[10px] text-slate-500">
+                                                            {new Date(c.modifiedAt!).toLocaleString('th-TH', {
+                                                                month: 'short',
+                                                                day: 'numeric',
+                                                                hour: '2-digit',
+                                                                minute: '2-digit'
+                                                            })}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <span className="text-xs text-slate-600">-</span>
+                                            )}
+                                        </td>
+                                        <td className="px-4 py-3 text-right">
+                                            <div className="flex justify-end gap-2">
+                                                <button
+                                                    onClick={() => onEdit(c)}
+                                                    className="p-2 rounded-lg hover:bg-white/5 text-slate-400 hover:text-white transition-colors"
+                                                >
+                                                    <Edit2 className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => onDelete(c.id)}
+                                                    className="p-2 rounded-lg hover:bg-rose-500/10 text-slate-400 hover:text-rose-400 transition-colors"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan={8} className="px-4 py-8 text-center text-slate-500 text-sm">
+                                        ไม่พบข้อมูลลูกค้า
                                     </td>
                                 </tr>
-                            ))}
+                            )}
                         </tbody>
                     </table>
                 </div>
