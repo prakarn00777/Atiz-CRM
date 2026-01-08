@@ -93,7 +93,7 @@ export default function IssueManager({ issues, customers, onAdd, onEdit, onDelet
     return (
         <div className="space-y-6">
             <div>
-                <h1 className="text-3xl font-bold tracking-tight mb-4">แจ้งปัญหา</h1>
+                <h1 className="text-3xl font-bold tracking-tight mb-4">Issue Reporting</h1>
             </div>
 
             {/* Search, Filters, and Add Button */}
@@ -142,7 +142,7 @@ export default function IssueManager({ issues, customers, onAdd, onEdit, onDelet
                     className="btn btn-primary h-9 whitespace-nowrap"
                 >
                     <Plus className="w-4 h-4" />
-                    แจ้งเคสใหม่
+                    New Case
                 </button>
             </div>
 
@@ -153,13 +153,13 @@ export default function IssueManager({ issues, customers, onAdd, onEdit, onDelet
                         <thead>
                             <tr className="bg-white/5 text-slate-400 text-xs uppercase tracking-wider border-b border-white/5">
                                 <th className="px-4 py-3 font-semibold w-[5%] text-center">No.</th>
-                                <th className="px-4 py-3 font-semibold w-[10%]">เลขที่เคส</th>
-                                <th className="px-4 py-3 font-semibold w-[15%]">ชื่อเคส</th>
-                                <th className="px-4 py-3 font-semibold w-[12%]">ลูกค้า</th>
-                                <th className="px-4 py-3 font-semibold w-[10%] text-center">ระดับปัญหา</th>
-                                <th className="px-4 py-3 font-semibold w-[10%] text-center">สถานะ</th>
-                                <th className="px-4 py-3 font-semibold w-[10%]">ประเภทปัญหา</th>
-                                <th className="px-4 py-3 font-semibold w-[15%]">แก้ไขล่าสุด</th>
+                                <th className="px-4 py-3 font-semibold w-[10%]">Case Id</th>
+                                <th className="px-4 py-3 font-semibold w-[15%]">Case Name</th>
+                                <th className="px-4 py-3 font-semibold w-[12%]">Customer</th>
+                                <th className="px-4 py-3 font-semibold w-[10%] text-center">Severity</th>
+                                <th className="px-4 py-3 font-semibold w-[10%] text-center">Status</th>
+                                <th className="px-4 py-3 font-semibold w-[10%]">Type</th>
+                                <th className="px-4 py-3 font-semibold w-[15%]">Modified By</th>
                                 <th className="px-4 py-3 font-semibold w-[13%] text-right">Actions</th>
                             </tr>
                         </thead>

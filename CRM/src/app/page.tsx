@@ -749,10 +749,10 @@ export default function CRMPage() {
               <X className="w-5 h-5" />
             </button>
             <div className="mb-6">
-              <h2 className="text-xl font-bold">{editingIssue ? "แก้ไขข้อมูลปัญหา" : "แจ้งปัญหาเคสใหม่"}</h2>
+              <h2 className="text-xl font-bold">{editingIssue ? "Edit Issue Details" : "Create New Case"}</h2>
               {editingIssue && (
                 <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/10 border border-indigo-500/30 rounded-lg mt-2">
-                  <span className="text-xs text-slate-400">เลขที่เคส:</span>
+                  <span className="text-xs text-slate-400">Case ID:</span>
                   <span className="text-xs font-mono font-bold text-indigo-400">{editingIssue.caseNumber}</span>
                 </div>
               )}
@@ -762,7 +762,7 @@ export default function CRMPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1 md:col-span-2">
                   <label className="text-xs font-medium text-slate-400 flex items-center gap-1">
-                    ลูกค้า <span className="text-rose-500">*</span>
+                    Customer <span className="text-rose-500">*</span>
                   </label>
                   <SearchableCustomerSelect
                     customers={customers}
@@ -776,18 +776,18 @@ export default function CRMPage() {
 
                 <div className="space-y-1 md:col-span-2">
                   <label className="text-xs font-medium text-slate-400 flex items-center gap-1">
-                    หัวข้อปัญหา / ชื่อเคส <span className="text-rose-500">*</span>
+                    Case Subject / Title <span className="text-rose-500">*</span>
                   </label>
                   <input
                     name="title"
                     defaultValue={editingIssue?.title}
                     className="input-field py-1.5 h-8 text-xs"
-                    placeholder="ระบุหัวข้อสั้นๆ"
+                    placeholder="Briefly describe the issue"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-slate-400">ประเภทปัญหา</label>
+                  <label className="text-xs font-medium text-slate-400">Issue Type</label>
                   <CustomSelect
                     name="type"
                     defaultValue={editingIssue?.type || "issue/bug"}
@@ -799,7 +799,7 @@ export default function CRMPage() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-slate-400">ระดับปัญหา</label>
+                  <label className="text-xs font-medium text-slate-400">Severity</label>
                   <CustomSelect
                     name="severity"
                     defaultValue={editingIssue?.severity || "ต่ำ"}
@@ -814,7 +814,7 @@ export default function CRMPage() {
 
                 {editingIssue && (
                   <div className="space-y-1">
-                    <label className="text-xs font-medium text-slate-400">สถานะ</label>
+                    <label className="text-xs font-medium text-slate-400">Status</label>
                     <CustomSelect
                       name="status"
                       defaultValue={editingIssue?.status || "แจ้งเคส"}
@@ -828,7 +828,7 @@ export default function CRMPage() {
                 )}
 
                 <div className="space-y-1 md:col-span-2">
-                  <label className="text-xs font-medium text-slate-400">ไฟล์แนบ (ภาพ, PDF, วิดีโอ)</label>
+                  <label className="text-xs font-medium text-slate-400">Attachments (Images, PDF, Video)</label>
                   <div className="flex flex-wrap gap-2">
                     {selectedFiles.map((file, i) => (
                       <div key={i} className="flex items-center gap-2 bg-white/5 border border-white/10 px-2 py-1 rounded-lg text-[10px] text-slate-300">
@@ -865,19 +865,19 @@ export default function CRMPage() {
                         }}
                       />
                       <div className="flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/30 border-dashed px-3 py-1 rounded-lg text-[10px] text-indigo-400 hover:bg-indigo-500/20 transition-colors">
-                        <Plus className="w-3 h-3" /> เพิ่มไฟล์
+                        <Plus className="w-3 h-3" /> Add Files
                       </div>
                     </label>
                   </div>
                 </div>
 
                 <div className="space-y-1 md:col-span-2">
-                  <label className="text-xs font-medium text-slate-400">รายละเอียดเพิ่มเติม</label>
+                  <label className="text-xs font-medium text-slate-400">Description</label>
                   <textarea
                     name="description"
                     defaultValue={editingIssue?.description}
                     className="input-field py-2 text-xs min-h-[100px] resize-none"
-                    placeholder="อธิบายรายละเอียดปัญหา..."
+                    placeholder="Provide more details about the issue..."
                   />
                 </div>
               </div>
@@ -888,13 +888,13 @@ export default function CRMPage() {
                   onClick={() => setIssueModalOpen(false)}
                   className="btn btn-ghost flex-1 py-2"
                 >
-                  ยกเลิก
+                  Cancel
                 </button>
                 <button
                   type="submit"
                   className="btn btn-primary flex-1 py-2"
                 >
-                  บันทึกข้อมูล
+                  Save Details
                 </button>
               </div>
             </form>
