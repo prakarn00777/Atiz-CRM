@@ -1,0 +1,146 @@
+.appBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0 16px;
+  /* Slightly adjusted padding */
+  height: var(--header-height);
+  position: sticky;
+  top: 0;
+  background-color: var(--secondary-color);
+  z-index: 10;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logoIconBg {
+  background-color: var(--primary-color);
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 10px rgba(0, 102, 255, 0.2);
+}
+
+.logoText {
+  font-size: 22px;
+  font-weight: 800;
+  /* Bolder font */
+  color: #1a1a1a;
+  letter-spacing: -0.5px;
+}
+
+.notificationBtn {
+  background: var(--white);
+  width: 44px;
+  height: 44px;
+  /* Larger touch target */
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  position: relative;
+  transition: transform 0.2s;
+}
+
+.notificationBtn:active {
+  transform: scale(0.95);
+}
+
+.badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background-color: #FF3B30;
+  /* iOS Red */
+  color: white;
+  font-size: 11px;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  border: 2px solid var(--secondary-color);
+  padding: 0 4px;
+}
+
+.searchContainer {
+  margin-bottom: 28px;
+}
+
+.searchBar {
+  background: var(--white);
+  border-radius: 12px;
+  /* Slightly less round than full pill for modern look */
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  border: 1px solid transparent;
+  transition: box-shadow 0.2s;
+}
+
+.searchBar:active {
+  background-color: #fafafa;
+}
+
+.searchIcon {
+  color: #999;
+}
+
+.searchInput {
+  border: none;
+  background: transparent;
+  width: 100%;
+  font-size: 16px;
+  color: var(--text-color);
+  outline: none;
+  font-family: inherit;
+}
+
+.searchInput::placeholder {
+  color: #999;
+}
+
+.section {
+  margin-bottom: 32px;
+}
+
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 16px;
+  padding: 0 4px;
+}
+
+.categoryTitle {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1a1a1a;
+  letter-spacing: -0.3px;
+}
+
+.seeAllBtn {
+  background: none;
+  color: var(--primary-color);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  /* Increased gap */
+}

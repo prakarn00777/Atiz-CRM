@@ -1,0 +1,99 @@
+:root {
+  /* Theme Colors from Figma */
+  --primary-color: #0066FF;
+  --secondary-color: #F5F5F5;
+  /* App Background */
+  --accent-color: #FFD700;
+  --success-color: #28a745;
+  --danger-color: #dc3545;
+
+  --white: #ffffff;
+  --text-color: #121212;
+  --text-secondary: #666666;
+  --border-color: #E0E0E0;
+
+  /* Typography */
+  --font-heading: 20px;
+  --font-body: 16px;
+  --font-small: 14px;
+  --font-button: 16px;
+
+  /* Spacing & Sizes */
+  --bottom-nav-height: 80px;
+  --header-height: 60px;
+  --border-radius-card: 16px;
+  --border-radius-pill: 999px;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+  -webkit-tap-highlight-color: transparent;
+  /* Remove tap highlight on mobile */
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: var(--secondary-color);
+  color: var(--text-color);
+  overscroll-behavior-y: none;
+  /* Prevent pull-to-refresh on mobile if desired */
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
+  user-select: none;
+}
+
+/* Utilities */
+.container {
+  max-width: 480px;
+  /* Limit to typical mobile width for desktop view */
+  margin: 0 auto;
+  padding: 0 16px;
+  padding-bottom: calc(var(--bottom-nav-height) + 20px);
+  /* Space for bottom nav */
+  background-color: var(--secondary-color);
+  min-height: 100vh;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.05);
+  position: relative;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-size: var(--font-button);
+  font-weight: 600;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.btn-primary {
+  background-color: var(--primary-color);
+  color: var(--white);
+  box-shadow: 0 4px 12px rgba(0, 102, 255, 0.2);
+}
+
+.btn-primary:active {
+  transform: scale(0.98);
+}
+
+.h1 {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-color);
+}

@@ -1,0 +1,82 @@
+.calendar {
+    background: var(--white);
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.monthLabel {
+    font-weight: 700;
+    font-size: 18px;
+}
+
+.navBtn {
+    background: none;
+    border: 1px solid var(--secondary-color);
+    border-radius: 4px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--text-color);
+}
+
+.weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    text-align: center;
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+}
+
+.day {
+    aspect-ratio: 1;
+    border: none;
+    background: none;
+    border-radius: 50%;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.day:hover:not(:disabled) {
+    background-color: var(--secondary-color);
+}
+
+.selected {
+    background-color: var(--primary-color) !important;
+    color: var(--white) !important;
+}
+
+.today {
+    border: 1px solid var(--primary-color);
+    color: var(--primary-color);
+}
+
+.disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.emptyDay {
+    aspect-ratio: 1;
+}

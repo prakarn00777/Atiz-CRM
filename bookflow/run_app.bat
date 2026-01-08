@@ -1,0 +1,6 @@
+@echo off
+echo Setting up Node.js environment...
+SET "PATH=C:\Program Files\nodejs;%PATH%"
+echo Starting BookFlow...
+npm run dev
+pause
