@@ -154,12 +154,13 @@ export default function IssueManager({ issues, customers, onAdd, onEdit, onDelet
                             <tr className="bg-white/5 text-slate-400 text-xs uppercase tracking-wider border-b border-white/5">
                                 <th className="px-4 py-3 font-semibold w-[5%] text-center">No.</th>
                                 <th className="px-4 py-3 font-semibold w-[10%]">เลขที่เคส</th>
-                                <th className="px-4 py-3 font-semibold w-[20%]">ชื่อเคส</th>
-                                <th className="px-4 py-3 font-semibold w-[15%]">ลูกค้า</th>
+                                <th className="px-4 py-3 font-semibold w-[15%]">ชื่อเคส</th>
+                                <th className="px-4 py-3 font-semibold w-[12%]">ลูกค้า</th>
                                 <th className="px-4 py-3 font-semibold w-[10%] text-center">ระดับปัญหา</th>
-                                <th className="px-4 py-3 font-semibold w-[12%] text-center">สถานะ</th>
-                                <th className="px-4 py-3 font-semibold w-[13%]">ประเภทปัญหา</th>
-                                <th className="px-4 py-3 font-semibold w-[15%] text-right">Actions</th>
+                                <th className="px-4 py-3 font-semibold w-[10%] text-center">สถานะ</th>
+                                <th className="px-4 py-3 font-semibold w-[10%]">ประเภทปัญหา</th>
+                                <th className="px-4 py-3 font-semibold w-[15%]">แก้ไขล่าสุด</th>
+                                <th className="px-4 py-3 font-semibold w-[13%] text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5">
@@ -201,6 +202,26 @@ export default function IssueManager({ issues, customers, onAdd, onEdit, onDelet
                                         </td>
                                         <td className="px-4 py-3">
                                             <span className="text-xs text-slate-400">{issue.type}</span>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            {issue.modifiedBy ? (
+                                                <div className="flex items-start gap-2">
+                                                    <Clock className="w-3.5 h-3.5 text-slate-500 mt-0.5 flex-shrink-0" />
+                                                    <div className="flex flex-col">
+                                                        <span className="text-xs font-medium text-slate-300">{issue.modifiedBy}</span>
+                                                        <span className="text-[10px] text-slate-500">
+                                                            {new Date(issue.modifiedAt!).toLocaleString('th-TH', {
+                                                                month: 'short',
+                                                                day: 'numeric',
+                                                                hour: '2-digit',
+                                                                minute: '2-digit'
+                                                            })}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <span className="text-xs text-slate-600">-</span>
+                                            )}
                                         </td>
                                         <td className="px-4 py-3 text-right">
                                             <div className="flex justify-end gap-2">
