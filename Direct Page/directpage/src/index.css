@@ -1,0 +1,102 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lexend:wght@400;500;600;700&display=swap');
+
+:root {
+  --primary: #2D5BFF;
+  --primary-hover: #1a46e6;
+  --secondary: #EBF1FF;
+  --accent: #FF5C00;
+  --text-dark: #1A1A1A;
+  --text-muted: #666666;
+  --bg-white: #FFFFFF;
+  --bg-light: #F8FAFF;
+  --border-color: #E6E8F1;
+  --shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  --border-radius: 12px;
+  --max-width: 480px;
+  /* Mobile first orientation */
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  color: var(--text-dark);
+  background-color: #F0F2F5;
+  /* Background for desktop view to center the mobile app */
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  background-color: var(--bg-white);
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: 'Lexend', sans-serif;
+  font-weight: 700;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.container {
+  padding: 0 20px;
+}
+
+.btn-primary {
+  background-color: var(--primary);
+  color: white;
+  padding: 12px 24px;
+  border-radius: 50px;
+  font-weight: 600;
+  font-size: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-outline {
+  background-color: transparent;
+  border: 1.5px solid var(--primary);
+  color: var(--primary);
+  padding: 8px 18px;
+  border-radius: 50px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.section-padding {
+  padding: 40px 20px;
+}
+
+/* Custom Utilities */
+.bg-gradient {
+  background: linear-gradient(180deg, #EBF1FF 0%, #FFFFFF 100%);
+}

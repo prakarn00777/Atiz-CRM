@@ -14,10 +14,22 @@
 }
 
 @layer base {
+  html {
+    overflow-y: scroll;
+  }
+
   body {
     background-color: var(--color-bg-dark);
     color: var(--color-text-main);
     @apply antialiased;
+  }
+
+  button {
+    @apply cursor-pointer;
+  }
+
+  button:disabled {
+    @apply cursor-not-allowed;
   }
 }
 
@@ -26,7 +38,7 @@
 }
 
 @utility btn {
-  @apply px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-2;
+  @apply px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-2 border border-transparent;
 }
 
 @utility btn-primary {
@@ -65,5 +77,14 @@
 
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background: rgba(99, 102, 241, 0.5);
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+  
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
   }
 }

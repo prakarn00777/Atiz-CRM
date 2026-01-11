@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Sidebar from "@/components/Sidebar";
 import CustomerTable from "@/components/CustomerTable";
-import { Layers, X, ChevronDown, Plus, Edit2, Trash2, Users, Activity, Award, TrendingUp, Clock } from "lucide-react";
+import { Layers, X, ChevronDown, Plus, Edit2, Trash2, Users, Activity, Award, TrendingUp, Clock, AlertTriangle } from "lucide-react";
 import CustomSelect from "@/components/CustomSelect";
 import UserManager from "@/components/UserManager";
 import RoleManager from "@/components/RoleManager";
@@ -11,6 +11,7 @@ import Toast from "@/components/Toast";
 import IssueManager from "@/components/IssueManager";
 import SearchableCustomerSelect from "@/components/SearchableCustomerSelect";
 import SegmentedControl from "@/components/SegmentedControl";
+import InstallationManager from "@/components/InstallationManager";
 
 interface Branch {
   name: string;
@@ -42,10 +43,24 @@ interface Customer {
   package: string;
   status: string;
   branches?: Branch[];
+  product?: "Dr.Ease" | "EasePos"; // Added product field
   createdBy?: string;
   createdAt?: string;
   modifiedBy?: string;
   modifiedAt?: string;
+}
+
+interface Installation {
+  id: number;
+  customerId: number;
+  customerName: string;
+  systemLink?: string; // Added system link
+  status: "Pending" | "Installing" | "Completed";
+  requestedBy: string;
+  requestedAt: string;
+  assignedDev?: string;
+  completedAt?: string;
+  notes?: string;
 }
 
 export default function CRMPage() {
@@ -58,6 +73,7 @@ export default function CRMPage() {
   const [branchInputs, setBranchInputs] = useState<Branch[]>([]);
   const [isAddingBranch, setIsAddingBranch] = useState(false);
   const [editingBranchIndex, setEditingBranchIndex] = useState<number | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'branch' | 'customer' | 'issue', id?: number, index?: number, title?: string } | null>(null);
   const [tempBranchName, setTempBranchName] = useState("");
   const [tempBranchAddress, setTempBranchAddress] = useState("");
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
@@ -74,6 +90,9 @@ export default function CRMPage() {
   const [users, setUsers] = useState<any[]>([]);
   const [roles, setRoles] = useState<any[]>([]);
 
+  // Installation States
+  const [installations, setInstallations] = useState<Installation[]>([]);
+
   // Initial Data
   useEffect(() => {
     setMounted(true);
@@ -82,9 +101,11 @@ export default function CRMPage() {
     const savedSystemUsers = localStorage.getItem("crm_system_users_v2");
     const savedRoles = localStorage.getItem("crm_roles_v2");
     const savedIssues = localStorage.getItem("crm_issues_v2");
+    const savedInstallations = localStorage.getItem("crm_installations_v2");
 
     if (savedUser) setUser(JSON.parse(savedUser));
     if (savedIssues) setIssues(JSON.parse(savedIssues));
+    if (savedInstallations) setInstallations(JSON.parse(savedInstallations));
 
     if (savedCustomers) {
       setCustomers(JSON.parse(savedCustomers));
@@ -96,6 +117,7 @@ export default function CRMPage() {
           link: "https://aura.example.com",
           package: "Elite",
           status: "ใช้งาน",
+          product: "Dr.Ease",
           branches: [
             { name: "สาขาสยาม", isMain: true, address: "สยามสแควร์ ซอย 1" },
             { name: "สาขาเซ็นทรัลลาดพร้าว", isMain: false, address: "ชั้น 3 โซนบิวตี้" }
@@ -107,22 +129,35 @@ export default function CRMPage() {
           link: "https://smile.example.com",
           package: "Standard",
           status: "รอการใช้งาน",
+          product: "Dr.Ease",
           branches: [
             { name: "สาขาพระราม 9", isMain: true, address: "G Tower ชั้น G" }
           ]
         },
         {
           id: 3,
+          name: "ร้านกาแฟ อาราบิก้า",
+          link: "https://arabica.example.com",
+          package: "Starter",
+          status: "ติดตั้งแล้ว",
+          product: "EasePos",
+          branches: []
+        },
+        {
+          id: 4,
           name: "เพ็ท แอนด์ มี",
           link: "https://petme.example.com",
           package: "Starter",
           status: "ยกเลิก",
+          product: "EasePos",
           branches: []
         }
       ];
       setCustomers(initial);
       localStorage.setItem("crm_customers_v2", JSON.stringify(initial));
     }
+    // ... (rest of useEffect)
+
 
     if (savedRoles) {
       setRoles(JSON.parse(savedRoles));
@@ -171,12 +206,10 @@ export default function CRMPage() {
     localStorage.removeItem("crm_user_v2");
   };
 
-  const handleDelete = (id: number) => {
-    if (confirm("ยืนยันการลบลูกค้านี้?")) {
-      const updated = customers.filter(c => c.id !== id);
-      setCustomers(updated);
-      localStorage.setItem("crm_customers_v2", JSON.stringify(updated));
-    }
+  const handleDeleteCustomer = (id: number) => {
+    const updated = customers.filter(c => c.id !== id);
+    setCustomers(updated);
+    localStorage.setItem("crm_customers_v2", JSON.stringify(updated));
   };
 
   const handleSaveCustomer = (e: React.FormEvent<HTMLFormElement>) => {
@@ -187,7 +220,8 @@ export default function CRMPage() {
       name: formData.get("name") as string,
       link: formData.get("link") as string,
       package: formData.get("package") as string,
-      status: formData.get("status") as string,
+      status: editingCustomer ? (formData.get("status") as string) : "รอการติดตั้ง",
+      product: (formData.get("product") as any) || "Dr.Ease",
       branches: branchInputs.filter(b => b.name.trim() !== ""),
       createdBy: editingCustomer?.createdBy || user?.name,
       createdAt: editingCustomer?.createdAt || new Date().toISOString(),
@@ -207,11 +241,33 @@ export default function CRMPage() {
     setModalOpen(false);
     setEditingCustomer(null);
 
+    // Auto-create installation request
+    let installCreated = false;
+    if (!editingCustomer && data.status === "รอการติดตั้ง") {
+      const newInst: Installation = {
+        id: installations.length > 0 ? Math.max(...installations.map(i => i.id)) + 1 : 1,
+        customerId: data.id,
+        customerName: data.name,
+        status: "Pending",
+        requestedBy: user?.name || "System",
+        requestedAt: new Date().toISOString(),
+      };
+
+      const updatedInst = [...installations, newInst];
+      setInstallations(updatedInst);
+      localStorage.setItem("crm_installations_v2", JSON.stringify(updatedInst));
+      installCreated = true;
+    }
+
     // Show notifications
     const isNewCustomer = !editingCustomer;
-    const message = isNewCustomer
+    let message = isNewCustomer
       ? `เพิ่มลูกค้า "${data.name}" สำเร็จ!`
       : `แก้ไขข้อมูล "${data.name}" สำเร็จ!`;
+
+    if (installCreated) {
+      message += " พร้อมสร้างใบงานติดตั้งอัตโนมัติ";
+    }
 
     setToast({ message, type: "success" });
 
@@ -354,12 +410,62 @@ export default function CRMPage() {
   };
 
   const handleDeleteIssue = (id: number) => {
-    if (confirm("ยืนยันการลบเคสนี้?")) {
-      const updated = issues.filter(i => i.id !== id);
-      setIssues(updated);
-      localStorage.setItem("crm_issues_v2", JSON.stringify(updated));
-      setToast({ message: "ลบเคสเรียบร้อยแล้ว", type: "info" });
+    const updated = issues.filter(i => i.id !== id);
+    setIssues(updated);
+    localStorage.setItem("crm_issues_v2", JSON.stringify(updated));
+    setToast({ message: "ลบเคสเรียบร้อยแล้ว", type: "info" });
+  };
+
+  // Installation Handlers
+  const handleAddInstallation = (newInst: Partial<Installation>) => {
+    const customer = customers.find(c => c.id === newInst.customerId);
+    const data: Installation = {
+      id: installations.length > 0 ? Math.max(...installations.map(i => i.id)) + 1 : 1,
+      customerId: newInst.customerId || 0,
+      customerName: newInst.customerName || "",
+      status: "Pending",
+      requestedBy: user?.name || "System",
+      requestedAt: new Date().toISOString(),
+      notes: newInst.notes,
+    };
+    const updated = [...installations, data];
+    setInstallations(updated);
+    localStorage.setItem("crm_installations_v2", JSON.stringify(updated));
+    setToast({ message: `แจ้งงานติดตั้งแผนก DEV สำหรับคุณ ${data.customerName} เรียบร้อยแล้ว`, type: "success" });
+  };
+
+  const handleUpdateInstallationStatus = (id: number, status: "Pending" | "Installing" | "Completed") => {
+    const updated = installations.map(inst => {
+      if (inst.id === id) {
+        const newData = { ...inst, status, assignedDev: inst.assignedDev || user?.name };
+        if (status === "Completed") newData.completedAt = new Date().toISOString();
+        return newData;
+      }
+      return inst;
+    });
+    setInstallations(updated);
+    localStorage.setItem("crm_installations_v2", JSON.stringify(updated));
+
+    // Auto-update customer status to "Active" if installation is completed
+    if (status === "Completed") {
+      const targetInst = installations.find(i => i.id === id);
+      if (targetInst) {
+        const updatedCustomers = customers.map(c =>
+          c.id === targetInst.customerId ? { ...c, status: "ติดตั้งแล้ว" } : c
+        );
+        setCustomers(updatedCustomers);
+        localStorage.setItem("crm_customers_v2", JSON.stringify(updatedCustomers));
+        setToast({ message: `ติดตั้งระบบเรียบร้อยแล้ว! สถานะลูกค้า ${targetInst.customerName} ถูกปรับเป็น "ติดตั้งแล้ว" อัตโนมัติ`, type: "success" });
+      }
+    } else {
+      setToast({ message: `อัพเดทสถานะงานติดตั้งเป็น ${status} เรียบร้อยแล้ว`, type: "info" });
     }
+  };
+
+  const handleAssignDev = (id: number, devName: string) => {
+    const updated = installations.map(inst => inst.id === id ? { ...inst, assignedDev: devName } : inst);
+    setInstallations(updated);
+    localStorage.setItem("crm_installations_v2", JSON.stringify(updated));
   };
 
   return (
@@ -370,131 +476,151 @@ export default function CRMPage() {
         onLogout={handleLogout}
       />
 
-      <main className="flex-1 p-4 lg:p-6">
-        {currentView === "dashboard" ? (
-          <div className="space-y-6">
-            {/* Header */}
-            <div className="space-y-2">
-              <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
-                Dashboard
-              </h1>
-              <p className="text-sm text-slate-400">ภาพรวมข้อมูลลูกค้าและสถิติการใช้งาน</p>
-            </div>
+      <main className="flex-1 p-4 lg:p-6 overflow-x-hidden min-h-screen">
+        <div
+          key={currentView}
+          className="animate-in fade-in slide-in-from-bottom-2 duration-300"
+          style={{ willChange: "opacity, transform" }}
+        >
+          {currentView === "dashboard" ? (
+            <div className="space-y-6">
+              {/* Header */}
+              <div className="space-y-2">
+                <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
+                  Dashboard
+                </h1>
+                <p className="text-sm text-slate-400">ภาพรวมข้อมูลลูกค้าและสถิติการใช้งาน</p>
+              </div>
 
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {[
-                {
-                  label: "ลูกค้าทั้งหมด",
-                  value: customers.length,
-                  icon: Users,
-                  gradient: "from-indigo-500/20 to-purple-500/20",
-                  iconColor: "text-indigo-400",
-                  trend: "+12%"
-                },
-                {
-                  label: "ใช้งานอยู่",
-                  value: customers.filter(c => c.status === "ใช้งาน").length,
-                  icon: Activity,
-                  gradient: "from-emerald-500/20 to-teal-500/20",
-                  iconColor: "text-emerald-400",
-                  trend: "+8%"
-                },
-                {
-                  label: "แพ็คเกจ Elite",
-                  value: customers.filter(c => c.package === "Elite").length,
-                  icon: Award,
-                  gradient: "from-amber-500/20 to-orange-500/20",
-                  iconColor: "text-amber-400",
-                  trend: "+5%"
-                },
-              ].map((stat, i) => {
-                const Icon = stat.icon;
-                return (
-                  <div
-                    key={i}
-                    className={`glass-card p-6 border-white/10 bg-gradient-to-br ${stat.gradient} hover:scale-[1.02] transition-all duration-300 cursor-pointer group`}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">{stat.label}</p>
-                        <p className="text-3xl font-bold mt-3 text-white">{stat.value}</p>
-                        <div className="flex items-center gap-1 mt-2">
-                          <TrendingUp className="w-3 h-3 text-emerald-400" />
-                          <span className="text-xs text-emerald-400 font-medium">{stat.trend}</span>
-                          <span className="text-xs text-slate-500">vs เดือนที่แล้ว</span>
+              {/* Stats Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {[
+                  {
+                    label: "ลูกค้าทั้งหมด",
+                    value: customers.length,
+                    icon: Users,
+                    gradient: "from-indigo-500/20 to-purple-500/20",
+                    iconColor: "text-indigo-400",
+                    trend: "+12%"
+                  },
+                  {
+                    label: "ใช้งานอยู่",
+                    value: customers.filter(c => c.status === "ใช้งาน").length,
+                    icon: Activity,
+                    gradient: "from-emerald-500/20 to-teal-500/20",
+                    iconColor: "text-emerald-400",
+                    trend: "+8%"
+                  },
+                  {
+                    label: "แพ็คเกจ Elite",
+                    value: customers.filter(c => c.package === "Elite").length,
+                    icon: Award,
+                    gradient: "from-amber-500/20 to-orange-500/20",
+                    iconColor: "text-amber-400",
+                    trend: "+5%"
+                  },
+                ].map((stat, i) => {
+                  const Icon = stat.icon;
+                  return (
+                    <div
+                      key={i}
+                      className={`glass-card p-6 border-white/10 bg-gradient-to-br ${stat.gradient} hover:scale-[1.02] transition-all duration-300 cursor-pointer group`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">{stat.label}</p>
+                          <p className="text-3xl font-bold mt-3 text-white">{stat.value}</p>
+                          <div className="flex items-center gap-1 mt-2">
+                            <TrendingUp className="w-3 h-3 text-emerald-400" />
+                            <span className="text-xs text-emerald-400 font-medium">{stat.trend}</span>
+                            <span className="text-xs text-slate-500">vs เดือนที่แล้ว</span>
+                          </div>
+                        </div>
+                        <div className={`p-3 rounded-xl bg-white/5 group-hover:bg-white/10 transition-colors`}>
+                          <Icon className={`w-6 h-6 ${stat.iconColor}`} />
                         </div>
                       </div>
-                      <div className={`p-3 rounded-xl bg-white/5 group-hover:bg-white/10 transition-colors`}>
-                        <Icon className={`w-6 h-6 ${stat.iconColor}`} />
-                      </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Recent Customers Table */}
-            <div className="glass-card overflow-hidden border-white/10">
-              <div className="p-6 border-b border-white/10 bg-gradient-to-r from-indigo-500/10 to-purple-500/10">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h3 className="font-bold text-lg text-white">ลูกค้าล่าสุด</h3>
-                    <p className="text-xs text-slate-400 mt-1">รายการลูกค้าที่เพิ่มเข้ามาใหม่</p>
-                  </div>
-                  <button
-                    onClick={() => setView("customers")}
-                    className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-1 group"
-                  >
-                    ดูทั้งหมด
-                    <ChevronDown className="w-4 h-4 -rotate-90 group-hover:translate-x-1 transition-transform" />
-                  </button>
-                </div>
+                  );
+                })}
               </div>
-              <TableSummary customers={customers.slice(0, 5)} />
+
+              {/* Recent Customers Table */}
+              <div className="glass-card overflow-hidden border-white/10">
+                <div className="p-6 border-b border-white/10 bg-gradient-to-r from-indigo-500/10 to-purple-500/10">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h3 className="font-bold text-lg text-white">ลูกค้าล่าสุด</h3>
+                      <p className="text-xs text-slate-400 mt-1">รายการลูกค้าที่เพิ่มเข้ามาใหม่</p>
+                    </div>
+                    <button
+                      onClick={() => setView("customers")}
+                      className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-1 group"
+                    >
+                      ดูทั้งหมด
+                      <ChevronDown className="w-4 h-4 -rotate-90 group-hover:translate-x-1 transition-transform" />
+                    </button>
+                  </div>
+                </div>
+                <TableSummary customers={customers.slice(0, 5)} />
+              </div>
             </div>
-          </div>
-        ) : currentView === "customers" ? (
-          <CustomerTable
-            customers={customers}
-            onAdd={() => { setEditingCustomer(null); setBranchInputs([]); setModalOpen(true); }}
-            onEdit={(c) => { setEditingCustomer(c); setBranchInputs(c.branches || []); setModalOpen(true); }}
-            onDelete={handleDelete}
-          />
-        ) : currentView === "user_management" ? (
-          <UserManager
-            users={users}
-            roles={roles}
-            onSave={handleSaveUser}
-            onDelete={handleDeleteUser}
-          />
-        ) : currentView === "role_management" ? (
-          <RoleManager
-            roles={roles}
-            onSave={handleSaveRole}
-            onDelete={handleDeleteRole}
-          />
-        ) : currentView === "issues" ? (
-          <IssueManager
-            issues={issues}
-            customers={customers}
-            onAdd={() => {
-              setEditingIssue(null);
-              setSelectedCustomerId(null);
-              setSelectedCustomerName("");
-              setSelectedFiles([]);
-              setIssueModalOpen(true);
-            }}
-            onEdit={(issue) => {
-              setEditingIssue(issue);
-              setSelectedCustomerId(issue.customerId);
-              setSelectedCustomerName(issue.customerName);
-              setSelectedFiles(issue.attachments || []);
-              setIssueModalOpen(true);
-            }}
-            onDelete={handleDeleteIssue}
-          />
-        ) : null}
+          ) : currentView === "customers" ? (
+            <CustomerTable
+              customers={customers}
+              onAdd={() => { setEditingCustomer(null); setBranchInputs([]); setModalOpen(true); }}
+              onEdit={(c) => { setEditingCustomer(c); setBranchInputs(c.branches || []); setModalOpen(true); }}
+              onDelete={(id) => {
+                const customer = customers.find(c => c.id === id);
+                setDeleteConfirm({ type: 'customer', id, title: customer?.name || 'Customer' });
+              }}
+            />
+          ) : currentView === "user_management" ? (
+            <UserManager
+              users={users}
+              roles={roles}
+              onSave={handleSaveUser}
+              onDelete={handleDeleteUser}
+            />
+          ) : currentView === "role_management" ? (
+            <RoleManager
+              roles={roles}
+              onSave={handleSaveRole}
+              onDelete={handleDeleteRole}
+            />
+          ) : currentView === "issues" ? (
+            <IssueManager
+              issues={issues}
+              customers={customers}
+              onAdd={() => {
+                setEditingIssue(null);
+                setSelectedCustomerId(null);
+                setSelectedCustomerName("");
+                setSelectedFiles([]);
+                setIssueModalOpen(true);
+              }}
+              onEdit={(issue) => {
+                setEditingIssue(issue);
+                setSelectedCustomerId(issue.customerId);
+                setSelectedCustomerName(issue.customerName);
+                setSelectedFiles(issue.attachments || []);
+                setIssueModalOpen(true);
+              }}
+              onDelete={(id) => {
+                const issue = issues.find(i => i.id === id);
+                setDeleteConfirm({ type: 'issue', id, title: issue?.title || 'Issue' });
+              }}
+            />
+          ) : currentView === "installations" ? (
+            <InstallationManager
+              installations={installations}
+              customers={customers}
+              onAddInstallation={handleAddInstallation}
+              onUpdateStatus={handleUpdateInstallationStatus}
+              onAssignDev={handleAssignDev}
+            />
+          ) : null}
+        </div>
       </main>
 
       {/* Toast Notification */}
@@ -550,6 +676,17 @@ export default function CRMPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
+                      <label className="text-xs font-medium text-slate-400">ประเภทระบบ</label>
+                      <CustomSelect
+                        name="product"
+                        defaultValue={editingCustomer?.product || "Dr.Ease"}
+                        options={[
+                          { value: "Dr.Ease", label: "Dr.Ease (คลินิก)" },
+                          { value: "EasePos", label: "EasePos (ร้านค้า)" },
+                        ]}
+                      />
+                    </div>
+                    <div className="space-y-1">
                       <label className="text-xs font-medium text-slate-400">แพ็คเกจ</label>
                       <CustomSelect
                         name="package"
@@ -561,18 +698,22 @@ export default function CRMPage() {
                         ]}
                       />
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-slate-400">สถานะ</label>
-                      <CustomSelect
-                        name="status"
-                        defaultValue={editingCustomer?.status || "ใช้งาน"}
-                        options={[
-                          { value: "ใช้งาน", label: "ใช้งาน" },
-                          { value: "รอการใช้งาน", label: "รอการใช้งาน" },
-                          { value: "ยกเลิก", label: "ยกเลิก" },
-                        ]}
-                      />
-                    </div>
+                    {editingCustomer && (
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-slate-400">สถานะ</label>
+                        <CustomSelect
+                          name="status"
+                          defaultValue={editingCustomer?.status || "ใช้งาน"}
+                          options={[
+                            { value: "ใช้งาน", label: "ใช้งาน" },
+                            { value: "ติดตั้งแล้ว", label: "ติดตั้งแล้ว" },
+                            { value: "รอการใช้งาน", label: "รอการใช้งาน" },
+                            { value: "ยกเลิก", label: "ยกเลิก" },
+                            { value: "รอการติดตั้ง", label: "รอการติดตั้ง" },
+                          ]}
+                        />
+                      </div>
+                    )}
                   </div>
 
                   {/* Main Branch Field */}
@@ -702,7 +843,7 @@ export default function CRMPage() {
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={() => setBranchInputs(branchInputs.filter((_, i) => i !== actualIndex))}
+                                  onClick={() => setDeleteConfirm({ type: 'branch', index: actualIndex, title: branch.name })}
                                   className="p-1.5 text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors"
                                   title="ลบ"
                                 >
@@ -898,6 +1039,59 @@ export default function CRMPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Deletion Confirmation Modal */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div className="glass-card w-full max-w-sm p-6 relative shadow-2xl animate-in fade-in zoom-in duration-200 border-rose-500/20">
+            <div className="flex flex-col items-center text-center space-y-4">
+              <div className="w-12 h-12 rounded-full bg-rose-500/10 flex items-center justify-center">
+                <AlertTriangle className="w-6 h-6 text-rose-500" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">
+                  {deleteConfirm.type === 'branch' ? 'ยืนยันการลบสาขา?' :
+                    deleteConfirm.type === 'customer' ? 'ยืนยันการลบลูกค้า?' :
+                      deleteConfirm.type === 'issue' ? 'Confirm Delete Issue?' :
+                        'ยืนยันการลบรายการ?'}
+                </h3>
+                <p className="text-sm text-slate-400 mt-1">
+                  {deleteConfirm.type === 'branch' ? `คุณแน่ใจหรือไม่ว่าต้องการลบสาขา "${deleteConfirm.title}"?` :
+                    deleteConfirm.type === 'customer' ? `คุณแน่ใจหรือไม่ว่าต้องการลบลูกค้า "${deleteConfirm.title}"?` :
+                      deleteConfirm.type === 'issue' ? `Are you sure you want to delete issue "${deleteConfirm.title}"?` :
+                        `คุณแน่ใจหรือไม่ว่าต้องการลบรายการ "${deleteConfirm.title}"?`}
+                  <br />
+                  {deleteConfirm.type === 'issue' ? 'This action cannot be undone.' : 'การดำเนินการนี้ไม่สามารถย้อนกลับได้'}
+                </p>
+              </div>
+              <div className="flex gap-3 w-full mt-2">
+                <button
+                  onClick={() => setDeleteConfirm(null)}
+                  className="btn btn-ghost flex-1 py-2 text-xs"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  onClick={() => {
+                    if (deleteConfirm.type === 'branch' && deleteConfirm.index !== undefined) {
+                      setBranchInputs(branchInputs.filter((_, i) => i !== deleteConfirm.index));
+                    } else if (deleteConfirm.type === 'customer' && deleteConfirm.id !== undefined) {
+                      handleDeleteCustomer(deleteConfirm.id);
+                    } else if (deleteConfirm.type === 'issue' && deleteConfirm.id !== undefined) {
+                      handleDeleteIssue(deleteConfirm.id);
+                    }
+                    setDeleteConfirm(null);
+                  }}
+                  className="btn bg-rose-500 hover:bg-rose-600 text-white flex-1 py-2 rounded-xl transition-all font-medium text-xs shadow-lg shadow-rose-500/20"
+                >
+                  ยืนยันการลบ
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
