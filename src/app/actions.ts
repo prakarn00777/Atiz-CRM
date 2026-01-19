@@ -132,3 +132,82 @@ export async function getInstallations(): Promise<any[]> {
         modifiedAt: row.modified_at ? String(row.modified_at) : undefined,
     }));
 }
+
+export async function getUsers(): Promise<any[]> {
+    const { data, error } = await db
+        .from('users')
+        .select('*')
+        .order('id', { ascending: true });
+
+    if (error) {
+        console.error("Error fetching users:", error);
+        return [];
+    }
+
+    return data.map(u => ({
+        ...u,
+        role: u.role_id
+    }));
+}
+
+export async function saveUser(userData: any) {
+    const { id, ...rest } = userData;
+
+    // Map 'role' to 'role_id' for Supabase schema
+    const dbData = {
+        name: rest.name,
+        username: rest.username,
+        password: rest.password,
+        role_id: rest.role
+    };
+
+    let result;
+    if (id && id > 1000000) { // New user with Date.now() as temp id (SQLite artifact)
+        const { data, error } = await db.from('users').insert(dbData).select();
+        if (error) throw error;
+        result = data[0];
+    } else if (id) { // Existing user
+        const { data, error } = await db.from('users').update(dbData).eq('id', id).select();
+        if (error) throw error;
+        result = data[0];
+    } else { // No id at all
+        const { data, error } = await db.from('users').insert(dbData).select();
+        if (error) throw error;
+        result = data[0];
+    }
+
+    return { ...result, role: result.role_id };
+}
+
+export async function deleteUser(id: number) {
+    const { error } = await db.from('users').delete().eq('id', id);
+    if (error) throw error;
+    return true;
+}
+
+export async function getRoles(): Promise<any[]> {
+    const { data, error } = await db
+        .from('roles')
+        .select('*')
+        .order('id', { ascending: true });
+
+    if (error) {
+        console.error("Error fetching roles:", error);
+        return [];
+    }
+
+    return data;
+}
+
+export async function saveRole(roleData: any) {
+    const { id, ...rest } = roleData;
+    const { data, error } = await db.from('roles').upsert({ id, ...rest }).select();
+    if (error) throw error;
+    return data[0];
+}
+
+export async function deleteRole(id: string) {
+    const { error } = await db.from('roles').delete().eq('id', id);
+    if (error) throw error;
+    return true;
+}

@@ -14,7 +14,10 @@ import SegmentedControl from "@/components/SegmentedControl";
 import Dashboard from "@/components/Dashboard";
 import InstallationManager from "@/components/InstallationManager";
 import { Customer, Branch, Installation, Issue, UsageStatus } from "@/types";
-import { importCustomersFromCSV, getCustomers, getIssues, getInstallations } from "./actions";
+import {
+  importCustomersFromCSV, getCustomers, getIssues, getInstallations,
+  getUsers, saveUser, deleteUser, getRoles, saveRole, deleteRole
+} from "./actions";
 
 function TableSummary({ customers }: { customers: Customer[] }) {
   return (
@@ -110,16 +113,20 @@ export default function CRMPage() {
 
     const fetchData = async () => {
       try {
-        const [cData, iData, instData] = await Promise.all([
+        const [cData, iData, instData, userData, roleData] = await Promise.all([
           getCustomers(),
           getIssues(),
-          getInstallations()
+          getInstallations(),
+          getUsers(),
+          getRoles()
         ]);
         if (cData.length > 0) setCustomers(cData);
         if (iData.length > 0) setIssues(iData);
         if (instData.length > 0) setInstallations(instData);
+        if (userData.length > 0) setUsers(userData);
+        if (roleData.length > 0) setRoles(roleData);
       } catch (err) {
-        console.error("Failed to fetch data from Turso:", err);
+        console.error("Failed to fetch data:", err);
       }
     };
 
@@ -129,15 +136,24 @@ export default function CRMPage() {
   const handleLogin = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    const u = formData.get("username");
-    const p = formData.get("password");
+    const u_str = String(formData.get("username"));
+    const p_str = String(formData.get("password"));
 
-    if (u === "admin" && p === "1234") {
-      const userData = { name: "Admin" };
-      setUser(userData);
-      localStorage.setItem("crm_user_v2", JSON.stringify(userData));
+    const foundUser = users.find(u => u.username === u_str && u.password === p_str);
+
+    // Fallback for hardcoded admin if DB is empty or for convenience
+    if (!foundUser && u_str === "admin" && p_str === "1234") {
+      const adminData = { name: "Admin", role: "admin" };
+      setUser(adminData);
+      localStorage.setItem("crm_user_v2", JSON.stringify(adminData));
+      return;
+    }
+
+    if (foundUser) {
+      setUser(foundUser);
+      localStorage.setItem("crm_user_v2", JSON.stringify(foundUser));
     } else {
-      alert("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
+      setToast({ message: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง", type: "error" });
     }
   };
 
@@ -377,28 +393,52 @@ export default function CRMPage() {
 
 
 
-  const handleSaveUser = (userData: any) => {
-    const updated = users.find(u => u.id === userData.id) ? users.map(u => u.id === userData.id ? userData : u) : [...users, userData];
-    setUsers(updated);
-    localStorage.setItem("crm_system_users_v2", JSON.stringify(updated));
+  const handleSaveUser = async (userData: any) => {
+    try {
+      const saved = await saveUser(userData);
+      const updated = users.find(u => u.id === saved.id)
+        ? users.map(u => u.id === saved.id ? saved : u)
+        : [...users, saved];
+      setUsers(updated);
+      setToast({ message: "บันทึกข้อมูลผู้ใช้งานสำเร็จ", type: "success" });
+    } catch (err: any) {
+      setToast({ message: "เกิดข้อผิดพลาด: " + err.message, type: "error" });
+    }
   };
 
-  const handleDeleteUser = (id: number) => {
-    const updated = users.filter(u => u.id !== id);
-    setUsers(updated);
-    localStorage.setItem("crm_system_users_v2", JSON.stringify(updated));
+  const handleDeleteUser = async (id: number) => {
+    try {
+      await deleteUser(id);
+      const updated = users.filter(u => u.id !== id);
+      setUsers(updated);
+      setToast({ message: "ลบผู้ใช้งานเรียบร้อยแล้ว", type: "success" });
+    } catch (err: any) {
+      setToast({ message: "เกิดข้อผิดพลาด: " + err.message, type: "error" });
+    }
   };
 
-  const handleSaveRole = (roleData: any) => {
-    const updated = roles.find(r => r.id === roleData.id) ? roles.map(r => r.id === roleData.id ? roleData : r) : [...roles, roleData];
-    setRoles(updated);
-    localStorage.setItem("crm_roles_v2", JSON.stringify(updated));
+  const handleSaveRole = async (roleData: any) => {
+    try {
+      const saved = await saveRole(roleData);
+      const updated = roles.find(r => r.id === saved.id)
+        ? roles.map(r => r.id === saved.id ? saved : r)
+        : [...roles, saved];
+      setRoles(updated);
+      setToast({ message: "บันทึกข้อมูลบทบาทสำเร็จ", type: "success" });
+    } catch (err: any) {
+      setToast({ message: "เกิดข้อผิดพลาด: " + err.message, type: "error" });
+    }
   };
 
-  const handleDeleteRole = (id: string) => {
-    const updated = roles.filter(r => r.id !== id);
-    setRoles(updated);
-    localStorage.setItem("crm_roles_v2", JSON.stringify(updated));
+  const handleDeleteRole = async (id: string) => {
+    try {
+      await deleteRole(id);
+      const updated = roles.filter(r => r.id !== id);
+      setRoles(updated);
+      setToast({ message: "ลบบทบาทเรียบร้อยแล้ว", type: "success" });
+    } catch (err: any) {
+      setToast({ message: "เกิดข้อผิดพลาด: " + err.message, type: "error" });
+    }
   };
 
   if (!mounted) return null;
