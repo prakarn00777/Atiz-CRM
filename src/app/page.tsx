@@ -395,49 +395,67 @@ export default function CRMPage() {
 
   const handleSaveUser = async (userData: any) => {
     try {
-      const saved = await saveUser(userData);
-      const updated = users.find(u => u.id === saved.id)
-        ? users.map(u => u.id === saved.id ? saved : u)
-        : [...users, saved];
-      setUsers(updated);
-      setToast({ message: "บันทึกข้อมูลผู้ใช้งานสำเร็จ", type: "success" });
+      const result = await saveUser(userData);
+      if (result.success) {
+        const saved = result.data;
+        const updated = users.find(u => u.id === saved.id)
+          ? users.map(u => u.id === saved.id ? saved : u)
+          : [...users, saved];
+        setUsers(updated);
+        setToast({ message: "บันทึกข้อมูลผู้ใช้งานสำเร็จ", type: "success" });
+      } else {
+        setToast({ message: "เกิดข้อผิดพลาด: " + result.error, type: "error" });
+      }
     } catch (err: any) {
-      setToast({ message: "เกิดข้อผิดพลาด: " + err.message, type: "error" });
+      setToast({ message: "เกิดข้อผิดพลาดในการเชื่อมต่อ", type: "error" });
     }
   };
 
   const handleDeleteUser = async (id: number) => {
     try {
-      await deleteUser(id);
-      const updated = users.filter(u => u.id !== id);
-      setUsers(updated);
-      setToast({ message: "ลบผู้ใช้งานเรียบร้อยแล้ว", type: "success" });
+      const result = await deleteUser(id);
+      if (result.success) {
+        const updated = users.filter(u => u.id !== id);
+        setUsers(updated);
+        setToast({ message: "ลบผู้ใช้งานเรียบร้อยแล้ว", type: "success" });
+      } else {
+        setToast({ message: "เกิดข้อผิดพลาด: " + result.error, type: "error" });
+      }
     } catch (err: any) {
-      setToast({ message: "เกิดข้อผิดพลาด: " + err.message, type: "error" });
+      setToast({ message: "เกิดข้อผิดพลาดในการเชื่อมต่อ", type: "error" });
     }
   };
 
   const handleSaveRole = async (roleData: any) => {
     try {
-      const saved = await saveRole(roleData);
-      const updated = roles.find(r => r.id === saved.id)
-        ? roles.map(r => r.id === saved.id ? saved : r)
-        : [...roles, saved];
-      setRoles(updated);
-      setToast({ message: "บันทึกข้อมูลบทบาทสำเร็จ", type: "success" });
+      const result = await saveRole(roleData);
+      if (result.success) {
+        const saved = result.data;
+        const updated = roles.find(r => r.id === saved.id)
+          ? roles.map(r => r.id === saved.id ? saved : r)
+          : [...roles, saved];
+        setRoles(updated);
+        setToast({ message: "บันทึกข้อมูลบทบาทสำเร็จ", type: "success" });
+      } else {
+        setToast({ message: "เกิดข้อผิดพลาด: " + result.error, type: "error" });
+      }
     } catch (err: any) {
-      setToast({ message: "เกิดข้อผิดพลาด: " + err.message, type: "error" });
+      setToast({ message: "เกิดข้อผิดพลาดในการเชื่อมต่อ", type: "error" });
     }
   };
 
   const handleDeleteRole = async (id: string) => {
     try {
-      await deleteRole(id);
-      const updated = roles.filter(r => r.id !== id);
-      setRoles(updated);
-      setToast({ message: "ลบบทบาทเรียบร้อยแล้ว", type: "success" });
+      const result = await deleteRole(id);
+      if (result.success) {
+        const updated = roles.filter(r => r.id !== id);
+        setRoles(updated);
+        setToast({ message: "ลบบทบาทเรียบร้อยแล้ว", type: "success" });
+      } else {
+        setToast({ message: "เกิดข้อผิดพลาด: " + result.error, type: "error" });
+      }
     } catch (err: any) {
-      setToast({ message: "เกิดข้อผิดพลาด: " + err.message, type: "error" });
+      setToast({ message: "เกิดข้อผิดพลาดในการเชื่อมต่อ", type: "error" });
     }
   };
 
