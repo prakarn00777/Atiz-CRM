@@ -4,6 +4,6 @@
 [x] Remove "Add Customer" button from `CustomerTable.tsx`
 [x] Update `InstallationManager.tsx` table columns
 [x] Fix Branch Count display in `page.tsx`
-[ ] Refactor Customer Status into `usageStatus` and `installationStatus`
-[ ] Update UI in `CustomerTable` to show dual status badges
-[ ] Update filters in `CustomerTable` for dual status
+[x] Refactor Customer Status into `usageStatus` and `installationStatus`
+[x] Update UI in `CustomerTable` to show dual status badges
+[x] Update filters in `CustomerTable` for dual status

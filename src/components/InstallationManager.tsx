@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { Plus, Search, Filter, Clock, CheckCircle2, Play, User, MessageSquare, AlertCircle, X, Edit2, ExternalLink, Layers } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Plus, Search, Filter, Clock, CheckCircle2, Play, User, MessageSquare, AlertCircle, X, Edit2, ExternalLink, Layers, MoreVertical } from "lucide-react";
+import { createPortal } from "react-dom";
 import SearchableCustomerSelect from "./SearchableCustomerSelect";
 import CustomSelect from "./CustomSelect";
+import CustomDatePicker from "./CustomDatePicker";
 import { Customer, Installation } from "@/types";
 
 interface InstallationManagerProps {
@@ -11,18 +13,17 @@ interface InstallationManagerProps {
     customers: Customer[];
     onAddInstallation: (installation: any) => void;
     onUpdateStatus: (id: number, status: Installation["status"]) => void;
-    onAssignDev: (id: number, devName: string) => void;
 }
 
 export default function InstallationManager({
     installations,
     customers,
     onAddInstallation,
-    onUpdateStatus,
-    onAssignDev
+    onUpdateStatus
 }: InstallationManagerProps) {
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState<string>("all");
+    const [dateRange, setDateRange] = useState<{ start: string; end: string }>({ start: "", end: "" });
     const [isModalOpen, setModalOpen] = useState(false);
     const [customerType, setCustomerType] = useState<"new" | "existing">("new");
     const [newInst, setNewInst] = useState({
@@ -35,7 +36,40 @@ export default function InstallationManager({
         newCustomerPackage: "Standard",
         branchName: "",
         branchAddress: ""
+
     });
+
+    // Action Menu States
+    const [activeMenu, setActiveMenu] = useState<number | null>(null);
+    const [menuPosition, setMenuPosition] = useState<{ top: number, left: number } | null>(null);
+    const [mounted, setMounted] = useState(false);
+
+    // Initial mount for portal
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    const handleMenuToggle = (e: React.MouseEvent, id: number) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const rect = (e.target as HTMLElement).closest('button')?.getBoundingClientRect();
+        if (rect) {
+            setMenuPosition({
+                top: rect.bottom,
+                left: rect.left
+            });
+        }
+        setActiveMenu(activeMenu === id ? null : id);
+    };
+
+    // Close menu when clicking outside
+    useEffect(() => {
+        const handleClickOutside = () => setActiveMenu(null);
+        if (activeMenu !== null) {
+            window.addEventListener('click', handleClickOutside);
+        }
+        return () => window.removeEventListener('click', handleClickOutside);
+    }, [activeMenu]);
 
     const resetModal = () => {
         setCustomerType("new");
@@ -55,7 +89,20 @@ export default function InstallationManager({
     const filteredInstallations = installations.filter(inst => {
         const matchesSearch = inst.customerName.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesStatus = statusFilter === "all" || inst.status === statusFilter;
-        return matchesSearch && matchesStatus;
+
+        // Date Range Filter logic
+        let matchesDate = true;
+        if (dateRange.start) {
+            matchesDate = matchesDate && inst.requestedAt >= dateRange.start;
+        }
+        if (dateRange.end) {
+            // Add time to end date to include the entire day
+            const endDate = new Date(dateRange.end);
+            endDate.setHours(23, 59, 59, 999);
+            matchesDate = matchesDate && new Date(inst.requestedAt) <= endDate;
+        }
+
+        return matchesSearch && matchesStatus && matchesDate;
     });
 
     const sortedInstallations = [...filteredInstallations].sort((a, b) => b.id - a.id);
@@ -110,13 +157,30 @@ export default function InstallationManager({
                         </div>
 
                         <div className="flex flex-wrap items-center gap-3 w-full">
+                            <div className="flex items-center bg-black/20 border border-white/10 rounded-xl h-9 px-1">
+                                <CustomDatePicker
+                                    placeholder="วันเริ่มต้น"
+                                    value={dateRange.start}
+                                    max={dateRange.end}
+                                    onChange={(val) => { setDateRange({ ...dateRange, start: val }); setCurrentPage(1); }}
+                                    className="w-[140px] !border-none !bg-transparent !h-full !py-0 text-xs shadow-none focus:ring-0"
+                                />
+                                <span className="text-slate-500 text-xs">-</span>
+                                <CustomDatePicker
+                                    placeholder="วันสิ้นสุด"
+                                    value={dateRange.end}
+                                    min={dateRange.start}
+                                    onChange={(val) => { setDateRange({ ...dateRange, end: val }); setCurrentPage(1); }}
+                                    className="w-[140px] !border-none !bg-transparent !h-full !py-0 text-xs shadow-none focus:ring-0"
+                                />
+                            </div>
                             <div className="relative shrink-0">
                                 <CustomSelect
                                     options={[
-                                        { value: "all", label: "สถานะทั้งหมด" },
-                                        { value: "Pending", label: "รอดำเนินการ" },
-                                        { value: "Installing", label: "กำลังดำเนินการ" },
-                                        { value: "Completed", label: "ติดตั้งเสร็จแล้ว" },
+                                        { value: "all", label: "All Status" },
+                                        { value: "Pending", label: "Pending" },
+                                        { value: "Installing", label: "Installing" },
+                                        { value: "Completed", label: "Completed" },
                                     ]}
                                     value={statusFilter}
                                     onChange={(val) => { setStatusFilter(val); setCurrentPage(1); }}
@@ -148,7 +212,6 @@ export default function InstallationManager({
                                 <th className="px-4 py-3 font-semibold w-[10%] text-center">Type</th>
                                 <th className="px-4 py-3 font-semibold w-[10%]">System Link</th>
                                 <th className="px-4 py-3 font-semibold w-[9%] text-center">Status</th>
-                                <th className="px-4 py-3 font-semibold w-[13%]">Assigned Dev</th>
                                 <th className="px-4 py-3 font-semibold w-[13%]">Request By</th>
                                 <th className="px-4 py-3 font-semibold w-[13%]">Modified By</th>
                                 <th className="px-4 py-3 font-semibold w-[8%] text-right">Actions</th>
@@ -180,9 +243,10 @@ export default function InstallationManager({
                                         <td className="px-4 py-3">
                                             {(() => {
                                                 const cust = customers.find(c => c.id === inst.customerId);
-                                                return cust?.subdomain ? (
-                                                    <span className="text-xs text-indigo-400 truncate block max-w-[120px]" title={cust.subdomain}>
-                                                        {cust.subdomain}
+                                                const displayLink = cust?.subdomain || inst.customerLink;
+                                                return displayLink ? (
+                                                    <span className="text-xs text-indigo-400 truncate block max-w-[120px]" title={displayLink}>
+                                                        {displayLink}
                                                     </span>
                                                 ) : (
                                                     <span className="text-xs text-slate-500 italic">-</span>
@@ -195,20 +259,7 @@ export default function InstallationManager({
                                                 {inst.status}
                                             </div>
                                         </td>
-                                        <td className="px-4 py-3">
-                                            <div className="flex items-center gap-2">
-                                                {inst.assignedDev ? (
-                                                    <>
-                                                        <div className="w-6 h-6 rounded-full bg-slate-700 flex items-center justify-center text-[10px] text-white">
-                                                            {inst.assignedDev.charAt(0)}
-                                                        </div>
-                                                        <span className="text-xs text-slate-300">{inst.assignedDev}</span>
-                                                    </>
-                                                ) : (
-                                                    <span className="text-xs text-slate-500 italic">ยังไม่ได้มอบหมาย</span>
-                                                )}
-                                            </div>
-                                        </td>
+
                                         <td className="px-4 py-3">
                                             {inst.requestedBy ? (
                                                 <div className="flex items-start gap-2">
@@ -250,21 +301,41 @@ export default function InstallationManager({
                                             )}
                                         </td>
                                         <td className="px-4 py-3 text-right">
-                                            <div className="flex justify-end gap-2">
+                                            <div className="flex justify-end gap-2 relative">
                                                 <button
-                                                    onClick={() => setSelectedInst(inst)}
-                                                    className="p-2 rounded-lg hover:bg-white/5 text-slate-400 hover:text-white transition-colors"
-                                                    title="แก้ไขรายละเอียด"
+                                                    onClick={(e) => handleMenuToggle(e, inst.id)}
+                                                    className={`p-2 rounded-lg transition-colors ${activeMenu === inst.id ? 'bg-indigo-500/20 text-white' : 'hover:bg-white/5 text-slate-400 hover:text-white'}`}
                                                 >
-                                                    <Edit2 className="w-4 h-4" />
+                                                    <MoreVertical className="w-4 h-4" />
                                                 </button>
+
+                                                {mounted && activeMenu === inst.id && menuPosition && createPortal(
+                                                    <div
+                                                        style={{
+                                                            position: 'fixed',
+                                                            top: `${menuPosition.top + 8}px`,
+                                                            left: `${menuPosition.left - 144}px`,
+                                                        }}
+                                                        className="z-[9999] w-40 py-1.5 bg-[#1e293b] border border-white/10 rounded-xl shadow-2xl animate-in fade-in zoom-in duration-150 origin-top-right"
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    >
+                                                        <button
+                                                            onClick={() => { setSelectedInst(inst); setActiveMenu(null); }}
+                                                            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-300 hover:bg-white/5 hover:text-white transition-colors"
+                                                        >
+                                                            <Edit2 className="w-3.5 h-3.5" />
+                                                            แก้ไขรายละเอียด
+                                                        </button>
+                                                    </div>,
+                                                    document.body
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={9} className="px-4 py-8 text-center text-slate-500 italic text-sm">
+                                    <td colSpan={8} className="px-4 py-8 text-center text-slate-500 italic text-sm">
                                         ไม่พบข้อมูลงานติดตั้ง
                                     </td>
                                 </tr>
@@ -370,7 +441,7 @@ export default function InstallationManager({
                                                 </label>
                                                 <input
                                                     type="text"
-                                                    className="input-field py-2 text-xs"
+                                                    className="input-field"
                                                     placeholder="เช่น สาขาสยาม, สาขาเซ็นทรัล"
                                                     value={newInst.branchName}
                                                     onChange={(e) => setNewInst({ ...newInst, branchName: e.target.value })}
@@ -389,7 +460,7 @@ export default function InstallationManager({
                                         </label>
                                         <input
                                             type="text"
-                                            className="input-field py-2 text-xs"
+                                            className="input-field"
                                             placeholder="กรอกชื่อลูกค้า..."
                                             value={newInst.newCustomerName}
                                             onChange={(e) => setNewInst({ ...newInst, newCustomerName: e.target.value })}
@@ -397,14 +468,17 @@ export default function InstallationManager({
                                     </div>
                                     <div>
                                         <label className="block text-xs font-medium text-slate-400 mb-1.5">
-                                            Subdomain / Link <span className="text-rose-500">*</span>
+                                            แพ็คเกจ <span className="text-rose-500">*</span>
                                         </label>
-                                        <input
-                                            type="text"
-                                            className="input-field py-2 text-xs"
-                                            placeholder="example.ease.me"
-                                            value={newInst.newCustomerLink}
-                                            onChange={(e) => setNewInst({ ...newInst, newCustomerLink: e.target.value })}
+                                        <CustomSelect
+                                            options={[
+                                                { value: "Starter", label: "Starter" },
+                                                { value: "Standard", label: "Standard" },
+                                                { value: "Elite", label: "Elite" },
+                                            ]}
+                                            value={newInst.newCustomerPackage}
+                                            onChange={(val) => setNewInst({ ...newInst, newCustomerPackage: val })}
+                                            placeholder="เลือกแพ็คเกจ..."
                                         />
                                     </div>
                                 </div>

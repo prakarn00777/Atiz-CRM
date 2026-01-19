@@ -1,5 +1,5 @@
-export type UsageStatus = "Active" | "Trial" | "Inactive" | "Canceled";
-export type InstallationStatus = "Pending" | "In Progress" | "Installed";
+export type UsageStatus = "Active" | "Pending" | "Training" | "Canceled";
+export type InstallationStatus = "Pending" | "Installing" | "Completed";
 export type ProductType = "Dr.Ease" | "EasePos";
 
 export interface Branch {
@@ -7,7 +7,7 @@ export interface Branch {
     name: string;
     isMain: boolean;
     address?: string;
-    status?: "รอการติดตั้ง" | "กำลังติดตั้ง" | "ติดตั้งเสร็จ";
+    status?: "Pending" | "Installing" | "Completed";
 }
 
 export interface Customer {
@@ -38,11 +38,11 @@ export interface Installation {
     id: number;
     customerId: number;
     customerName: string;
+    customerLink?: string;
     branchName?: string;
     status: "Pending" | "Installing" | "Completed";
     requestedBy: string;
     requestedAt: string;
-    assignedDev?: string;
     completedAt?: string;
     notes?: string;
     installationType?: "new" | "branch";
@@ -57,7 +57,7 @@ export interface Issue {
     customerId: number;
     customerName: string;
     branchName?: string;
-    severity: "ต่ำ" | "ปานกลาง" | "สูง" | "วิกฤต";
+    severity: "Low" | "Medium" | "High" | "Critical";
     status: "แจ้งเคส" | "กำลังดำเนินการ" | "เสร็จสิ้น";
     type: string;
     description?: string;

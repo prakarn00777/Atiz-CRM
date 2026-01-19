@@ -67,7 +67,7 @@ export default function CustomSelect({
                 type="button"
                 onClick={() => !disabled && setIsOpen(!isOpen)}
                 disabled={disabled}
-                className={`input-field flex items-center justify-between group transition-all duration-200 ${disabled ? "cursor-not-allowed opacity-50 bg-white/5" : "cursor-pointer active:scale-[0.99]"} ${icon ? "pl-9" : className?.includes("pl-") ? "" : "pl-3"} ${className?.includes("h-") ? "" : "py-2"} ${className || ""}`}
+                className={`input-field flex items-center justify-between group transition-all duration-200 ${disabled ? "cursor-not-allowed opacity-50 bg-white/5" : "cursor-pointer active:scale-[0.99]"} ${icon ? "pl-9" : className?.includes("pl-") ? "" : "pl-3"} ${className || ""}`}
             >
                 {icon && (
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">

@@ -1,9 +1,9 @@
-import { createClient } from "@libsql/client";
+import { createClient } from "@supabase/supabase-js";
 
-const url = process.env.TURSO_DATABASE_URL!;
-const authToken = process.env.TURSO_AUTH_TOKEN!;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-export const db = createClient({
-    url,
-    authToken,
-});
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+// Alias for easier refactoring if needed
+export const db = supabase;

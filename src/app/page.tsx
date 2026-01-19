@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Sidebar from "@/components/Sidebar";
 import CustomerTable from "@/components/CustomerTable";
-import { Layers, X, ChevronDown, Plus, Edit2, Trash2, Users, Activity, Award, TrendingUp, Clock, AlertTriangle } from "lucide-react";
+import { Layers, X, ChevronDown, Plus, Edit2, Trash2, Users, Activity, Award, TrendingUp, Clock, AlertTriangle, MapPin, Play, CheckCircle2, AlertCircle, Paperclip } from "lucide-react";
 import CustomSelect from "@/components/CustomSelect";
 import UserManager from "@/components/UserManager";
 import RoleManager from "@/components/RoleManager";
@@ -11,8 +11,9 @@ import Toast from "@/components/Toast";
 import IssueManager from "@/components/IssueManager";
 import SearchableCustomerSelect from "@/components/SearchableCustomerSelect";
 import SegmentedControl from "@/components/SegmentedControl";
+import Dashboard from "@/components/Dashboard";
 import InstallationManager from "@/components/InstallationManager";
-import { Customer, Branch, Installation, Issue } from "@/types";
+import { Customer, Branch, Installation, Issue, UsageStatus } from "@/types";
 import { importCustomersFromCSV, getCustomers, getIssues, getInstallations } from "./actions";
 
 function TableSummary({ customers }: { customers: Customer[] }) {
@@ -32,9 +33,11 @@ function TableSummary({ customers }: { customers: Customer[] }) {
             <td className="px-5 py-3 text-sm text-slate-400">{c.package}</td>
             <td className="px-5 py-3">
               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${c.usageStatus === "Active" ? "text-emerald-400 bg-emerald-500/10" :
-                c.usageStatus === "Trial" ? "text-amber-400 bg-amber-500/10" :
-                  c.usageStatus === "Inactive" ? "text-slate-400 bg-slate-500/10" : "text-rose-400 bg-rose-500/10"
-                }`}>{c.usageStatus}</span>
+                c.usageStatus === "Pending" ? "text-amber-400 bg-amber-500/10" :
+                  c.usageStatus === "Training" ? "text-indigo-400 bg-indigo-500/10" : "text-rose-400 bg-rose-500/10"
+                }`}>{c.usageStatus === "Active" ? "ใช้งานแล้ว" :
+                  c.usageStatus === "Pending" ? "รอการใช้งาน" :
+                    c.usageStatus === "Training" ? "รอการเทรนนิ่ง" : "ยกเลิก"}</span>
             </td>
           </tr>
         ))}
@@ -65,12 +68,17 @@ export default function CRMPage() {
   const [selectedBranchName, setSelectedBranchName] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<{ name: string, type: string, size: number, data: string }[]>([]);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
+  const [isEditingName, setIsEditingName] = useState(false);
 
   // Branch states
   const [branchInputs, setBranchInputs] = useState<Branch[]>([]);
+  const [activeBranchIndex, setActiveBranchIndex] = useState(0);
   const [editingBranchIndex, setEditingBranchIndex] = useState<number | null>(null);
   const [tempBranchName, setTempBranchName] = useState("");
   const [tempBranchAddress, setTempBranchAddress] = useState("");
+  const [modalUsageStatus, setModalUsageStatus] = useState<UsageStatus>("Active");
+  const [modalIssueStatus, setModalIssueStatus] = useState<"แจ้งเคส" | "กำลังดำเนินการ" | "เสร็จสิ้น">("แจ้งเคส");
+  const [showConfetti, setShowConfetti] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -143,7 +151,7 @@ export default function CRMPage() {
       subdomain: formData.get("subdomain") as string,
       productType: formData.get("product") as any,
       package: formData.get("package") as string,
-      usageStatus: (formData.get("usageStatus") as any) || "Active",
+      usageStatus: modalUsageStatus,
       installationStatus: editingCustomer ? editingCustomer.installationStatus : "Pending",
       branches: branchInputs,
       modifiedBy: user?.name,
@@ -161,6 +169,7 @@ export default function CRMPage() {
     localStorage.setItem("crm_customers_v2", JSON.stringify(updated));
     setModalOpen(false);
     setEditingCustomer(null);
+    setIsEditingName(false);
     setToast({ message: "บันทึกข้อมูลลูกค้าสำเร็จ", type: "success" });
   };
 
@@ -197,7 +206,7 @@ export default function CRMPage() {
       customerName: selectedCustomerName,
       branchName: selectedBranchName,
       severity: formData.get("severity") as any,
-      status: (formData.get("status") as any) || "แจ้งเคส",
+      status: modalIssueStatus,
       type: formData.get("type") as string,
       description: formData.get("description") as string,
       attachments: JSON.stringify(selectedFiles),
@@ -218,7 +227,15 @@ export default function CRMPage() {
     localStorage.setItem("crm_issues_v2", JSON.stringify(updated));
     setIssueModalOpen(false);
     setEditingIssue(null);
-    setToast({ message: "บันทึกข้อมูลเคสเรียบร้อยแล้ว", type: "success" });
+
+    // Show confetti when completing an issue
+    if (modalIssueStatus === "เสร็จสิ้น") {
+      setShowConfetti(true);
+      setTimeout(() => setShowConfetti(false), 3000);
+      setToast({ message: "🎉 ยินดี! แก้ไขเคสเสร็จสิ้นแล้ว", type: "success" });
+    } else {
+      setToast({ message: "บันทึกข้อมูลเคสเรียบร้อยแล้ว", type: "success" });
+    }
   };
 
   const handleDeleteIssue = (id: number) => {
@@ -229,33 +246,136 @@ export default function CRMPage() {
   };
 
   const handleAddInstallation = (newInst: any) => {
-    // Basic implementation for compatibility with existing manager
+    const nextInstId = installations.length > 0 ? Math.max(...installations.map(i => i.id)) + 1 : 1;
+    let finalCustomerId = newInst.customerId || 0;
+    let updatedCustomers = [...customers];
+
+    // If it's a new customer, create the customer record first
+    if (newInst.installationType === "new") {
+      const nextCustId = customers.length > 0 ? Math.max(...customers.map(c => c.id)) + 1 : 1;
+      finalCustomerId = nextCustId;
+
+      const newCustomer: Customer = {
+        id: nextCustId,
+        clientCode: `DE${nextCustId.toString().padStart(4, "0")}`,
+        name: newInst.newCustomerName,
+        subdomain: newInst.newCustomerLink,
+        productType: newInst.newCustomerProduct,
+        package: newInst.newCustomerPackage,
+        usageStatus: "Pending",
+        installationStatus: "Pending",
+        branches: [
+          { name: "สำนักงานใหญ่", isMain: true, status: "Pending" }
+        ],
+        createdBy: user?.name,
+        createdAt: new Date().toISOString()
+      };
+
+      updatedCustomers = [...customers, newCustomer];
+      setCustomers(updatedCustomers);
+      localStorage.setItem("crm_customers_v2", JSON.stringify(updatedCustomers));
+    } else if (newInst.installationType === "branch" && newInst.branchName) {
+      // If it's a new branch for an existing customer, add the branch to the customer
+      updatedCustomers = customers.map(c => {
+        if (c.id === finalCustomerId) {
+          const branches = c.branches || [];
+          // Check if branch already exists to avoid duplicates
+          if (!branches.some(b => b.name === newInst.branchName)) {
+            return {
+              ...c,
+              branches: [...branches, { name: newInst.branchName, isMain: false, status: "Pending" }]
+            };
+          }
+        }
+        return c;
+      });
+      setCustomers(updatedCustomers);
+      localStorage.setItem("crm_customers_v2", JSON.stringify(updatedCustomers));
+    }
+
     const data: Installation = {
-      id: installations.length > 0 ? Math.max(...installations.map(i => i.id)) + 1 : 1,
-      customerId: newInst.customerId || 0,
-      customerName: newInst.customerName || "",
+      id: nextInstId,
+      customerId: finalCustomerId,
+      customerName: newInst.installationType === "new" ? newInst.newCustomerName : (newInst.customerName || ""),
+      customerLink: newInst.installationType === "new" ? newInst.newCustomerLink : undefined,
+      branchName: newInst.installationType === "branch" ? newInst.branchName : undefined,
       status: "Pending",
       requestedBy: user?.name || "System",
       requestedAt: new Date().toISOString(),
       notes: newInst.notes,
       installationType: newInst.installationType
     };
-    const updated = [...installations, data];
-    setInstallations(updated);
-    localStorage.setItem("crm_installations_v2", JSON.stringify(updated));
+
+    const updatedInst = [...installations, data];
+    setInstallations(updatedInst);
+    localStorage.setItem("crm_installations_v2", JSON.stringify(updatedInst));
+
+    setToast({ message: newInst.installationType === "new" ? "สร้างลูกค้าและเปิดงานติดตั้งสำเร็จ" : "แจ้งงานติดตั้งสาขาใหม่สำเร็จ", type: "success" });
   };
 
-  const handleUpdateInstallationStatus = (id: number, status: any) => {
-    const updated = installations.map(inst => inst.id === id ? { ...inst, status, modifiedBy: user?.name, modifiedAt: new Date().toISOString() } : inst);
+  const handleUpdateInstallationStatus = (id: number, status: Installation["status"]) => {
+    const updated = installations.map(inst => {
+      if (inst.id === id) {
+        // If installation completed, also update customer/branch status
+        if (status === "Completed") {
+          const updatedCusts = customers.map(c => {
+            if (c.id === inst.customerId) {
+              const updatedBranches = c.branches?.map(b => {
+                // If it's a branch installation, match branch name
+                if (inst.installationType === "branch" && b.name === inst.branchName) {
+                  return { ...b, status: "Completed" as const };
+                }
+                // If it's a new main installation
+                if (inst.installationType === "new" && b.isMain) {
+                  return { ...b, status: "Completed" as const };
+                }
+                return b;
+              });
+              return {
+                ...c,
+                installationStatus: "Completed" as const,
+                branches: updatedBranches
+              };
+            }
+            return c;
+          });
+          setCustomers(updatedCusts);
+          localStorage.setItem("crm_customers_v2", JSON.stringify(updatedCusts));
+        } else if (status === "Installing") {
+          // Sync "Installing" status to customer and specific branch
+          const updatedCusts = customers.map(c => {
+            if (c.id === inst.customerId) {
+              const updatedBranches = c.branches?.map(b => {
+                if (inst.installationType === "branch" && b.name === inst.branchName) {
+                  return { ...b, status: "Installing" as const };
+                }
+                if (inst.installationType === "new" && b.isMain) {
+                  return { ...b, status: "Installing" as const };
+                }
+                return b;
+              });
+              return {
+                ...c,
+                installationStatus: "Installing" as const,
+                branches: updatedBranches
+              };
+            }
+            return c;
+          });
+          setCustomers(updatedCusts);
+          localStorage.setItem("crm_customers_v2", JSON.stringify(updatedCusts));
+        }
+
+        return { ...inst, status, modifiedBy: user?.name, modifiedAt: new Date().toISOString() };
+      }
+      return inst;
+    });
     setInstallations(updated);
     localStorage.setItem("crm_installations_v2", JSON.stringify(updated));
+    setToast({ message: "อัปเดตสถานะงานติดตั้งเรียบร้อยแล้ว", type: "success" });
   };
 
-  const handleAssignDev = (id: number, devName: string) => {
-    const updated = installations.map(inst => inst.id === id ? { ...inst, assignedDev: devName } : inst);
-    setInstallations(updated);
-    localStorage.setItem("crm_installations_v2", JSON.stringify(updated));
-  };
+
 
   const handleSaveUser = (userData: any) => {
     const updated = users.find(u => u.id === userData.id) ? users.map(u => u.id === userData.id ? userData : u) : [...users, userData];
@@ -318,76 +438,40 @@ export default function CRMPage() {
       <main className="flex-1 overflow-auto bg-gradient-to-br from-[#020617] via-[#0f172a] to-[#020617] relative">
         <div className="p-8 max-w-[1600px] mx-auto relative z-10">
           {currentView === "dashboard" ? (
-            <div className="space-y-8 animate-in fade-in slide-in-from-top-4 duration-500">
-              <div className="flex justify-between items-center bg-white/[0.02] border border-white/5 p-6 rounded-3xl backdrop-blur-md">
-                <div>
-                  <h1 className="text-4xl font-extrabold text-white tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">ภาพรวมระบบ</h1>
-                  <p className="text-slate-400 mt-2 flex items-center gap-2">
-                    <Activity className="w-4 h-4 text-emerald-400 animate-pulse" />
-                    ยินดีต้อนรับกลับมา, <span className="text-indigo-400 font-bold">{user.name}</span>
-                  </p>
-                </div>
-                <div className="flex gap-4">
-                  <button onClick={() => { setEditingCustomer(null); setBranchInputs([{ name: "สำนักงานใหญ่", isMain: true, address: "", status: "รอการติดตั้ง" }]); setModalOpen(true); }} className="btn btn-primary h-12 px-6 flex items-center gap-2 font-bold shadow-lg shadow-indigo-500/20 active:scale-95 transition-all">
-                    <Plus className="w-5 h-5" />
-                    เพิ่มลูกค้าใหม่
-                  </button>
-                  <button onClick={() => { setView("issues"); setIssueModalOpen(true); }} className="btn btn-ghost h-12 px-6 border border-white/10 hover:border-indigo-500/50 flex items-center gap-2 font-bold group">
-                    <AlertTriangle className="w-5 h-5 text-amber-500 group-hover:animate-shake" />
-                    แจ้งเคสใหม่
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {[
-                  { label: "ลูกค้าทั้งหมด", value: customers.length, icon: Users, gradient: "from-indigo-500/20 to-purple-500/20", iconColor: "text-indigo-400", trend: "+12%" },
-                  { label: "เคสที่รอดำเนินการ", value: issues.filter(i => i.status !== "เสร็จสิ้น").length, icon: Activity, gradient: "from-rose-500/20 to-orange-500/20", iconColor: "text-rose-400", trend: "-2%" },
-                  { label: "ติดตั้งสำเร็จ (เดือนนี้)", value: installations.filter(i => i.status === "Completed").length, icon: Layers, gradient: "from-emerald-500/20 to-teal-500/20", iconColor: "text-emerald-400", trend: "+8%" },
-                  { label: "โปรเจกต์ Elite", value: customers.filter(c => c.package === "Elite").length, icon: Award, gradient: "from-amber-500/20 to-orange-500/20", iconColor: "text-amber-400", trend: "+5%" },
-                ].map((stat, i) => (
-                  <div key={i} className={`glass-card p-6 border-white/10 bg-gradient-to-br ${stat.gradient} hover:scale-[1.02] transition-all duration-300 cursor-pointer group`}>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">{stat.label}</p>
-                        <p className="text-3xl font-bold mt-3 text-white">{stat.value}</p>
-                        <div className="flex items-center gap-1 mt-2">
-                          <TrendingUp className="w-3 h-3 text-emerald-400" />
-                          <span className="text-xs text-emerald-400 font-medium">{stat.trend}</span>
-                        </div>
-                      </div>
-                      <div className={`p-3 rounded-xl bg-white/5 group-hover:bg-white/10 transition-colors`}>
-                        <stat.icon className={`w-6 h-6 ${stat.iconColor}`} />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="glass-card overflow-hidden border-white/10">
-                <div className="p-6 border-b border-white/10 bg-gradient-to-r from-indigo-500/10 to-purple-500/10">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <h3 className="font-bold text-lg text-white">ลูกค้าล่าสุด</h3>
-                    </div>
-                    <button onClick={() => setView("customers")} className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-1">
-                      ดูทั้งหมด <ChevronDown className="w-4 h-4 -rotate-90" />
-                    </button>
-                  </div>
-                </div>
-                <TableSummary customers={customers.slice(0, 5)} />
-              </div>
-            </div>
+            <Dashboard
+              customers={customers}
+              installations={installations}
+              issues={issues}
+              user={user}
+              onViewChange={setView}
+            />
           ) : currentView === "customers" ? (
-            <CustomerTable customers={customers} onEdit={(c) => { setEditingCustomer(c); setBranchInputs(c.branches || []); setModalOpen(true); }} onDelete={(id) => { const customer = customers.find(c => c.id === id); setDeleteConfirm({ type: 'customer', id, title: customer?.name || 'Customer' }); }} onImport={handleImportCSV} />
+            <CustomerTable
+              customers={customers}
+              onEdit={(c) => {
+                setEditingCustomer(c);
+                const branches = c.branches && c.branches.length > 0
+                  ? c.branches
+                  : [{ name: "สำนักงานใหญ่", isMain: true, address: "", status: "Pending" as "Pending" }];
+                setBranchInputs(branches);
+                setModalUsageStatus(c.usageStatus || "Active");
+                setActiveBranchIndex(0);
+                setModalOpen(true);
+              }}
+              onDelete={(id) => {
+                const customer = customers.find(c => c.id === id);
+                setDeleteConfirm({ type: 'customer', id, title: customer?.name || 'Customer' });
+              }}
+              onImport={handleImportCSV}
+            />
           ) : currentView === "user_management" ? (
             <UserManager users={users} roles={roles} onSave={handleSaveUser} onDelete={handleDeleteUser} />
           ) : currentView === "role_management" ? (
             <RoleManager roles={roles} onSave={handleSaveRole} onDelete={handleDeleteRole} />
           ) : currentView === "issues" ? (
-            <IssueManager issues={issues} customers={customers} onAdd={() => { setEditingIssue(null); setSelectedCustomerId(null); setSelectedCustomerName(""); setSelectedBranchName(""); setSelectedFiles([]); setModalMode('create'); setIssueModalOpen(true); }} onEdit={(issue) => { setEditingIssue(issue); setSelectedCustomerId(issue.customerId); setSelectedCustomerName(issue.customerName); setSelectedBranchName(issue.branchName || ""); setSelectedFiles(JSON.parse(issue.attachments || "[]")); setModalMode('edit'); setIssueModalOpen(true); }} onDelete={(id) => { const issue = issues.find(i => i.id === id); setDeleteConfirm({ type: 'issue', id, title: issue?.title || 'Issue' }); }} />
+            <IssueManager issues={issues} customers={customers} onAdd={() => { setEditingIssue(null); setSelectedCustomerId(null); setSelectedCustomerName(""); setSelectedBranchName(""); setSelectedFiles([]); setModalMode('create'); setModalIssueStatus("แจ้งเคส"); setIssueModalOpen(true); }} onEdit={(issue) => { setEditingIssue(issue); setSelectedCustomerId(issue.customerId); setSelectedCustomerName(issue.customerName); setSelectedBranchName(issue.branchName || ""); setSelectedFiles(JSON.parse(issue.attachments || "[]")); setModalMode('edit'); setModalIssueStatus(issue.status); setIssueModalOpen(true); }} onDelete={(id) => { const issue = issues.find(i => i.id === id); setDeleteConfirm({ type: 'issue', id, title: issue?.title || 'Issue' }); }} />
           ) : currentView === "installations" ? (
-            <InstallationManager installations={installations} customers={customers} onAddInstallation={handleAddInstallation} onUpdateStatus={handleUpdateInstallationStatus} onAssignDev={handleAssignDev} />
+            <InstallationManager installations={installations} customers={customers} onAddInstallation={handleAddInstallation} onUpdateStatus={handleUpdateInstallationStatus} />
           ) : null}
         </div>
       </main>
@@ -398,37 +482,268 @@ export default function CRMPage() {
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
-          <div className="glass-card w-full max-w-4xl p-6 relative shadow-2xl">
-            <button onClick={() => setModalOpen(false)} className="absolute top-5 right-5 text-slate-400 hover:text-white"><X /></button>
-            <h2 className="text-xl font-bold mb-6">{editingCustomer ? "แก้ไขข้อมูลลูกค้า" : "เพิ่มข้อมูลลูกค้า"}</h2>
-            <form onSubmit={handleSaveCustomer}>
-              <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-slate-400">ชื่อคลินิก/ร้าน</label>
-                    <input name="name" defaultValue={editingCustomer?.name} className="input-field py-1.5 h-8 text-xs" required />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-slate-400">Subdomain / Link</label>
-                    <input name="subdomain" defaultValue={editingCustomer?.subdomain} className="input-field py-1.5 h-8 text-xs" required />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-slate-400">ประเภทระบบ</label>
-                      <CustomSelect name="product" defaultValue={editingCustomer?.productType || "Dr.Ease"} options={[{ value: "Dr.Ease", label: "Dr.Ease" }, { value: "EasePos", label: "EasePos" }]} />
+          <div className="glass-card w-full max-w-4xl max-h-[90vh] flex flex-col relative shadow-2xl">
+            <div className="p-6 border-b border-white/5 flex items-center justify-between shrink-0">
+              <h2 className="text-xl font-bold">{editingCustomer ? "แก้ไขข้อมูลลูกค้า" : "เพิ่มข้อมูลลูกค้า"}</h2>
+              <button onClick={() => { setModalOpen(false); setIsEditingName(false); }} className="text-slate-400 hover:text-white transition-colors p-1 hover:bg-white/5 rounded-lg"><X /></button>
+            </div>
+            <div className="overflow-y-auto p-6 custom-scrollbar flex-1">
+              <form onSubmit={handleSaveCustomer}>
+                <div className="space-y-6">
+                  {/* Basic Information */}
+                  <div>
+                    <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+                      <div className="w-1 h-4 bg-indigo-500 rounded-full"></div>
+                      ข้อมูลพื้นฐาน
+                    </h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      {editingCustomer && (
+                        <div className="col-span-2 flex items-center gap-6">
+                          {/* Customer ID Badge */}
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] uppercase tracking-wider font-bold text-slate-500">Customer ID</label>
+                            <div className="flex items-center">
+                              <div className="bg-indigo-500/10 border border-indigo-500/20 backdrop-blur-md rounded-md px-2.5 py-1 flex items-center gap-2 group hover:border-indigo-500/40 transition-all duration-300">
+                                <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></div>
+                                <span className="text-xs font-mono font-black text-indigo-400 tracking-tight leading-none">
+                                  {editingCustomer.clientCode || `DE${editingCustomer.id.toString().padStart(4, "0")}`}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="space-y-1 col-span-2">
+                        <label className="text-xs font-medium text-slate-400">ชื่อคลินิก/ร้าน</label>
+                        {isEditingName || !editingCustomer ? (
+                          <div className="relative group">
+                            <input
+                              name="name"
+                              defaultValue={editingCustomer?.name}
+                              className="input-field pr-10"
+                              placeholder="กรอกชื่อคลินิกหรือร้าน..."
+                              autoFocus={isEditingName}
+                              required
+                            />
+                            {isEditingName && (
+                              <button
+                                type="button"
+                                onClick={() => setIsEditingName(false)}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-white transition-colors"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-between bg-white/[0.03] border border-white/5 rounded-lg px-3 py-2 group hover:border-indigo-500/30 transition-all duration-200">
+                            <span className="text-sm font-semibold text-slate-200">{editingCustomer?.name}</span>
+                            <button
+                              type="button"
+                              onClick={() => setIsEditingName(true)}
+                              className="p-1 px-2 rounded bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 transition-all flex items-center gap-1.5 text-[10px] font-bold"
+                            >
+                              <Edit2 className="w-3 h-3" />
+                              แก้ไขชื่อ
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-slate-400">Subdomain / Link</label>
+                        <input name="subdomain" defaultValue={editingCustomer?.subdomain} className="input-field" required />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-slate-400">ประเภทระบบ</label>
+                        <CustomSelect name="product" defaultValue={editingCustomer?.productType || "Dr.Ease"} options={[{ value: "Dr.Ease", label: "Dr.Ease" }, { value: "EasePos", label: "EasePos" }]} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-slate-400">สถานะการใช้งาน</label>
+                        <CustomSelect
+                          options={[
+                            { value: "Training", label: "รอการเทรนนิ่ง" },
+                            { value: "Pending", label: "รอการใช้งาน" },
+                            { value: "Active", label: "ใช้งานแล้ว" },
+                            { value: "Canceled", label: "ยกเลิก" },
+                          ]}
+                          value={modalUsageStatus}
+                          onChange={(val) => setModalUsageStatus(val as UsageStatus)}
+                          placeholder="เลือกสถานะ..."
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-slate-400">แพ็คเกจ</label>
+                        <CustomSelect name="package" defaultValue={editingCustomer?.package || "Standard"} options={[{ value: "Starter", label: "Starter" }, { value: "Standard", label: "Standard" }, { value: "Elite", label: "Elite" }]} />
+                      </div>
+
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-slate-400">แพ็คเกจ</label>
-                      <CustomSelect name="package" defaultValue={editingCustomer?.package || "Standard"} options={[{ value: "Starter", label: "Starter" }, { value: "Standard", label: "Standard" }, { value: "Elite", label: "Elite" }]} />
+                  </div>
+
+                  {/* Branch Management - Master Detail Layout */}
+                  <div className="border-t border-white/10 pt-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                        <div className="w-1 h-4 bg-emerald-500 rounded-full"></div>
+                        จัดการสาขา ({branchInputs.length})
+                      </h3>
+                    </div>
+
+                    <div className="flex flex-col md:flex-row gap-6 h-[320px] bg-slate-900/40 rounded-xl border border-white/5 p-4">
+                      {/* Left: Branch List */}
+                      <div className="w-full md:w-1/3 flex flex-col border-r border-white/5 pr-4">
+                        <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2">
+                          {branchInputs.map((branch, idx) => (
+                            <button
+                              type="button"
+                              key={idx}
+                              onClick={() => setActiveBranchIndex(idx)}
+                              className={`w-full text-left p-3 rounded-lg border transition-all duration-200 group relative ${idx === activeBranchIndex
+                                ? "bg-indigo-500/10 border-indigo-500/30 shadow-sm"
+                                : "bg-transparent border-transparent hover:bg-white/5"
+                                }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                  <div className={`w-6 h-6 rounded flex items-center justify-center text-[10px] font-bold ${idx === activeBranchIndex ? "bg-indigo-500 text-white" : "bg-slate-700 text-slate-400"
+                                    }`}>
+                                    {idx + 1}
+                                  </div>
+                                  <div className="flex flex-col">
+                                    <span className={`text-xs font-semibold truncate max-w-[120px] ${idx === activeBranchIndex ? "text-white" : "text-slate-400 group-hover:text-slate-200"
+                                      }`}>
+                                      {branch.name || "ระบุชื่อสาขา..."}
+                                    </span>
+                                    {branch.isMain && (
+                                      <span className="text-[9px] text-emerald-400 font-medium">Main Branch</span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Status Indicator Dot */}
+                              <div className={`absolute right-3 top-3 w-1.5 h-1.5 rounded-full ${branch.status === "Completed" ? "bg-emerald-500" :
+                                branch.status === "Installing" ? "bg-blue-500" : "bg-slate-600"
+                                }`} />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Right: Branch Details */}
+                      <div className="flex-1 pl-2">
+                        {branchInputs[activeBranchIndex] ? (
+                          <div className="h-full flex flex-col animate-in fade-in slide-in-from-right-2 duration-200">
+                            <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/5">
+                              <div>
+                                <h4 className="text-sm font-semibold text-white">รายละเอียดสาขา</h4>
+                                <p className="text-[10px] text-slate-500">แก้ไขข้อมูลและจัดการสถานะของสาขาที่เลือก</p>
+                              </div>
+                              {!branchInputs[activeBranchIndex].isMain && (
+                                <button
+                                  type="button"
+                                  onClick={() => setDeleteConfirm({ type: 'branch', index: activeBranchIndex, title: branchInputs[activeBranchIndex].name || "สาขาที่เลือก" })}
+                                  className="px-3 py-1.5 rounded bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 text-xs font-medium flex items-center gap-1.5 transition-colors"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                  ลบสาขานี้
+                                </button>
+                              )}
+                            </div>
+
+                            <div className="space-y-4">
+                              <div className="space-y-1.5">
+                                <label className="text-xs font-medium text-slate-400">ชื่อสาขา (Branch Name)</label>
+                                <div className="relative">
+                                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+                                  <input
+                                    type="text"
+                                    value={branchInputs[activeBranchIndex].name}
+                                    onChange={(e) => {
+                                      const updated = [...branchInputs];
+                                      updated[activeBranchIndex].name = e.target.value;
+                                      setBranchInputs(updated);
+                                    }}
+                                    placeholder="เช่น สาขาสยามพารากอน..."
+                                    className="input-field pl-9 py-2 text-sm w-full"
+                                    autoFocus
+                                  />
+                                </div>
+                              </div>
+
+
+
+                              <div className="space-y-1.5">
+                                <label className="text-xs font-medium text-slate-400">สถานะการติดตั้ง (Installation Status)</label>
+                                <div className="h-9 flex items-center">
+                                  {(() => {
+                                    const activeBranch = branchInputs[activeBranchIndex];
+                                    const inst = installations.find(i =>
+                                      i.customerId === editingCustomer?.id &&
+                                      ((activeBranch.isMain && i.installationType === "new") ||
+                                        (!activeBranch.isMain && i.installationType === "branch" && i.branchName === activeBranch.name))
+                                    );
+
+                                    if (inst) {
+                                      const getStatusIcon = (status: string) => {
+                                        switch (status) {
+                                          case "Pending": return <Clock className="w-3.5 h-3.5 text-amber-400" />;
+                                          case "Installing": return <Play className="w-3.5 h-3.5 text-indigo-400 animate-pulse" />;
+                                          case "Completed": return <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />;
+                                          default: return <AlertCircle className="w-3.5 h-3.5 text-slate-400" />;
+                                        }
+                                      };
+
+                                      const getStatusStyle = (status: string) => {
+                                        switch (status) {
+                                          case "Pending": return "bg-amber-500/15 text-amber-400 border-amber-500/20";
+                                          case "Installing": return "bg-indigo-500/15 text-indigo-400 border-indigo-500/20";
+                                          case "Completed": return "bg-emerald-500/15 text-emerald-400 border-emerald-500/20";
+                                          default: return "bg-slate-500/15 text-slate-400 border-slate-500/20";
+                                        }
+                                      };
+
+                                      const statusLabel = inst.status; // Directly use English status label
+
+                                      return (
+                                        <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border shadow-sm ${getStatusStyle(inst.status)}`}>
+                                          {getStatusIcon(inst.status)}
+                                          {statusLabel}
+                                        </div>
+                                      );
+                                    }
+
+                                    // Fallback to internal branch status
+                                    return (
+                                      <span className={`inline-flex px-2.5 py-1 rounded-full text-[10px] font-bold whitespace-nowrap shadow-sm ${activeBranch.status === "Completed" ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20" :
+                                        activeBranch.status === "Installing" ? "bg-blue-500/15 text-blue-400 border border-blue-500/20" :
+                                          "bg-slate-500/15 text-slate-400 border border-slate-500/20"
+                                        }`}>
+                                        {activeBranch.status || "Pending"}
+                                      </span>
+                                    );
+                                  })()}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="h-full flex flex-col items-center justify-center text-slate-500 opacity-50">
+                            <MapPin className="w-12 h-12 mb-3" />
+                            <p className="text-sm">เลือกสาขาเพื่อแก้ไขรายละเอียด</p>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-              <div className="flex gap-3 pt-6 mt-6 border-t border-white/10">
-                <button type="button" onClick={() => setModalOpen(false)} className="btn btn-ghost flex-1">ยกเลิก</button>
-                <button type="submit" className="btn btn-primary flex-1">บันทึก</button>
-              </div>
-            </form>
+
+                <div className="flex gap-3 pt-6 mt-6 border-t border-white/10">
+                  <button type="button" onClick={() => setModalOpen(false)} className="btn btn-ghost flex-1">ยกเลิก</button>
+                  <button type="submit" className="btn btn-primary flex-1">บันทึก</button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}
@@ -436,12 +751,68 @@ export default function CRMPage() {
       {/* Issue Modal and Delete Confirm remain similar but with updated attachments handling */}
       {isIssueModalOpen && (
         <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setIssueModalOpen(false)} />
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-md" />
           <div className="glass-card w-full max-w-2xl max-h-[90vh] flex flex-col relative shadow-2xl border-indigo-500/20">
             <div className="p-6 border-b border-white/5 flex justify-between items-center">
               <h2 className="text-xl font-bold text-white">{editingIssue ? "Edit Issue" : "New Issue"}</h2>
               <button onClick={() => setIssueModalOpen(false)}><X /></button>
             </div>
+
+            {/* Status Indicator Bar - Only show when editing */}
+            {editingIssue && (
+              <div className="px-6 py-4 bg-white/[0.02] border-b border-white/5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-slate-400">Status:</span>
+
+                  {/* Clickable Status Flow Buttons - Forward Only */}
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={editingIssue.status !== "แจ้งเคส"}
+                      onClick={() => setModalIssueStatus("แจ้งเคส")}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${modalIssueStatus === "แจ้งเคส"
+                        ? "bg-amber-500 text-white shadow-lg shadow-amber-500/30 scale-105"
+                        : editingIssue.status !== "แจ้งเคส"
+                          ? "bg-slate-700/50 text-slate-500 cursor-not-allowed border border-slate-600/20"
+                          : "bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20"
+                        }`}
+                    >
+                      แจ้งเคส
+                    </button>
+
+                    <span className="text-slate-600">→</span>
+
+                    <button
+                      type="button"
+                      disabled={editingIssue.status === "เสร็จสิ้น"}
+                      onClick={() => setModalIssueStatus("กำลังดำเนินการ")}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${modalIssueStatus === "กำลังดำเนินการ"
+                        ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/30 scale-105"
+                        : editingIssue.status === "เสร็จสิ้น"
+                          ? "bg-slate-700/50 text-slate-500 cursor-not-allowed border border-slate-600/20"
+                          : "bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 border border-indigo-500/20"
+                        }`}
+                    >
+                      กำลังดำเนินการ
+                    </button>
+
+                    <span className="text-slate-600">→</span>
+
+                    <button
+                      type="button"
+                      onClick={() => setModalIssueStatus("เสร็จสิ้น")}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${modalIssueStatus === "เสร็จสิ้น"
+                        ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 scale-105"
+                        : "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20"
+                        }`}
+                    >
+                      เสร็จสิ้น
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="flex-1 overflow-y-auto p-6">
               <form id="issue-form" onSubmit={handleSaveIssue} className="space-y-4">
                 <div className="space-y-1">
@@ -450,13 +821,119 @@ export default function CRMPage() {
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-slate-400">Subject</label>
-                  <input name="title" defaultValue={editingIssue?.title} className="input-field py-1.5 h-8 text-xs" required />
+                  <input name="title" defaultValue={editingIssue?.title} className="input-field" required />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <CustomSelect name="type" defaultValue={editingIssue?.type || "issue"} options={[{ value: "issue", label: "Issue" }, { value: "request", label: "Request" }]} />
-                  <CustomSelect name="severity" defaultValue={editingIssue?.severity || "ต่ำ"} options={[{ value: "ต่ำ", label: "ต่ำ" }, { value: "ปานกลาง", label: "ปานกลาง" }, { value: "สูง", label: "สูง" }]} />
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-slate-400">Issue Type</label>
+                    <CustomSelect
+                      name="type"
+                      defaultValue={editingIssue?.type || "Bug Report"}
+                      options={[
+                        { value: "Bug Report", label: "Bug Report" },
+                        { value: "Data Request", label: "Data Request" },
+                        { value: "System Modification", label: "System Modification" },
+                        { value: "New Requirement", label: "New Requirement" }
+                      ]}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-slate-400">Severity</label>
+                    <CustomSelect
+                      name="severity"
+                      defaultValue={editingIssue?.severity || "Low"}
+                      options={[
+                        { value: "Low", label: "Low" },
+                        { value: "Medium", label: "Medium" },
+                        { value: "High", label: "High" },
+                        { value: "Critical", label: "Critical" }
+                      ]}
+                    />
+                  </div>
                 </div>
-                <textarea name="description" defaultValue={editingIssue?.description} className="input-field min-h-[100px] text-xs" placeholder="Description..." />
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-slate-400">Description</label>
+                  <textarea name="description" defaultValue={editingIssue?.description} className="input-field min-h-[100px] text-xs" placeholder="Description..." />
+                </div>
+
+                {/* File Attachments */}
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-slate-400">Attachments</label>
+
+                  {/* Upload Zone */}
+                  <div
+                    className="border-2 border-dashed border-white/10 rounded-xl p-4 text-center hover:border-indigo-500/50 hover:bg-indigo-500/5 transition-all cursor-pointer"
+                    onClick={() => document.getElementById('file-input')?.click()}
+                  >
+                    <input
+                      id="file-input"
+                      type="file"
+                      multiple
+                      accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+                      className="hidden"
+                      onChange={(e) => {
+                        const files = e.target.files;
+                        if (files) {
+                          Array.from(files).forEach(file => {
+                            if (file.size > 2 * 1024 * 1024) {
+                              setToast({ message: `ไฟล์ ${file.name} ใหญ่เกิน 2MB`, type: "error" });
+                              return;
+                            }
+                            const reader = new FileReader();
+                            reader.onload = () => {
+                              setSelectedFiles(prev => [...prev, {
+                                name: file.name,
+                                type: file.type,
+                                size: file.size,
+                                data: reader.result as string
+                              }]);
+                            };
+                            reader.readAsDataURL(file);
+                          });
+                        }
+                        e.target.value = '';
+                      }}
+                    />
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="w-10 h-10 rounded-full bg-indigo-500/10 flex items-center justify-center">
+                        <Paperclip className="w-5 h-5 text-indigo-400" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-300">คลิกเพื่อเลือกไฟล์หรือลากไฟล์มาวาง</p>
+                        <p className="text-[10px] text-slate-500 mt-1">รองรับ: รูปภาพ, PDF, Word, Excel (สูงสุด 2MB ต่อไฟล์)</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* File Preview List */}
+                  {selectedFiles.length > 0 && (
+                    <div className="space-y-2 mt-3">
+                      {selectedFiles.map((file, idx) => (
+                        <div key={idx} className="flex items-center gap-3 p-2 bg-white/5 rounded-lg border border-white/10">
+                          {/* Thumbnail for images */}
+                          {file.type.startsWith('image/') ? (
+                            <img src={file.data} alt={file.name} className="w-10 h-10 object-cover rounded" />
+                          ) : (
+                            <div className="w-10 h-10 bg-slate-700 rounded flex items-center justify-center text-[10px] font-bold text-slate-400">
+                              {file.name.split('.').pop()?.toUpperCase()}
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-slate-300 truncate">{file.name}</p>
+                            <p className="text-[10px] text-slate-500">{(file.size / 1024).toFixed(1)} KB</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedFiles(prev => prev.filter((_, i) => i !== idx))}
+                            className="p-1.5 hover:bg-rose-500/20 rounded-lg transition-colors"
+                          >
+                            <X className="w-4 h-4 text-rose-400" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </form>
             </div>
             <div className="p-6 border-t border-white/5 flex gap-2">
@@ -474,14 +951,41 @@ export default function CRMPage() {
             <h3 className="text-lg font-bold mb-2">ยืนยันการลบ?</h3>
             <p className="text-sm text-slate-400 mb-6">{deleteConfirm.title}</p>
             <div className="flex gap-3">
-              <button onClick={() => setDeleteConfirm(null)} className="btn btn-ghost flex-1">Cancel</button>
+              <button onClick={() => setDeleteConfirm(null)} className="btn btn-ghost flex-1">ยกเลิก</button>
               <button onClick={() => {
                 if (deleteConfirm.type === 'customer' && deleteConfirm.id) handleDeleteCustomer(deleteConfirm.id);
                 if (deleteConfirm.type === 'issue' && deleteConfirm.id) handleDeleteIssue(deleteConfirm.id);
+                if (deleteConfirm.type === 'branch' && deleteConfirm.index !== undefined) {
+                  const filtered = branchInputs.filter((_, i) => i !== deleteConfirm.index);
+                  setBranchInputs(filtered);
+                  setActiveBranchIndex(Math.max(0, (deleteConfirm.index || 0) - 1));
+                }
                 setDeleteConfirm(null);
-              }} className="btn bg-rose-500 hover:bg-rose-600 text-white flex-1">Delete</button>
+              }} className="btn bg-rose-500 hover:bg-rose-600 text-white flex-1">ลบรายการ</button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Confetti Effect */}
+      {showConfetti && (
+        <div className="fixed inset-0 z-[300] pointer-events-none overflow-hidden">
+          {[...Array(50)].map((_, i) => (
+            <div
+              key={i}
+              className="absolute animate-confetti"
+              style={{
+                left: `${Math.random() * 100}%`,
+                top: '-10px',
+                width: `${8 + Math.random() * 12}px`,
+                height: `${8 + Math.random() * 12}px`,
+                backgroundColor: ['#f59e0b', '#10b981', '#6366f1', '#ec4899', '#8b5cf6', '#06b6d4'][Math.floor(Math.random() * 6)],
+                borderRadius: Math.random() > 0.5 ? '50%' : '2px',
+                animationDelay: `${Math.random() * 2}s`,
+                animationDuration: `${2 + Math.random() * 2}s`,
+              }}
+            />
+          ))}
         </div>
       )}
     </div>

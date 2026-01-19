@@ -1,13 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Edit2, Trash2, ShieldCheck, X, CheckCircle2 } from "lucide-react";
+import { Plus, Edit2, Trash2, ShieldCheck, X, Check } from "lucide-react";
+
+interface MenuPermission {
+    create: boolean;
+    read: boolean;
+    update: boolean;
+    delete: boolean;
+}
 
 interface RoleData {
     id: string;
     name: string;
     description: string;
-    permissions: string[];
+    permissions: Record<string, MenuPermission>;
 }
 
 interface RoleManagerProps {
@@ -16,28 +23,59 @@ interface RoleManagerProps {
     onDelete: (id: string) => void;
 }
 
-const AVAILABLE_PERMISSIONS = [
-    { id: "dashboard", label: "Dashboard" },
-    { id: "customers", label: "จัดการลูกค้า" },
-    { id: "user_management", label: "จัดการผู้ใช้งาน" },
-    { id: "role_management", label: "จัดการบทบาท" },
+const AVAILABLE_MENUS = [
+    { id: "dashboard", label: "Dashboard", icon: "📊" },
+    { id: "customers", label: "จัดการลูกค้า", icon: "👥" },
+    { id: "installations", label: "งานติดตั้ง", icon: "🔧" },
+    { id: "issues", label: "แจ้งปัญหา", icon: "📝" },
+    { id: "user_management", label: "จัดการผู้ใช้งาน", icon: "👤" },
+    { id: "role_management", label: "จัดการบทบาท", icon: "🛡️" },
 ];
+
+const DEFAULT_PERMISSION: MenuPermission = { create: false, read: false, update: false, delete: false };
 
 export default function RoleManager({ roles, onSave, onDelete }: RoleManagerProps) {
     const [isModalOpen, setModalOpen] = useState(false);
     const [editingRole, setEditingRole] = useState<RoleData | null>(null);
-    const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
+    const [permissions, setPermissions] = useState<Record<string, MenuPermission>>({});
 
     const handleOpenModal = (role: RoleData | null = null) => {
         setEditingRole(role);
-        setSelectedPermissions(role?.permissions || []);
+        if (role?.permissions) {
+            setPermissions(role.permissions);
+        } else {
+            // Initialize with default permissions
+            const defaultPerms: Record<string, MenuPermission> = {};
+            AVAILABLE_MENUS.forEach(menu => {
+                defaultPerms[menu.id] = { ...DEFAULT_PERMISSION };
+            });
+            setPermissions(defaultPerms);
+        }
         setModalOpen(true);
     };
 
-    const togglePermission = (id: string) => {
-        setSelectedPermissions(prev =>
-            prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]
-        );
+    const togglePermission = (menuId: string, action: keyof MenuPermission) => {
+        setPermissions(prev => ({
+            ...prev,
+            [menuId]: {
+                ...prev[menuId],
+                [action]: !prev[menuId]?.[action]
+            }
+        }));
+    };
+
+    const toggleAllForMenu = (menuId: string) => {
+        const current = permissions[menuId];
+        const allChecked = current?.create && current?.read && current?.update && current?.delete;
+        setPermissions(prev => ({
+            ...prev,
+            [menuId]: {
+                create: !allChecked,
+                read: !allChecked,
+                update: !allChecked,
+                delete: !allChecked
+            }
+        }));
     };
 
     const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -47,10 +85,22 @@ export default function RoleManager({ roles, onSave, onDelete }: RoleManagerProp
             id: editingRole ? editingRole.id : `role_${Date.now()}`,
             name: formData.get("name") as string,
             description: formData.get("description") as string,
-            permissions: selectedPermissions,
+            permissions: permissions,
         };
         onSave(data);
         setModalOpen(false);
+    };
+
+    const getPermissionCount = (role: RoleData) => {
+        if (!role.permissions) return 0;
+        let count = 0;
+        Object.values(role.permissions).forEach(p => {
+            if (p.create) count++;
+            if (p.read) count++;
+            if (p.update) count++;
+            if (p.delete) count++;
+        });
+        return count;
     };
 
     return (
@@ -86,14 +136,31 @@ export default function RoleManager({ roles, onSave, onDelete }: RoleManagerProp
                             </div>
                         </div>
                         <div className="space-y-2">
-                            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">เมนูที่เข้าถึงได้:</p>
+                            <div className="flex items-center justify-between">
+                                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">สิทธิ์การเข้าถึง:</p>
+                                <span className="text-xs text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-full">
+                                    {getPermissionCount(r)} สิทธิ์
+                                </span>
+                            </div>
                             <div className="flex flex-wrap gap-2">
-                                {r.permissions.map(p => (
-                                    <span key={p} className="px-2 py-1 rounded-md bg-indigo-500/5 text-indigo-300 text-xs border border-indigo-500/10">
-                                        {AVAILABLE_PERMISSIONS.find(ap => ap.id === p)?.label || p}
-                                    </span>
-                                ))}
-                                {r.permissions.length === 0 && <span className="text-xs text-slate-500 italic">ไม่มีสิทธิการเข้าถึง</span>}
+                                {AVAILABLE_MENUS.filter(menu => {
+                                    const p = r.permissions?.[menu.id];
+                                    return p?.create || p?.read || p?.update || p?.delete;
+                                }).map(menu => {
+                                    const p = r.permissions?.[menu.id];
+                                    const actions = [
+                                        p?.read && 'R',
+                                        p?.create && 'C',
+                                        p?.update && 'U',
+                                        p?.delete && 'D'
+                                    ].filter(Boolean).join('');
+                                    return (
+                                        <span key={menu.id} className="px-2 py-1 rounded-md bg-indigo-500/5 text-indigo-300 text-xs border border-indigo-500/10">
+                                            {menu.icon} {menu.label} <span className="text-indigo-400/60">({actions})</span>
+                                        </span>
+                                    );
+                                })}
+                                {getPermissionCount(r) === 0 && <span className="text-xs text-slate-500 italic">ไม่มีสิทธิการเข้าถึง</span>}
                             </div>
                         </div>
                     </div>
@@ -102,44 +169,92 @@ export default function RoleManager({ roles, onSave, onDelete }: RoleManagerProp
 
             {isModalOpen && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setModalOpen(false)} />
-                    <div className="glass-card w-full max-w-lg p-8 relative shadow-2xl animate-in fade-in zoom-in duration-200">
-                        <button onClick={() => setModalOpen(false)} className="absolute top-6 right-6 p-2 text-slate-400 hover:text-white">
-                            <X className="w-6 h-6" />
-                        </button>
-                        <h2 className="text-2xl font-bold mb-6">{editingRole ? "แก้ไขบทบาท" : "เพิ่มบทบาท"}</h2>
-                        <form onSubmit={handleSubmit} className="space-y-6">
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-slate-400">ชื่อบทบาท</label>
-                                <input name="name" defaultValue={editingRole?.name} className="input-field" required />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-slate-400">รายละเอียด</label>
-                                <textarea name="description" defaultValue={editingRole?.description} className="input-field h-24 resize-none" />
-                            </div>
-                            <div className="space-y-3">
-                                <label className="text-sm font-medium text-slate-400">สิทธิการเข้าถึงเมนู</label>
-                                <div className="grid grid-cols-2 gap-3">
-                                    {AVAILABLE_PERMISSIONS.map(p => (
-                                        <button
-                                            key={p.id}
-                                            type="button"
-                                            onClick={() => togglePermission(p.id)}
-                                            className={`flex items-center gap-2 p-3 rounded-xl border transition-all text-left ${selectedPermissions.includes(p.id)
-                                                    ? "bg-indigo-500/10 border-indigo-500/30 text-indigo-300"
-                                                    : "bg-black/20 border-white/5 text-slate-400 hover:border-white/10"
-                                                }`}
-                                        >
-                                            <div className={`w-5 h-5 rounded-full flex items-center justify-center border ${selectedPermissions.includes(p.id) ? "border-indigo-400 bg-indigo-400 text-slate-900" : "border-slate-600"
-                                                }`}>
-                                                {selectedPermissions.includes(p.id) && <CheckCircle2 className="w-3 h-3" />}
-                                            </div>
-                                            <span className="text-sm">{p.label}</span>
-                                        </button>
-                                    ))}
+                    <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
+                    <div className="glass-card w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col relative shadow-2xl animate-in fade-in zoom-in duration-200">
+                        <div className="p-6 border-b border-white/5 flex justify-between items-center shrink-0">
+                            <h2 className="text-2xl font-bold">{editingRole ? "แก้ไขบทบาท" : "เพิ่มบทบาท"}</h2>
+                            <button onClick={() => setModalOpen(false)} className="p-2 text-slate-400 hover:text-white">
+                                <X className="w-6 h-6" />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+                            <div className="p-6 space-y-6 overflow-y-auto custom-scrollbar flex-1">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium text-slate-400">ชื่อบทบาท</label>
+                                        <input name="name" defaultValue={editingRole?.name} className="input-field" required />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium text-slate-400">รายละเอียด</label>
+                                        <input name="description" defaultValue={editingRole?.description} className="input-field" />
+                                    </div>
+                                </div>
+
+                                {/* Permission Matrix */}
+                                <div className="space-y-3">
+                                    <label className="text-sm font-medium text-slate-400">สิทธิ์การเข้าถึงเมนู (CRUD)</label>
+                                    <div className="border border-white/10 rounded-xl overflow-hidden">
+                                        <table className="w-full">
+                                            <thead>
+                                                <tr className="bg-white/5 text-slate-400 text-xs uppercase tracking-wider">
+                                                    <th className="px-4 py-3 text-left font-semibold">เมนู</th>
+                                                    <th className="px-3 py-3 text-center font-semibold w-20">ดู (R)</th>
+                                                    <th className="px-3 py-3 text-center font-semibold w-20">เพิ่ม (C)</th>
+                                                    <th className="px-3 py-3 text-center font-semibold w-20">แก้ไข (U)</th>
+                                                    <th className="px-3 py-3 text-center font-semibold w-20">ลบ (D)</th>
+                                                    <th className="px-3 py-3 text-center font-semibold w-20">ทั้งหมด</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-white/5">
+                                                {AVAILABLE_MENUS.map(menu => {
+                                                    const perm = permissions[menu.id] || DEFAULT_PERMISSION;
+                                                    const allChecked = perm.create && perm.read && perm.update && perm.delete;
+                                                    return (
+                                                        <tr key={menu.id} className="hover:bg-white/[0.02] transition-colors">
+                                                            <td className="px-4 py-3">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span>{menu.icon}</span>
+                                                                    <span className="text-sm text-slate-300">{menu.label}</span>
+                                                                </div>
+                                                            </td>
+                                                            {(['read', 'create', 'update', 'delete'] as const).map(action => (
+                                                                <td key={action} className="px-3 py-3 text-center">
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => togglePermission(menu.id, action)}
+                                                                        className={`w-8 h-8 rounded-lg border-2 transition-all flex items-center justify-center ${perm[action]
+                                                                                ? 'bg-indigo-500 border-indigo-500 text-white'
+                                                                                : 'bg-transparent border-slate-600 hover:border-slate-500'
+                                                                            }`}
+                                                                    >
+                                                                        {perm[action] && <Check className="w-4 h-4" />}
+                                                                    </button>
+                                                                </td>
+                                                            ))}
+                                                            <td className="px-3 py-3 text-center">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => toggleAllForMenu(menu.id)}
+                                                                    className={`w-8 h-8 rounded-lg border-2 transition-all flex items-center justify-center ${allChecked
+                                                                            ? 'bg-emerald-500 border-emerald-500 text-white'
+                                                                            : 'bg-transparent border-slate-600 hover:border-slate-500'
+                                                                        }`}
+                                                                >
+                                                                    {allChecked && <Check className="w-4 h-4" />}
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <p className="text-[10px] text-slate-500">R = Read (ดู), C = Create (เพิ่ม), U = Update (แก้ไข), D = Delete (ลบ)</p>
                                 </div>
                             </div>
-                            <div className="flex gap-3 pt-4">
+
+                            <div className="p-6 border-t border-white/5 flex gap-3 shrink-0">
                                 <button type="button" onClick={() => setModalOpen(false)} className="btn btn-ghost flex-1">ยกเลิก</button>
                                 <button type="submit" className="btn btn-primary flex-1">บันทึก</button>
                             </div>

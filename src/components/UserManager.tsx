@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { Plus, Edit2, Trash2, User, X } from "lucide-react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
+import { Plus, Edit2, Trash2, User, X, Search, MoreVertical, Filter } from "lucide-react";
 import CustomSelect from "./CustomSelect";
 
 interface UserData {
@@ -10,6 +11,8 @@ interface UserData {
     username: string;
     password: string;
     role: string;
+    modifiedBy?: string;
+    modifiedAt?: string;
 }
 
 interface RoleData {
@@ -27,6 +30,50 @@ interface UserManagerProps {
 export default function UserManager({ users, roles, onSave, onDelete }: UserManagerProps) {
     const [isModalOpen, setModalOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<UserData | null>(null);
+    const [searchTerm, setSearchTerm] = useState("");
+    const [roleFilter, setRoleFilter] = useState("all");
+
+    // Pagination
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
+
+    // Action Menu States
+    const [activeMenu, setActiveMenu] = useState<number | null>(null);
+    const [menuPosition, setMenuPosition] = useState<{ top: number, left: number } | null>(null);
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    useEffect(() => {
+        const handleClose = () => {
+            setActiveMenu(null);
+            setMenuPosition(null);
+        };
+
+        if (activeMenu !== null) {
+            window.addEventListener('click', handleClose);
+            window.addEventListener('scroll', handleClose, true);
+        }
+
+        return () => {
+            window.removeEventListener('click', handleClose);
+            window.removeEventListener('scroll', handleClose, true);
+        };
+    }, [activeMenu]);
+
+    const handleMenuToggle = (e: React.MouseEvent, id: number) => {
+        e.stopPropagation();
+        const rect = e.currentTarget.getBoundingClientRect();
+        if (activeMenu === id) {
+            setActiveMenu(null);
+            setMenuPosition(null);
+        } else {
+            setActiveMenu(id);
+            setMenuPosition({ top: rect.bottom, left: rect.right });
+        }
+    };
 
     const handleOpenModal = (user: UserData | null = null) => {
         setEditingUser(user);
@@ -36,12 +83,16 @@ export default function UserManager({ users, roles, onSave, onDelete }: UserMana
     const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         const formData = new FormData(e.currentTarget);
+        const currentUser = localStorage.getItem("crm_user_v2");
+        const userName = currentUser ? JSON.parse(currentUser).name : "System";
         const data: UserData = {
             id: editingUser ? editingUser.id : Date.now(),
             name: formData.get("name") as string,
             username: formData.get("username") as string,
             password: formData.get("password") as string,
             role: formData.get("role") as string,
+            modifiedBy: userName,
+            modifiedAt: new Date().toISOString(),
         };
         onSave(data);
         setModalOpen(false);
@@ -49,103 +100,322 @@ export default function UserManager({ users, roles, onSave, onDelete }: UserMana
 
     const roleOptions = roles.map(r => ({ value: r.id, label: r.name }));
 
+    // Filtering
+    const filteredUsers = users.filter(u => {
+        const matchesSearch =
+            u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            u.username.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesRole = roleFilter === "all" || u.role === roleFilter;
+        return matchesSearch && matchesRole;
+    });
+
+    // Pagination
+    const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+    const paginatedUsers = filteredUsers.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage
+    );
+
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center">
-                <h1 className="text-3xl font-bold tracking-tight">จัดการผู้ใช้งาน</h1>
-                <button onClick={() => handleOpenModal()} className="btn btn-primary px-6">
-                    <Plus className="w-5 h-5" />
-                    <span>เพิ่มผู้ใช้งาน</span>
-                </button>
-            </div>
+            {/* Header with Search and Filters */}
+            <div className="flex flex-col gap-4">
+                <div className="flex justify-between items-center">
+                    <h1 className="text-3xl font-bold tracking-tight">จัดการผู้ใช้งาน</h1>
+                    <button onClick={() => handleOpenModal()} className="btn btn-primary px-6">
+                        <Plus className="w-5 h-5" />
+                        <span>เพิ่มผู้ใช้งาน</span>
+                    </button>
+                </div>
 
-            <div className="glass-card overflow-hidden border-indigo-500/5">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead>
-                            <tr className="bg-white/5 text-slate-400 text-xs uppercase tracking-wider">
-                                <th className="px-4 py-3 font-semibold">Full Name</th>
-                                <th className="px-4 py-3 font-semibold">Username</th>
-                                <th className="px-4 py-3 font-semibold">Role</th>
-                                <th className="px-4 py-3 font-semibold text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-white/5">
-                            {users.map((u) => (
-                                <tr key={u.id} className="group hover:bg-white/[0.02] transition-colors">
-                                    <td className="px-4 py-3">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-full bg-indigo-500/10 flex items-center justify-center text-indigo-400">
-                                                <User className="w-4 h-4" />
-                                            </div>
-                                            <span className="font-semibold text-slate-200">{u.name}</span>
-                                        </div>
-                                    </td>
-                                    <td className="px-4 py-3 text-slate-300">{u.username}</td>
-                                    <td className="px-4 py-3 text-slate-300">
-                                        <span className="px-2 py-1 rounded bg-white/5 text-xs text-indigo-300">
-                                            {roles.find(r => r.id === u.role)?.name || u.role}
-                                        </span>
-                                    </td>
-                                    <td className="px-4 py-3 text-right">
-                                        <div className="flex justify-end gap-2">
-                                            <button
-                                                onClick={() => handleOpenModal(u)}
-                                                className="p-2 rounded-lg hover:bg-white/5 text-slate-400 hover:text-white transition-colors"
-                                            >
-                                                <Edit2 className="w-4 h-4" />
-                                            </button>
-                                            <button
-                                                onClick={() => onDelete(u.id)}
-                                                className="p-2 rounded-lg hover:bg-rose-500/10 text-slate-400 hover:text-rose-400 transition-colors"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                {/* Search and Filter Bar */}
+                <div className="flex items-center gap-3 flex-wrap">
+                    <div className="relative flex-1 min-w-[200px] max-w-md">
+                        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                        <input
+                            type="text"
+                            placeholder="ค้นหาชื่อหรือ Username..."
+                            value={searchTerm}
+                            onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                            className="input-field pl-10 w-full"
+                        />
+                    </div>
+                    <div className="relative shrink-0">
+                        <CustomSelect
+                            options={[
+                                { value: "all", label: "ทุกบทบาท" },
+                                ...roleOptions
+                            ]}
+                            value={roleFilter}
+                            onChange={(val) => { setRoleFilter(val); setCurrentPage(1); }}
+                            className="w-[160px]"
+                            placeholder="บทบาท"
+                            icon={<Filter className="w-3.5 h-3.5" />}
+                        />
+                    </div>
                 </div>
             </div>
 
+            {/* Table Card */}
+            <div className="glass-card overflow-hidden border-indigo-500/5 flex flex-col h-[calc(100vh-220px)]">
+                <div className="overflow-auto custom-scrollbar flex-1">
+                    <table className="w-full text-left border-collapse relative">
+                        <thead className="sticky top-0 z-10 bg-[#0f172a] shadow-sm">
+                            <tr className="bg-white/5 text-slate-400 text-xs uppercase tracking-wider border-b border-white/5">
+                                <th className="px-4 py-3 font-semibold w-[5%] text-center">No.</th>
+                                <th className="px-4 py-3 font-semibold w-[20%]">ชื่อ-นามสกุล</th>
+                                <th className="px-4 py-3 font-semibold w-[15%]">Username</th>
+                                <th className="px-4 py-3 font-semibold w-[15%] text-center">บทบาท</th>
+                                <th className="px-4 py-3 font-semibold w-[20%] text-center">Modified By</th>
+                                <th className="px-4 py-3 font-semibold w-[10%] text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/5">
+                            {paginatedUsers.length > 0 ? (
+                                paginatedUsers.map((u, index) => (
+                                    <tr key={u.id} className="group hover:bg-white/[0.02] transition-colors h-14">
+                                        <td className="px-4 py-3 text-center">
+                                            <span className="text-xs text-slate-500">{(currentPage - 1) * itemsPerPage + index + 1}</span>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-full bg-indigo-500/10 flex items-center justify-center text-indigo-400">
+                                                    <User className="w-4 h-4" />
+                                                </div>
+                                                <span className="font-semibold text-slate-200 text-sm">{u.name}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <span className="text-sm text-slate-400 font-mono">{u.username}</span>
+                                        </td>
+                                        <td className="px-4 py-3 text-center">
+                                            <span className="px-3 py-1 rounded-full bg-indigo-500/10 text-xs text-indigo-300 font-medium border border-indigo-500/20">
+                                                {roles.find(r => r.id === u.role)?.name || u.role}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3 text-center">
+                                            {u.modifiedBy ? (
+                                                <div className="flex flex-col items-center">
+                                                    <span className="text-xs font-medium text-slate-300">{u.modifiedBy}</span>
+                                                    <span className="text-[10px] text-slate-500">
+                                                        {new Date(u.modifiedAt!).toLocaleString('th-TH', {
+                                                            day: '2-digit',
+                                                            month: '2-digit',
+                                                            year: '2-digit',
+                                                            hour: '2-digit',
+                                                            minute: '2-digit'
+                                                        })}
+                                                    </span>
+                                                </div>
+                                            ) : (
+                                                <span className="text-xs text-slate-600">-</span>
+                                            )}
+                                        </td>
+                                        <td className="px-4 py-3 text-center">
+                                            <button
+                                                onClick={(e) => handleMenuToggle(e, u.id)}
+                                                className={`p-2 rounded-lg transition-colors ${activeMenu === u.id ? 'bg-indigo-500/20 text-white' : 'hover:bg-white/5 text-slate-400 hover:text-white'}`}
+                                            >
+                                                <MoreVertical className="w-4 h-4" />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan={6} className="px-4 py-12 text-center text-slate-500">
+                                        ไม่พบข้อมูลผู้ใช้งาน
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                    <div className="px-4 py-3 border-t border-white/5 flex items-center justify-between bg-white/[0.02]">
+                        <span className="text-xs text-slate-500">
+                            แสดง {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, filteredUsers.length)} จาก {filteredUsers.length} รายการ
+                        </span>
+                        <div className="flex items-center gap-1">
+                            <button
+                                onClick={() => setCurrentPage(1)}
+                                disabled={currentPage === 1}
+                                className="px-2 py-1 text-xs rounded hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed text-slate-400"
+                            >
+                                ««
+                            </button>
+                            <button
+                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                disabled={currentPage === 1}
+                                className="px-2 py-1 text-xs rounded hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed text-slate-400"
+                            >
+                                «
+                            </button>
+                            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                let pageNum;
+                                if (totalPages <= 5) {
+                                    pageNum = i + 1;
+                                } else if (currentPage <= 3) {
+                                    pageNum = i + 1;
+                                } else if (currentPage >= totalPages - 2) {
+                                    pageNum = totalPages - 4 + i;
+                                } else {
+                                    pageNum = currentPage - 2 + i;
+                                }
+                                return (
+                                    <button
+                                        key={pageNum}
+                                        onClick={() => setCurrentPage(pageNum)}
+                                        className={`w-7 h-7 text-xs rounded transition-colors ${currentPage === pageNum
+                                            ? 'bg-indigo-500 text-white'
+                                            : 'hover:bg-white/5 text-slate-400'
+                                            }`}
+                                    >
+                                        {pageNum}
+                                    </button>
+                                );
+                            })}
+                            <button
+                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                disabled={currentPage === totalPages}
+                                className="px-2 py-1 text-xs rounded hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed text-slate-400"
+                            >
+                                »
+                            </button>
+                            <button
+                                onClick={() => setCurrentPage(totalPages)}
+                                disabled={currentPage === totalPages}
+                                className="px-2 py-1 text-xs rounded hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed text-slate-400"
+                            >
+                                »»
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Action Menu Portal */}
+            {mounted && activeMenu !== null && menuPosition && createPortal(
+                <div
+                    className="fixed z-[200] bg-slate-800 border border-white/10 rounded-lg shadow-xl py-1 min-w-[140px]"
+                    style={{ top: menuPosition.top + 4, left: menuPosition.left - 140 }}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <button
+                        onClick={() => {
+                            const user = users.find(u => u.id === activeMenu);
+                            if (user) handleOpenModal(user);
+                            setActiveMenu(null);
+                        }}
+                        className="w-full px-4 py-2 text-left text-sm text-slate-300 hover:bg-white/5 flex items-center gap-2"
+                    >
+                        <Edit2 className="w-4 h-4" />
+                        แก้ไข
+                    </button>
+                    <button
+                        onClick={() => {
+                            if (activeMenu) onDelete(activeMenu);
+                            setActiveMenu(null);
+                        }}
+                        className="w-full px-4 py-2 text-left text-sm text-rose-400 hover:bg-rose-500/10 flex items-center gap-2"
+                    >
+                        <Trash2 className="w-4 h-4" />
+                        ลบ
+                    </button>
+                </div>,
+                document.body
+            )}
+
+            {/* Modal */}
             {isModalOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setModalOpen(false)} />
-                    <div className="glass-card w-full max-w-lg p-8 relative shadow-2xl animate-in fade-in zoom-in duration-200">
-                        <button onClick={() => setModalOpen(false)} className="absolute top-6 right-6 p-2 text-slate-400 hover:text-white">
-                            <X className="w-6 h-6" />
-                        </button>
-                        <h2 className="text-2xl font-bold mb-6">{editingUser ? "แก้ไขผู้ใช้งาน" : "เพิ่มผู้ใช้งาน"}</h2>
-                        <form onSubmit={handleSubmit} className="space-y-6">
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-slate-400">ชื่อ-นามสกุล</label>
-                                <input name="name" defaultValue={editingUser?.name} className="input-field" required />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-slate-400">Username</label>
-                                    <input name="username" defaultValue={editingUser?.username} className="input-field" required />
+                <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/80 backdrop-blur-md" />
+                    <div className="glass-card w-full max-w-lg max-h-[90vh] flex flex-col relative shadow-2xl border-indigo-500/20">
+                        {/* Header */}
+                        <div className="p-6 border-b border-white/5 flex justify-between items-center shrink-0">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400">
+                                    <User className="w-5 h-5" />
                                 </div>
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-slate-400">Password</label>
-                                    <input name="password" type="password" defaultValue={editingUser?.password} className="input-field" required />
+                                <div>
+                                    <h2 className="text-xl font-bold text-white">{editingUser ? "แก้ไขผู้ใช้งาน" : "เพิ่มผู้ใช้งาน"}</h2>
+                                    <p className="text-xs text-slate-500">กรอกข้อมูลผู้ใช้งานระบบ</p>
                                 </div>
                             </div>
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-slate-400">บทบาท</label>
-                                <CustomSelect
-                                    name="role"
-                                    defaultValue={editingUser?.role || (roleOptions[0]?.value)}
-                                    options={roleOptions}
-                                />
-                            </div>
-                            <div className="flex gap-3 pt-4">
-                                <button type="button" onClick={() => setModalOpen(false)} className="btn btn-ghost flex-1">ยกเลิก</button>
-                                <button type="submit" className="btn btn-primary flex-1">บันทึก</button>
-                            </div>
-                        </form>
+                            <button onClick={() => setModalOpen(false)} className="p-2 hover:bg-white/5 rounded-lg transition-colors">
+                                <X className="w-5 h-5 text-slate-400 hover:text-white" />
+                            </button>
+                        </div>
+
+                        {/* Body */}
+                        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                            <form id="user-form" onSubmit={handleSubmit} className="space-y-5">
+                                {/* Name Field */}
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-medium text-slate-400 flex items-center gap-1">
+                                        ชื่อ-นามสกุล <span className="text-rose-400">*</span>
+                                    </label>
+                                    <input
+                                        name="name"
+                                        defaultValue={editingUser?.name}
+                                        className="input-field"
+                                        placeholder="กรอกชื่อ-นามสกุล"
+                                        required
+                                    />
+                                </div>
+
+                                {/* Username & Password */}
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-medium text-slate-400 flex items-center gap-1">
+                                            Username <span className="text-rose-400">*</span>
+                                        </label>
+                                        <input
+                                            name="username"
+                                            defaultValue={editingUser?.username}
+                                            className="input-field"
+                                            placeholder="ชื่อผู้ใช้"
+                                            required
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-medium text-slate-400 flex items-center gap-1">
+                                            Password <span className="text-rose-400">*</span>
+                                        </label>
+                                        <input
+                                            name="password"
+                                            type="password"
+                                            defaultValue={editingUser?.password}
+                                            className="input-field"
+                                            placeholder="รหัสผ่าน"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Role */}
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-medium text-slate-400">บทบาท</label>
+                                    <CustomSelect
+                                        name="role"
+                                        defaultValue={editingUser?.role || (roleOptions[0]?.value)}
+                                        options={roleOptions}
+                                    />
+                                </div>
+                            </form>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-6 border-t border-white/5 flex gap-3 shrink-0">
+                            <button type="button" onClick={() => setModalOpen(false)} className="btn btn-ghost flex-1">
+                                ยกเลิก
+                            </button>
+                            <button form="user-form" type="submit" className="btn btn-primary flex-1">
+                                บันทึก
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

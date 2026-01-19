@@ -59,9 +59,28 @@ export default function CustomerTable({ customers, onEdit, onDelete, onImport }:
         }
     };
 
+    const importCSV = () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.csv';
+        input.onchange = (e: any) => {
+            const file = e.target.files[0];
+            if (file && onImport) {
+                Papa.parse(file, {
+                    header: true,
+                    skipEmptyLines: true,
+                    complete: (results) => {
+                        onImport(results.data);
+                    }
+                });
+            }
+        };
+        input.click();
+    };
+
     const filteredCustomers = customers.filter((c) => {
         const matchesSearch =
-            c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (c.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
             (c.subdomain || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
             `DE${c.id.toString().padStart(4, "0")}`.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesUsageStatus = usageStatusFilter === "all" || c.usageStatus === usageStatusFilter;
@@ -98,35 +117,11 @@ export default function CustomerTable({ customers, onEdit, onDelete, onImport }:
                             placeholder="Search..."
                             value={searchTerm}
                             onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-                            className="input-field pl-9 py-1.5 text-xs h-9"
+                            className="input-field pl-10 w-full"
                         />
                     </div>
 
                     <div className="flex flex-wrap items-center gap-3 w-full">
-                        {onImport && (
-                            <label className="btn btn-ghost h-9 px-3 gap-2 text-xs flex items-center cursor-pointer border border-white/10 hover:border-indigo-500/50 transition-all font-medium text-slate-300">
-                                <Plus className="w-3.5 h-3.5" />
-                                Import CSV
-                                <input
-                                    type="file"
-                                    className="hidden"
-                                    accept=".csv"
-                                    onChange={(e) => {
-                                        const file = e.target.files?.[0];
-                                        if (file) {
-                                            Papa.parse(file, {
-                                                header: true,
-                                                skipEmptyLines: true,
-                                                complete: (results) => {
-                                                    onImport(results.data);
-                                                }
-                                            });
-                                        }
-                                    }}
-                                />
-                            </label>
-                        )}
-
                         <div className="relative shrink-0">
                             <CustomSelect
                                 options={[
@@ -146,10 +141,10 @@ export default function CustomerTable({ customers, onEdit, onDelete, onImport }:
                             <CustomSelect
                                 options={[
                                     { value: "all", label: "สถานะใช้งานทั้งหมด" },
-                                    { value: "Active", label: "Active (ใช้งาน)" },
-                                    { value: "Trial", label: "Trial (ทดลองใช้)" },
-                                    { value: "Inactive", label: "Inactive (ปิดปรับปรุง)" },
-                                    { value: "Canceled", label: "Canceled (ยกเลิก)" },
+                                    { value: "Training", label: "รอการเทรนนิ่ง" },
+                                    { value: "Pending", label: "รอการใช้งาน" },
+                                    { value: "Active", label: "ใช้งานแล้ว" },
+                                    { value: "Canceled", label: "ยกเลิก" },
                                 ]}
                                 value={usageStatusFilter}
                                 onChange={(val) => { setUsageStatusFilter(val); setCurrentPage(1); }}
@@ -163,9 +158,9 @@ export default function CustomerTable({ customers, onEdit, onDelete, onImport }:
                             <CustomSelect
                                 options={[
                                     { value: "all", label: "สถานะติดตั้งทั้งหมด" },
-                                    { value: "Pending", label: "Pending (รอติดตั้ง)" },
-                                    { value: "In Progress", label: "In Progress (กำลังติดตั้ง)" },
-                                    { value: "Installed", label: "Installed (ติดตั้งแล้ว)" },
+                                    { value: "Pending", label: "Pending" },
+                                    { value: "Installing", label: "Installing" },
+                                    { value: "Completed", label: "Completed" },
                                 ]}
                                 value={installationStatusFilter}
                                 onChange={(val) => { setInstallationStatusFilter(val); setCurrentPage(1); }}
@@ -246,14 +241,17 @@ export default function CustomerTable({ customers, onEdit, onDelete, onImport }:
                                         <td className="px-4 py-3 text-center">
                                             <div className="flex flex-col items-center gap-1">
                                                 <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap ${c.usageStatus === "Active" ? "bg-emerald-500/10 text-emerald-400" :
-                                                    c.usageStatus === "Trial" ? "bg-amber-500/10 text-amber-400" :
-                                                        c.usageStatus === "Inactive" ? "bg-slate-500/10 text-slate-400" :
+                                                    c.usageStatus === "Pending" ? "bg-amber-500/10 text-amber-400" :
+                                                        c.usageStatus === "Training" ? "bg-indigo-500/10 text-indigo-400" :
                                                             "bg-rose-500/10 text-rose-400"
                                                     }`}>
-                                                    {c.usageStatus}
+                                                    {c.usageStatus === "Active" ? "ใช้งานแล้ว" :
+                                                        c.usageStatus === "Pending" ? "รอการใช้งาน" :
+                                                            c.usageStatus === "Training" ? "รอการเทรนนิ่ง" : "ยกเลิก"}
                                                 </span>
-                                                <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium whitespace-nowrap ${c.installationStatus === "Installed" ? "bg-blue-500/10 text-blue-400" :
-                                                    c.installationStatus === "In Progress" ? "bg-cyan-500/10 text-cyan-400" :
+                                                {/* Installation Status */}
+                                                <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium whitespace-nowrap ${c.installationStatus === "Completed" ? "bg-blue-500/10 text-blue-400" :
+                                                    c.installationStatus === "Installing" ? "bg-cyan-500/10 text-cyan-400" :
                                                         "bg-purple-500/10 text-purple-400"
                                                     }`}>
                                                     {c.installationStatus}
@@ -316,24 +314,6 @@ export default function CustomerTable({ customers, onEdit, onDelete, onImport }:
                                                         </button>
                                                         <div className="my-1 border-t border-white/5" />
                                                         <button
-                                                            onClick={async () => {
-                                                                const customerId = c.clientCode || `DE${c.id.toString().padStart(4, "0")}`;
-                                                                const url = `${window.location.origin.replace('3000', '3001')}/login?id=${customerId}`;
-                                                                try {
-                                                                    await navigator.clipboard.writeText(url);
-                                                                    alert("คัดลอกลิงก์ Console แล้ว: " + url);
-                                                                } catch (err) {
-                                                                    console.error(err);
-                                                                }
-                                                                setActiveMenu(null);
-                                                            }}
-                                                            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-indigo-400 hover:bg-indigo-500/10 transition-colors"
-                                                        >
-                                                            <ExternalLink className="w-3.5 h-3.5" />
-                                                            ลิงก์ Console
-                                                        </button>
-                                                        <div className="my-1 border-t border-white/5" />
-                                                        <button
                                                             onClick={() => { onDelete(c.id); setActiveMenu(null); }}
                                                             className="w-full flex items-center gap-2 px-3 py-2 text-xs text-rose-400 hover:bg-rose-500/10 transition-colors"
                                                         >
@@ -358,39 +338,110 @@ export default function CustomerTable({ customers, onEdit, onDelete, onImport }:
                     </table>
                 </div>
 
-                {/* Pagination Controls */}
+                {/* Pagination Controls - Enhanced Design */}
                 {totalPages > 1 && (
-                    <div className="px-4 py-3 border-t border-white/5 flex items-center justify-between">
-                        <div className="text-xs text-slate-400">
-                            แสดง {((currentPage - 1) * itemsPerPage) + 1} ถึง {Math.min(currentPage * itemsPerPage, sortedCustomers.length)} จาก {sortedCustomers.length} รายการ
-                        </div>
-                        <div className="flex gap-2">
-                            <button
-                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                disabled={currentPage === 1}
-                                className="px-3 py-1 text-xs rounded-lg hover:bg-white/5 disabled:opacity-50 disabled:hover:bg-transparent transition-colors text-slate-300"
-                            >
-                                ก่อนหน้า
-                            </button>
-                            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                    <div className="px-6 py-4 border-t border-white/5 bg-gradient-to-r from-white/[0.02] to-transparent">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></div>
+                                <span className="text-xs font-medium text-slate-300">
+                                    หน้า {currentPage} / {totalPages}
+                                </span>
+                                <div className="h-4 w-px bg-white/10 mx-2"></div>
+                                <span className="text-xs text-slate-400">
+                                    {((currentPage - 1) * itemsPerPage) + 1}–{Math.min(currentPage * itemsPerPage, sortedCustomers.length)} จาก {sortedCustomers.length} รายการ
+                                </span>
+                            </div>
+
+                            <div className="flex items-center gap-2">
                                 <button
-                                    key={page}
-                                    onClick={() => setCurrentPage(page)}
-                                    className={`w-7 h-7 rounded-lg text-xs font-medium transition-colors ${currentPage === page
-                                        ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/20"
-                                        : "hover:bg-white/5 text-slate-400"
-                                        }`}
+                                    onClick={() => setCurrentPage(1)}
+                                    disabled={currentPage === 1}
+                                    className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/5 disabled:opacity-30 disabled:hover:bg-transparent transition-all text-slate-300 group"
+                                    title="หน้าแรก"
                                 >
-                                    {page}
+                                    <svg className="w-4 h-4 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                                    </svg>
                                 </button>
-                            ))}
-                            <button
-                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                                disabled={currentPage === totalPages}
-                                className="px-3 py-1 text-xs rounded-lg hover:bg-white/5 disabled:opacity-50 disabled:hover:bg-transparent transition-colors text-slate-300"
-                            >
-                                ถัดไป
-                            </button>
+
+                                <button
+                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                    disabled={currentPage === 1}
+                                    className="px-3 h-8 rounded-lg flex items-center gap-1.5 hover:bg-white/5 disabled:opacity-30 disabled:hover:bg-transparent transition-all text-slate-300 text-xs font-medium group"
+                                >
+                                    <svg className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                                    </svg>
+                                    ก่อนหน้า
+                                </button>
+
+                                <div className="flex gap-1">
+                                    {(() => {
+                                        const pageNumbers = [];
+                                        const maxVisible = 5;
+
+                                        if (totalPages <= maxVisible) {
+                                            for (let i = 1; i <= totalPages; i++) pageNumbers.push(i);
+                                        } else {
+                                            if (currentPage <= 3) {
+                                                for (let i = 1; i <= 4; i++) pageNumbers.push(i);
+                                                pageNumbers.push('...');
+                                                pageNumbers.push(totalPages);
+                                            } else if (currentPage >= totalPages - 2) {
+                                                pageNumbers.push(1);
+                                                pageNumbers.push('...');
+                                                for (let i = totalPages - 3; i <= totalPages; i++) pageNumbers.push(i);
+                                            } else {
+                                                pageNumbers.push(1);
+                                                pageNumbers.push('...');
+                                                for (let i = currentPage - 1; i <= currentPage + 1; i++) pageNumbers.push(i);
+                                                pageNumbers.push('...');
+                                                pageNumbers.push(totalPages);
+                                            }
+                                        }
+
+                                        return pageNumbers.map((page, idx) => (
+                                            page === '...' ? (
+                                                <span key={`ellipsis-${idx}`} className="w-8 h-8 flex items-center justify-center text-slate-500 text-xs">•••</span>
+                                            ) : (
+                                                <button
+                                                    key={page}
+                                                    onClick={() => setCurrentPage(page as number)}
+                                                    className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${currentPage === page
+                                                        ? "bg-gradient-to-br from-indigo-500 to-indigo-600 text-white shadow-lg shadow-indigo-500/30 scale-110"
+                                                        : "hover:bg-white/5 text-slate-400 hover:text-white hover:scale-105"
+                                                        }`}
+                                                >
+                                                    {page}
+                                                </button>
+                                            )
+                                        ));
+                                    })()}
+                                </div>
+
+                                <button
+                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                    disabled={currentPage === totalPages}
+                                    className="px-3 h-8 rounded-lg flex items-center gap-1.5 hover:bg-white/5 disabled:opacity-30 disabled:hover:bg-transparent transition-all text-slate-300 text-xs font-medium group"
+                                >
+                                    ถัดไป
+                                    <svg className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                    </svg>
+                                </button>
+
+                                <button
+                                    onClick={() => setCurrentPage(totalPages)}
+                                    disabled={currentPage === totalPages}
+                                    className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/5 disabled:opacity-30 disabled:hover:bg-transparent transition-all text-slate-300 group"
+                                    title="หน้าสุดท้าย"
+                                >
+                                    <svg className="w-4 h-4 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}

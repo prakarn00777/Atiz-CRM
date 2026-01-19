@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@libsql/client": "^0.17.0",
+    "@supabase/supabase-js": "^2.90.1",
     "lucide-react": "^0.562.0",
     "next": "16.1.1",
     "papaparse": "^5.5.3",

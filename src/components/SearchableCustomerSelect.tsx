@@ -62,7 +62,7 @@ export default function SearchableCustomerSelect({
             <button
                 type="button"
                 onClick={() => setIsOpen(!isOpen)}
-                className="input-field py-1.5 h-8 text-xs w-full flex items-center justify-between gap-2"
+                className="input-field w-full flex items-center justify-between gap-2"
             >
                 <span className={selectedCustomer ? "text-slate-200" : "text-slate-500"}>
                     {selectedCustomer ? (
