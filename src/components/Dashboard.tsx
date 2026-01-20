@@ -25,13 +25,13 @@ interface DashboardProps {
 
 // Mock Data for New Business Metrics
 const MOCK_LINE_DATA = [
-    { name: 'Mon', drease: 12, ease: 8 },
-    { name: 'Tue', drease: 19, ease: 11 },
-    { name: 'Wed', drease: 15, ease: 14 },
-    { name: 'Thu', drease: 22, ease: 18 },
-    { name: 'Fri', drease: 30, ease: 21 },
-    { name: 'Sat', drease: 25, ease: 15 },
-    { name: 'Sun', drease: 18, ease: 12 },
+    { name: 'Mon', drease: 4, ease: 3 },
+    { name: 'Tue', drease: 3, ease: 0 },
+    { name: 'Wed', drease: 5, ease: 1 },
+    { name: 'Thu', drease: 3, ease: 2 },
+    { name: 'Fri', drease: 2, ease: 0 },
+    { name: 'Sat', drease: 5, ease: 0 },
+    { name: 'Sun', drease: 1, ease: 0 },
 ];
 
 const MOCK_PIE_DATA = [
