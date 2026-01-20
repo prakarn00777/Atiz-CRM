@@ -434,15 +434,36 @@ export default function CRMPage() {
   };
 
   const handleAddInstallation = async (newInst: any) => {
+    const previousInstallations = [...installations];
+    const previousCustomers = [...customers];
+
     try {
       let finalCustomerId = newInst.customerId || 0;
-      let updatedCustomersList = [...customers];
+      const nextCustId = Date.now();
+
+      if (newInst.installationType === "new") {
+        finalCustomerId = nextCustId;
+      }
+
+      const data: Installation = {
+        id: Date.now(),
+        customerId: finalCustomerId,
+        customerName: newInst.installationType === "new" ? newInst.newCustomerName : (newInst.customerName || ""),
+        customerLink: newInst.installationType === "new" ? newInst.newCustomerLink : undefined,
+        branchName: newInst.installationType === "branch" ? newInst.branchName : undefined,
+        status: "Pending",
+        requestedBy: user?.name || "System",
+        requestedAt: new Date().toISOString(),
+        notes: newInst.notes,
+        installationType: newInst.installationType
+      };
+
+      // Optimistic UI Update (Immediate)
+      setInstallations([data, ...installations]);
+      setToast({ message: newInst.installationType === "new" ? "กำลังสร้างข้อมูลและเปิดงานติดตั้ง..." : "กำลังแจ้งงานติดตั้ง...", type: "info" });
 
       // If it's a new customer, create the customer record first
       if (newInst.installationType === "new") {
-        const nextCustId = Date.now();
-        finalCustomerId = nextCustId;
-
         const newCustomer: Customer = {
           id: nextCustId,
           clientCode: `DE${nextCustId.toString().slice(-4).padStart(4, "0")}`,
@@ -465,7 +486,6 @@ export default function CRMPage() {
         // Refresh customers
         const freshCusts = await getCustomers();
         setCustomers(freshCusts);
-        updatedCustomersList = freshCusts;
       } else if (newInst.installationType === "branch" && newInst.branchName) {
         // If it's a new branch for an existing customer, update the customer
         const targetCust = customers.find(c => c.id === finalCustomerId);
@@ -481,47 +501,21 @@ export default function CRMPage() {
 
             const freshCusts = await getCustomers();
             setCustomers(freshCusts);
-            updatedCustomersList = freshCusts;
           }
         }
       }
 
-      const data: Installation = {
-        id: Date.now(),
-        customerId: finalCustomerId,
-        customerName: newInst.installationType === "new" ? newInst.newCustomerName : (newInst.customerName || ""),
-        customerLink: newInst.installationType === "new" ? newInst.newCustomerLink : undefined,
-        branchName: newInst.installationType === "branch" ? newInst.branchName : undefined,
-        status: "Pending",
-        requestedBy: user?.name || "System",
-        requestedAt: new Date().toISOString(),
-        notes: newInst.notes,
-        installationType: newInst.installationType
-      };
-
-      // Optimistic UI Update
-      const previousInstallations = [...installations];
-      setInstallations([data, ...installations]);
-
-      setToast({ message: newInst.installationType === "new" ? "สร้างลูกค้าและเปิดงานติดตั้งสำเร็จ" : "แจ้งงานติดตั้งสาขาใหม่สำเร็จ", type: "success" });
-
-      // Real-time Notification optimistically
-      pushNotification(
-        newInst.installationType === "new" ? "🚀 แจ้งติดตั้งลูกค้าใหม่" : "📍 แจ้งติดตั้งสาขาเพิ่ม",
-        newInst.installationType === "new"
-          ? `มีการแจ้งติดตั้งใหม่สำหรับ: ${newInst.newCustomerName} (${newInst.newCustomerProduct})`
-          : `มีการแจ้งติดตั้งสาขาใหม่: ${newInst.branchName} สำหรับลูกค้า ${newInst.customerName}`,
-        "info"
-      );
-
       const result = await saveInstallation(data);
       if (!result.success) {
         setInstallations(previousInstallations);
+        setCustomers(previousCustomers);
         setToast({ message: "เกิดข้อผิดพลาด: " + result.error, type: "error" });
       }
     } catch (err: any) {
       console.error("Failed to add installation:", err);
-      // Rollback logic if possible
+      // Robust Rollback
+      setInstallations(previousInstallations);
+      setCustomers(previousCustomers);
       setToast({ message: "เกิดข้อผิดพลาด: " + err.message, type: "error" });
     }
   };
