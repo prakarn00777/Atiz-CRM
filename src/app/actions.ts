@@ -60,7 +60,7 @@ export async function getCustomers(): Promise<Customer[]> {
         return (data || []).map(row => ({
             id: Number(row.id),
             name: String(row.name),
-            client_code: row.client_code ? String(row.client_code) : undefined,
+            clientCode: row.client_code ? String(row.client_code) : undefined,
             subdomain: row.subdomain ? String(row.subdomain) : undefined,
             productType: (row.product_type as ProductType) || "Dr.Ease",
             package: String(row.package),
@@ -74,6 +74,7 @@ export async function getCustomers(): Promise<Customer[]> {
             contactPhone: row.contact_phone ? String(row.contact_phone) : undefined,
             note: row.note ? String(row.note) : undefined,
             installationStatus: row.installation_status ? String(row.installation_status) : undefined,
+            branches: row.branches ? JSON.parse(String(row.branches)) : []
         })) as Customer[];
     } catch (err) {
         console.error("Critical error in getCustomers:", err);
@@ -106,6 +107,8 @@ export async function getIssues(): Promise<any[]> {
             status: String(row.status),
             reportedBy: String(row.reported_by),
             reportedAt: String(row.reported_at),
+            createdBy: row.created_by ? String(row.created_by) : String(row.reported_by), // Map createdBy for frontend
+            createdAt: row.created_at ? String(row.created_at) : String(row.reported_at), // Map createdAt for frontend
             modifiedBy: row.modified_by ? String(row.modified_by) : undefined,
             modifiedAt: row.modified_at ? String(row.modified_at) : undefined,
             attachments: row.attachments ? String(row.attachments) : "[]",
@@ -331,3 +334,165 @@ export async function deleteRole(id: string) {
         return { success: false, error: err.message };
     }
 }
+
+// Issue persistence
+export async function saveIssue(issueData: any) {
+    try {
+        const { id, ...rest } = issueData;
+        const dbData = {
+            customer_id: rest.customerId,
+            customer_name: rest.customerName,
+            branch_name: rest.branchName,
+            case_number: rest.caseNumber,
+            title: rest.title,
+            description: rest.description,
+            type: rest.type,
+            severity: rest.severity,
+            status: rest.status,
+            attachments: rest.attachments,
+            reported_by: rest.createdBy || rest.reportedBy,
+            reported_at: rest.createdAt || rest.reportedAt,
+            modified_by: rest.modifiedBy,
+            modified_at: rest.modifiedAt,
+            created_by: rest.createdBy,
+            created_at: rest.createdAt
+        };
+
+        let result;
+        if (id && id < 1000000) { // Existing issue
+            const { data, error } = await db.from('issues').update(dbData).eq('id', id).select();
+            if (error) throw error;
+            result = data?.[0];
+        } else { // New issue
+            const { data, error } = await db.from('issues').insert(dbData).select();
+            if (error) throw error;
+            result = data?.[0];
+        }
+
+        return { success: true, data: result };
+    } catch (err: any) {
+        console.error("Error in saveIssue:", err);
+        return { success: false, error: err.message };
+    }
+}
+
+export async function deleteIssue(id: number) {
+    try {
+        const { error } = await db.from('issues').delete().eq('id', id);
+        if (error) throw error;
+        return { success: true };
+    } catch (err: any) {
+        console.error("Error in deleteIssue:", err);
+        return { success: false, error: err.message };
+    }
+}
+
+// Customer persistence
+export async function saveCustomer(customerData: any) {
+    try {
+        const { id, ...rest } = customerData;
+        const dbData = {
+            name: rest.name,
+            client_code: rest.clientCode,
+            subdomain: rest.subdomain,
+            product_type: rest.productType,
+            package: rest.package,
+            usage_status: rest.usageStatus,
+            installation_status: rest.installationStatus,
+            business_type: rest.businessType,
+            contract_number: rest.contractNumber,
+            contract_start: rest.contractStart,
+            contract_end: rest.contractEnd,
+            sales_name: rest.salesName,
+            contact_name: rest.contactName,
+            contact_phone: rest.contactPhone,
+            note: rest.note,
+            modified_by: rest.modifiedBy,
+            modified_at: rest.modifiedAt,
+            created_by: rest.createdBy,
+            created_at: rest.createdAt,
+            branches: JSON.stringify(rest.branches || [])
+        };
+
+        let result;
+        if (id && id < 1000000) {
+            const { data, error } = await db.from('customers').update(dbData).eq('id', id).select();
+            if (error) throw error;
+            result = data?.[0];
+        } else {
+            const { data, error } = await db.from('customers').insert(dbData).select();
+            if (error) throw error;
+            result = data?.[0];
+        }
+
+        return { success: true, data: result };
+    } catch (err: any) {
+        console.error("Error in saveCustomer:", err);
+        return { success: false, error: err.message };
+    }
+}
+
+export async function deleteCustomer(id: number) {
+    try {
+        const { error } = await db.from('customers').delete().eq('id', id);
+        if (error) throw error;
+        return { success: true };
+    } catch (err: any) {
+        console.error("Error in deleteCustomer:", err);
+        return { success: false, error: err.message };
+    }
+}
+
+// Installation persistence
+export async function saveInstallation(instData: any) {
+    try {
+        const { id, ...rest } = instData;
+        const dbData = {
+            customer_id: rest.customerId,
+            customer_name: rest.customerName,
+            branch_name: rest.branchName,
+            status: rest.status,
+            requested_by: rest.requestedBy,
+            requested_at: rest.requestedAt,
+            assigned_dev: rest.assignedDev,
+            completed_at: rest.completedAt,
+            notes: rest.notes,
+            installation_type: rest.installationType,
+            modified_by: rest.modifiedBy,
+            modified_at: rest.modifiedAt
+        };
+
+        let result;
+        if (id && id < 1000000) {
+            const { data, error } = await db.from('installations').update(dbData).eq('id', id).select();
+            if (error) throw error;
+            result = data?.[0];
+        } else {
+            const { data, error } = await db.from('installations').insert(dbData).select();
+            if (error) throw error;
+            result = data?.[0];
+        }
+
+        return { success: true, data: result };
+    } catch (err: any) {
+        console.error("Error in saveInstallation:", err);
+        return { success: false, error: err.message };
+    }
+}
+
+export async function updateInstallationStatus(id: number, status: string, modifiedBy?: string) {
+    try {
+        const { data, error } = await db.from('installations').update({
+            status,
+            modified_by: modifiedBy,
+            modified_at: new Date().toISOString()
+        }).eq('id', id).select();
+
+        if (error) throw error;
+        return { success: true, data: data?.[0] };
+    } catch (err: any) {
+        console.error("Error in updateInstallationStatus:", err);
+        return { success: false, error: err.message };
+    }
+}
+

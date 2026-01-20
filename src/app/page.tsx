@@ -17,9 +17,11 @@ import InstallationManager from "@/components/InstallationManager";
 import NotificationBell from "@/components/NotificationBell";
 import { Customer, Branch, Installation, Issue, UsageStatus } from "@/types";
 import { useNotification } from "@/components/NotificationProvider";
+import { db } from "@/lib/db";
 import {
   importCustomersFromCSV, getCustomers, getIssues, getInstallations,
-  getUsers, saveUser, deleteUser, getRoles, saveRole, deleteRole, loginUser
+  getUsers, saveUser, deleteUser, getRoles, saveRole, deleteRole, loginUser,
+  saveIssue, deleteIssue, saveCustomer, deleteCustomer, saveInstallation, updateInstallationStatus
 } from "./actions";
 
 function TableSummary({ customers }: { customers: Customer[] }) {
@@ -92,30 +94,17 @@ export default function CRMPage() {
   useEffect(() => {
     setMounted(true);
     requestPermission();
+
+    // Restore user session only
     const savedUser = localStorage.getItem("crm_user_v2");
-    const savedCustomers = localStorage.getItem("crm_customers_v2");
-    const savedSystemUsers = localStorage.getItem("crm_system_users_v2");
-    const savedRoles = localStorage.getItem("crm_roles_v2");
-    const savedIssues = localStorage.getItem("crm_issues_v2");
-    const savedInstallations = localStorage.getItem("crm_installations_v2");
-
-    if (savedUser) setUser(JSON.parse(savedUser));
-    if (savedIssues) setIssues(JSON.parse(savedIssues));
-    if (savedInstallations) setInstallations(JSON.parse(savedInstallations));
-    if (savedRoles) setRoles(JSON.parse(savedRoles));
-
-    if (savedCustomers) {
-      setCustomers(JSON.parse(savedCustomers));
-    }
-
-    if (savedSystemUsers) {
-      setUsers(JSON.parse(savedSystemUsers));
-    } else {
-      const initialUsers = [
-        { id: 1, name: "Administrator", username: "admin", password: "password", role: "admin" }
-      ];
-      setUsers(initialUsers);
-      localStorage.setItem("crm_system_users_v2", JSON.stringify(initialUsers));
+    if (savedUser) {
+      try {
+        const parsedUser = JSON.parse(savedUser);
+        setUser(parsedUser);
+      } catch (e) {
+        console.error("Failed to parse saved user", e);
+        localStorage.removeItem("crm_user_v2");
+      }
     }
 
     const fetchData = async () => {
@@ -127,17 +116,37 @@ export default function CRMPage() {
           getUsers(),
           getRoles()
         ]);
-        if (cData.length > 0) setCustomers(cData);
-        if (iData.length > 0) setIssues(iData);
-        if (instData.length > 0) setInstallations(instData);
-        if (userData.length > 0) setUsers(userData);
-        if (roleData.length > 0) setRoles(roleData);
+
+        // Use functional updates or handle empty sets safely
+        setCustomers(cData);
+        setIssues(iData);
+        setInstallations(instData);
+        setUsers(userData);
+        setRoles(roleData);
       } catch (err) {
-        console.error("Failed to fetch data:", err);
+        console.error("Failed to fetch initial data:", err);
+        setToast({ message: "ไม่สามารถเชื่อมต่อฐานข้อมูลได้", type: "error" });
       }
     };
 
     fetchData();
+
+    // Real-time Subscriptions
+    const channels = [
+      db.channel('public:issues')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'issues' }, () => fetchData())
+        .subscribe(),
+      db.channel('public:customers')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, () => fetchData())
+        .subscribe(),
+      db.channel('public:installations')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'installations' }, () => fetchData())
+        .subscribe()
+    ];
+
+    return () => {
+      channels.forEach(channel => db.removeChannel(channel));
+    };
   }, []);
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -185,12 +194,12 @@ export default function CRMPage() {
     }
   };
 
-  const handleSaveCustomer = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSaveCustomer = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
 
     const data: Customer = {
-      id: editingCustomer ? editingCustomer.id : (customers.length > 0 ? Math.max(...customers.map(c => c.id)) + 1 : 1),
+      id: editingCustomer ? editingCustomer.id : (customers.length > 0 ? Math.max(...customers.map(c => c.id)) + 1 : Date.now()),
       name: formData.get("name") as string,
       subdomain: formData.get("subdomain") as string,
       productType: formData.get("product") as any,
@@ -202,26 +211,40 @@ export default function CRMPage() {
       modifiedAt: new Date().toISOString()
     };
 
-    let updated;
-    if (editingCustomer) {
-      updated = customers.map(c => c.id === editingCustomer.id ? data : c);
-    } else {
-      updated = [...customers, data];
-    }
+    try {
+      const result = await saveCustomer(data);
+      if (result.success) {
+        // Refresh local state from DB to get real IDs and latest data
+        const updatedCustomers = await getCustomers();
+        setCustomers(updatedCustomers);
 
-    setCustomers(updated);
-    localStorage.setItem("crm_customers_v2", JSON.stringify(updated));
-    setModalOpen(false);
-    setEditingCustomer(null);
-    setIsEditingName(false);
-    setToast({ message: "บันทึกข้อมูลลูกค้าสำเร็จ", type: "success" });
+        setModalOpen(false);
+        setEditingCustomer(null);
+        setIsEditingName(false);
+        setToast({ message: "บันทึกข้อมูลลูกค้าสำเร็จ", type: "success" });
+      } else {
+        setToast({ message: "เกิดข้อผิดพลาด: " + result.error, type: "error" });
+      }
+    } catch (err) {
+      console.error("Failed to save customer:", err);
+      setToast({ message: "เกิดข้อผิดพลาดในการเชื่อมต่อ", type: "error" });
+    }
   };
 
-  const handleDeleteCustomer = (id: number) => {
-    const updated = customers.filter(c => c.id !== id);
-    setCustomers(updated);
-    localStorage.setItem("crm_customers_v2", JSON.stringify(updated));
-    setToast({ message: "ลบข้อมูลลูกค้าเรียบร้อยแล้ว", type: "success" });
+  const handleDeleteCustomer = async (id: number) => {
+    try {
+      const result = await deleteCustomer(id);
+      if (result.success) {
+        const updated = customers.filter(c => c.id !== id);
+        setCustomers(updated);
+        setToast({ message: "ลบข้อมูลลูกค้าเรียบร้อยแล้ว", type: "success" });
+      } else {
+        setToast({ message: "เกิดข้อผิดพลาด: " + result.error, type: "error" });
+      }
+    } catch (err) {
+      console.error("Failed to delete customer:", err);
+      setToast({ message: "เกิดข้อผิดพลาดในการเชื่อมต่อ", type: "error" });
+    }
   };
 
   const handleImportCSV = async (data: any[]) => {
@@ -238,12 +261,12 @@ export default function CRMPage() {
     }
   };
 
-  const handleSaveIssue = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSaveIssue = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
 
     const data: Issue = {
-      id: editingIssue ? editingIssue.id : (issues.length > 0 ? Math.max(...issues.map(i => i.id)) + 1 : 1),
+      id: editingIssue ? editingIssue.id : (issues.length > 0 ? Math.max(...issues.map(i => i.id)) + 1 : Date.now()),
       caseNumber: editingIssue ? editingIssue.caseNumber : `CASE-${Math.floor(1000 + Math.random() * 9000)}`,
       title: formData.get("title") as string,
       customerId: selectedCustomerId || 0,
@@ -260,200 +283,204 @@ export default function CRMPage() {
       modifiedAt: new Date().toISOString()
     };
 
-    let updated;
-    if (editingIssue) {
-      updated = issues.map(i => i.id === editingIssue.id ? data : i);
-    } else {
-      updated = [...issues, data];
-    }
+    try {
+      const result = await saveIssue(data);
+      if (result.success) {
+        // Refresh issues from server
+        const updatedIssues = await getIssues();
+        setIssues(updatedIssues);
 
-    setIssues(updated);
-    localStorage.setItem("crm_issues_v2", JSON.stringify(updated));
-    setIssueModalOpen(false);
-    setEditingIssue(null);
+        setIssueModalOpen(false);
+        setEditingIssue(null);
 
-    // Trigger Notification
-    if (!editingIssue) {
-      pushNotification(
-        "📝 มีการแจ้งปัญหาใหม่",
-        `เคส: ${data.title} (${data.customerName}) ถูกสร้างขึ้นโดย ${user?.name || 'System'}`,
-        "info"
-      );
-    } else if (editingIssue.status !== modalIssueStatus) {
-      pushNotification(
-        "🔄 อัปเดตสถานะเคส",
-        `เคส [${data.caseNumber}] เปลี่ยนสถานะเป็น ${modalIssueStatus}`,
-        modalIssueStatus === "เสร็จสิ้น" ? "success" : "info"
-      );
-    }
+        // Trigger Notification
+        if (!editingIssue) {
+          pushNotification(
+            "📝 มีการแจ้งปัญหาใหม่",
+            `เคส: ${data.title} (${data.customerName}) ถูกสร้างขึ้นโดย ${user?.name || 'System'}`,
+            "info"
+          );
+        } else if (editingIssue.status !== modalIssueStatus) {
+          pushNotification(
+            "🔄 อัปเดตสถานะเคส",
+            `เคส [${data.caseNumber}] เปลี่ยนสถานะเป็น ${modalIssueStatus}`,
+            modalIssueStatus === "เสร็จสิ้น" ? "success" : "info"
+          );
+        }
 
-    // Show confetti when completing an issue
-    if (modalIssueStatus === "เสร็จสิ้น") {
-      setShowConfetti(true);
-      setTimeout(() => setShowConfetti(false), 3000);
-      setToast({ message: "🎉 ยินดี! แก้ไขเคสเสร็จสิ้นแล้ว", type: "success" });
-    } else {
-      setToast({ message: "บันทึกข้อมูลเคสเรียบร้อยแล้ว", type: "success" });
+        // Show confetti when completing an issue
+        if (modalIssueStatus === "เสร็จสิ้น") {
+          setShowConfetti(true);
+          setTimeout(() => setShowConfetti(false), 3000);
+          setToast({ message: "🎉 ยินดี! แก้ไขเคสเสร็จสิ้นแล้ว", type: "success" });
+        } else {
+          setToast({ message: "บันทึกข้อมูลเคสเรียบร้อยแล้ว", type: "success" });
+        }
+      } else {
+        setToast({ message: "เกิดข้อผิดพลาด: " + result.error, type: "error" });
+      }
+    } catch (err) {
+      console.error("Failed to save issue:", err);
+      setToast({ message: "เกิดข้อผิดพลาดในการเชื่อมต่อ", type: "error" });
     }
   };
 
-  const handleDeleteIssue = (id: number) => {
-    const updated = issues.filter(i => i.id !== id);
-    setIssues(updated);
-    localStorage.setItem("crm_issues_v2", JSON.stringify(updated));
-    setToast({ message: "ลบเคสเรียบร้อยแล้ว", type: "success" });
+  const handleDeleteIssue = async (id: number) => {
+    try {
+      const result = await deleteIssue(id);
+      if (result.success) {
+        const updated = issues.filter(i => i.id !== id);
+        setIssues(updated);
+        setToast({ message: "ลบเคสเรียบร้อยแล้ว", type: "success" });
+      } else {
+        setToast({ message: "เกิดข้อผิดพลาด: " + result.error, type: "error" });
+      }
+    } catch (err) {
+      console.error("Failed to delete issue:", err);
+      setToast({ message: "เกิดข้อผิดพลาดในการเชื่อมต่อ", type: "error" });
+    }
   };
 
-  const handleAddInstallation = (newInst: any) => {
-    const nextInstId = installations.length > 0 ? Math.max(...installations.map(i => i.id)) + 1 : 1;
-    let finalCustomerId = newInst.customerId || 0;
-    let updatedCustomers = [...customers];
+  const handleAddInstallation = async (newInst: any) => {
+    try {
+      let finalCustomerId = newInst.customerId || 0;
+      let updatedCustomersList = [...customers];
 
-    // If it's a new customer, create the customer record first
-    if (newInst.installationType === "new") {
-      const nextCustId = customers.length > 0 ? Math.max(...customers.map(c => c.id)) + 1 : 1;
-      finalCustomerId = nextCustId;
+      // If it's a new customer, create the customer record first
+      if (newInst.installationType === "new") {
+        const nextCustId = Date.now();
+        finalCustomerId = nextCustId;
 
-      const newCustomer: Customer = {
-        id: nextCustId,
-        clientCode: `DE${nextCustId.toString().padStart(4, "0")}`,
-        name: newInst.newCustomerName,
-        subdomain: newInst.newCustomerLink,
-        productType: newInst.newCustomerProduct,
-        package: newInst.newCustomerPackage,
-        usageStatus: "Pending",
-        installationStatus: "Pending",
-        branches: [
-          { name: "สำนักงานใหญ่", isMain: true, status: "Pending" }
-        ],
-        createdBy: user?.name,
-        createdAt: new Date().toISOString()
-      };
+        const newCustomer: Customer = {
+          id: nextCustId,
+          clientCode: `DE${nextCustId.toString().slice(-4).padStart(4, "0")}`,
+          name: newInst.newCustomerName,
+          subdomain: newInst.newCustomerLink,
+          productType: newInst.newCustomerProduct,
+          package: newInst.newCustomerPackage,
+          usageStatus: "Pending",
+          installationStatus: "Pending",
+          branches: [
+            { name: "สำนักงานใหญ่", isMain: true, status: "Pending" }
+          ],
+          createdBy: user?.name,
+          createdAt: new Date().toISOString()
+        };
 
-      updatedCustomers = [...customers, newCustomer];
-      setCustomers(updatedCustomers);
-      localStorage.setItem("crm_customers_v2", JSON.stringify(updatedCustomers));
-    } else if (newInst.installationType === "branch" && newInst.branchName) {
-      // If it's a new branch for an existing customer, add the branch to the customer
-      updatedCustomers = customers.map(c => {
-        if (c.id === finalCustomerId) {
-          const branches = c.branches || [];
-          // Check if branch already exists to avoid duplicates
+        const custResult = await saveCustomer(newCustomer);
+        if (!custResult.success) throw new Error(custResult.error);
+
+        // Refresh customers
+        const freshCusts = await getCustomers();
+        setCustomers(freshCusts);
+        updatedCustomersList = freshCusts;
+      } else if (newInst.installationType === "branch" && newInst.branchName) {
+        // If it's a new branch for an existing customer, update the customer
+        const targetCust = customers.find(c => c.id === finalCustomerId);
+        if (targetCust) {
+          const branches = targetCust.branches || [];
           if (!branches.some(b => b.name === newInst.branchName)) {
-            return {
-              ...c,
+            const updatedCust = {
+              ...targetCust,
               branches: [...branches, { name: newInst.branchName, isMain: false, status: "Pending" }]
             };
+            const custResult = await saveCustomer(updatedCust);
+            if (!custResult.success) throw new Error(custResult.error);
+
+            const freshCusts = await getCustomers();
+            setCustomers(freshCusts);
+            updatedCustomersList = freshCusts;
           }
         }
-        return c;
-      });
-      setCustomers(updatedCustomers);
-      localStorage.setItem("crm_customers_v2", JSON.stringify(updatedCustomers));
+      }
+
+      const data: Installation = {
+        id: Date.now(),
+        customerId: finalCustomerId,
+        customerName: newInst.installationType === "new" ? newInst.newCustomerName : (newInst.customerName || ""),
+        customerLink: newInst.installationType === "new" ? newInst.newCustomerLink : undefined,
+        branchName: newInst.installationType === "branch" ? newInst.branchName : undefined,
+        status: "Pending",
+        requestedBy: user?.name || "System",
+        requestedAt: new Date().toISOString(),
+        notes: newInst.notes,
+        installationType: newInst.installationType
+      };
+
+      const result = await saveInstallation(data);
+      if (result.success) {
+        const updatedInst = await getInstallations();
+        setInstallations(updatedInst);
+
+        // Real-time Notification
+        pushNotification(
+          newInst.installationType === "new" ? "🚀 แจ้งติดตั้งลูกค้าใหม่" : "📍 แจ้งติดตั้งสาขาเพิ่ม",
+          newInst.installationType === "new"
+            ? `มีการแจ้งติดตั้งใหม่สำหรับ: ${newInst.newCustomerName} (${newInst.newCustomerProduct})`
+            : `มีการแจ้งติดตั้งสาขาใหม่: ${newInst.branchName} สำหรับลูกค้า ${newInst.customerName}`,
+          "info"
+        );
+
+        setToast({ message: newInst.installationType === "new" ? "สร้างลูกค้าและเปิดงานติดตั้งสำเร็จ" : "แจ้งงานติดตั้งสาขาใหม่สำเร็จ", type: "success" });
+      } else {
+        setToast({ message: "เกิดข้อผิดพลาด: " + result.error, type: "error" });
+      }
+    } catch (err: any) {
+      console.error("Failed to add installation:", err);
+      setToast({ message: "เกิดข้อผิดพลาด: " + err.message, type: "error" });
     }
-
-    const data: Installation = {
-      id: nextInstId,
-      customerId: finalCustomerId,
-      customerName: newInst.installationType === "new" ? newInst.newCustomerName : (newInst.customerName || ""),
-      customerLink: newInst.installationType === "new" ? newInst.newCustomerLink : undefined,
-      branchName: newInst.installationType === "branch" ? newInst.branchName : undefined,
-      status: "Pending",
-      requestedBy: user?.name || "System",
-      requestedAt: new Date().toISOString(),
-      notes: newInst.notes,
-      installationType: newInst.installationType
-    };
-
-    const updatedInst = [...installations, data];
-    setInstallations(updatedInst);
-    localStorage.setItem("crm_installations_v2", JSON.stringify(updatedInst));
-
-    // Real-time Notification
-    pushNotification(
-      newInst.installationType === "new" ? "🚀 แจ้งติดตั้งลูกค้าใหม่" : "📍 แจ้งติดตั้งสาขาเพิ่ม",
-      newInst.installationType === "new"
-        ? `มีการแจ้งติดตั้งใหม่สำหรับ: ${newInst.newCustomerName} (${newInst.newCustomerProduct})`
-        : `มีการแจ้งติดตั้งสาขาใหม่: ${newInst.branchName} สำหรับลูกค้า ${newInst.customerName}`,
-      "info"
-    );
-
-    setToast({ message: newInst.installationType === "new" ? "สร้างลูกค้าและเปิดงานติดตั้งสำเร็จ" : "แจ้งงานติดตั้งสาขาใหม่สำเร็จ", type: "success" });
   };
 
-  const handleUpdateInstallationStatus = (id: number, status: Installation["status"]) => {
-    const updated = installations.map(inst => {
-      if (inst.id === id) {
+  const handleUpdateInstallationStatus = async (id: number, status: Installation["status"]) => {
+    try {
+      const result = await updateInstallationStatus(id, status, user?.name);
+      if (result.success) {
+        const inst = result.data;
+
         // If installation completed, also update customer/branch status
-        if (status === "Completed") {
-          const updatedCusts = customers.map(c => {
-            if (c.id === inst.customerId) {
-              const updatedBranches = c.branches?.map(b => {
-                // If it's a branch installation, match branch name
-                if (inst.installationType === "branch" && b.name === inst.branchName) {
-                  return { ...b, status: "Completed" as const };
-                }
-                // If it's a new main installation
-                if (inst.installationType === "new" && b.isMain) {
-                  return { ...b, status: "Completed" as const };
-                }
-                return b;
-              });
-              return {
-                ...c,
-                installationStatus: "Completed" as const,
-                branches: updatedBranches
-              };
-            }
-            return c;
-          });
-          setCustomers(updatedCusts);
-          localStorage.setItem("crm_customers_v2", JSON.stringify(updatedCusts));
-        } else if (status === "Installing") {
-          // Sync "Installing" status to customer and specific branch
-          const updatedCusts = customers.map(c => {
-            if (c.id === inst.customerId) {
-              const updatedBranches = c.branches?.map(b => {
-                if (inst.installationType === "branch" && b.name === inst.branchName) {
-                  return { ...b, status: "Installing" as const };
-                }
-                if (inst.installationType === "new" && b.isMain) {
-                  return { ...b, status: "Installing" as const };
-                }
-                return b;
-              });
-              return {
-                ...c,
-                installationStatus: "Installing" as const,
-                branches: updatedBranches
-              };
-            }
-            return c;
-          });
-          setCustomers(updatedCusts);
-          localStorage.setItem("crm_customers_v2", JSON.stringify(updatedCusts));
+        if (status === "Completed" || status === "Installing") {
+          const targetCust = customers.find(c => c.id === inst.customer_id);
+          if (targetCust) {
+            const updatedBranches = targetCust.branches?.map(b => {
+              if (inst.installation_type === "branch" && b.name === inst.branch_name) {
+                return { ...b, status: status as any };
+              }
+              if (inst.installation_type === "new" && b.isMain) {
+                return { ...b, status: status as any };
+              }
+              return b;
+            });
+            const updatedCust = {
+              ...targetCust,
+              installationStatus: status as any,
+              branches: updatedBranches
+            };
+            await saveCustomer(updatedCust);
+          }
         }
 
-        return { ...inst, status, modifiedBy: user?.name, modifiedAt: new Date().toISOString() };
-      }
-      return inst;
-    });
-    setInstallations(updated);
-    localStorage.setItem("crm_installations_v2", JSON.stringify(updated));
+        // Refresh all data
+        const [freshInsts, freshCusts] = await Promise.all([getInstallations(), getCustomers()]);
+        setInstallations(freshInsts);
+        setCustomers(freshCusts);
 
-    // Notification for completion
-    if (status === "Completed") {
-      const finishedInst = installations.find(i => i.id === id);
-      if (finishedInst) {
-        pushNotification(
-          "✅ ติดตั้งเสร็จสมบูรณ์",
-          `งานติดตั้งของ ${finishedInst.customerName}${finishedInst.branchName ? ` (${finishedInst.branchName})` : ''} เสร็จเรียบร้อยแล้ว`,
-          "success"
-        );
+        // Notification for completion
+        if (status === "Completed") {
+          pushNotification(
+            "✅ ติดตั้งเสร็จสมบูรณ์",
+            `งานติดตั้งของ ${inst.customer_name}${inst.branch_name ? ` (${inst.branch_name})` : ''} เสร็จเรียบร้อยแล้ว`,
+            "success"
+          );
+        }
+
+        setToast({ message: "อัปเดตสถานะงานติดตั้งเรียบร้อยแล้ว", type: "success" });
+      } else {
+        setToast({ message: "เกิดข้อผิดพลาด: " + result.error, type: "error" });
       }
+    } catch (err: any) {
+      console.error("Failed to update installation status:", err);
+      setToast({ message: "เกิดข้อผิดพลาดในการเชื่อมต่อ", type: "error" });
     }
-
-    setToast({ message: "อัปเดตสถานะงานติดตั้งเรียบร้อยแล้ว", type: "success" });
   };
 
 
