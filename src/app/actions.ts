@@ -219,15 +219,32 @@ export async function saveUser(userData: any) {
 }
 
 export async function loginUser(username: string, password: string) {
+    console.log("Attempting login for:", username); // Debug
     try {
+        if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+            console.error("Missing Supabase Env Vars:", {
+                url: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+                key: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+            });
+            return { success: false, error: "System Configuration Error: Missing Environment Variables" };
+        }
+
         const { data, error } = await db
             .from('users')
             .select('*, roles(name)')
             .eq('username', username)
-            .single();
+            .maybeSingle();
 
-        if (error || !data) {
-            return { success: false, error: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" };
+        console.log("Supabase login query result:", { data: data ? "Found" : "Not Found", error }); // Debug
+
+        if (error) {
+            console.error("Database error during login:", error);
+            return { success: false, error: `Database Error: ${error.message}` };
+        }
+
+        if (!data) {
+            console.log("Login failed: User not found");
+            return { success: false, error: "ไม่พบชื่อผู้ใช้งานนี้ในระบบ" };
         }
 
         const isValid = await bcrypt.compare(password, data.password);
@@ -242,7 +259,8 @@ export async function loginUser(username: string, password: string) {
         }
 
         if (!isMatch) {
-            return { success: false, error: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" };
+            console.log("Login failed: Password mismatch");
+            return { success: false, error: "รหัสผ่านไม่ถูกต้อง" };
         }
 
         const { password: _, ...userWithoutPassword } = data;
@@ -255,7 +273,7 @@ export async function loginUser(username: string, password: string) {
         };
     } catch (err: any) {
         console.error("Login error:", err);
-        return { success: false, error: "เกิดข้อผิดพลาดในการเข้าสู่ระบบ" };
+        return { success: false, error: `System Error: ${err.message}` };
     }
 }
 

@@ -466,20 +466,53 @@ export default function InstallationManager({
                                             onChange={(e) => setNewInst({ ...newInst, newCustomerName: e.target.value })}
                                         />
                                     </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-xs font-medium text-slate-400 mb-1.5">
+                                                ประเภทระบบ <span className="text-rose-500">*</span>
+                                            </label>
+                                            <CustomSelect
+                                                options={[
+                                                    { value: "Dr.Ease", label: "Dr.Ease" },
+                                                    { value: "ease", label: "ease" },
+                                                ]}
+                                                value={newInst.newCustomerProduct}
+                                                onChange={(val) => setNewInst({ ...newInst, newCustomerProduct: val })}
+                                                placeholder="เลือกระบบ..."
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-slate-400 mb-1.5">
+                                                แพ็คเกจ <span className="text-rose-500">*</span>
+                                            </label>
+                                            <CustomSelect
+                                                options={[
+                                                    { value: "Starter", label: "Starter" },
+                                                    { value: "Standard", label: "Standard" },
+                                                    { value: "Elite", label: "Elite" },
+                                                ]}
+                                                value={newInst.newCustomerPackage}
+                                                onChange={(val) => setNewInst({ ...newInst, newCustomerPackage: val })}
+                                                placeholder="เลือกแพ็คเกจ..."
+                                            />
+                                        </div>
+                                    </div>
+
                                     <div>
                                         <label className="block text-xs font-medium text-slate-400 mb-1.5">
-                                            แพ็คเกจ <span className="text-rose-500">*</span>
+                                            ลิงก์เข้าระบบ (System Link) <span className="text-rose-500">*</span>
                                         </label>
-                                        <CustomSelect
-                                            options={[
-                                                { value: "Starter", label: "Starter" },
-                                                { value: "Standard", label: "Standard" },
-                                                { value: "Elite", label: "Elite" },
-                                            ]}
-                                            value={newInst.newCustomerPackage}
-                                            onChange={(val) => setNewInst({ ...newInst, newCustomerPackage: val })}
-                                            placeholder="เลือกแพ็คเกจ..."
-                                        />
+                                        <div className="relative">
+                                            <input
+                                                type="text"
+                                                className="input-field pl-9"
+                                                placeholder="example.dr-ease.com"
+                                                value={newInst.newCustomerLink}
+                                                onChange={(e) => setNewInst({ ...newInst, newCustomerLink: e.target.value })}
+                                            />
+                                            <ExternalLink className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                                        </div>
                                     </div>
                                 </div>
                             )}

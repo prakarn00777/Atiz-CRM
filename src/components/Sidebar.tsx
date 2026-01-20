@@ -7,6 +7,7 @@ interface SidebarProps {
     currentView: string;
     setView: (view: string) => void;
     onLogout: () => void;
+    userRole: any;
 }
 
 const mainMenus = [
@@ -23,7 +24,7 @@ const mainMenus = [
     { id: "issues", label: "แจ้งปัญหา", icon: AlertCircle },
 ];
 
-const Sidebar = memo(function Sidebar({ currentView, setView, onLogout }: SidebarProps) {
+const Sidebar = memo(function Sidebar({ currentView, setView, onLogout, userRole }: SidebarProps) {
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [expandedMenus, setExpandedMenus] = useState<string[]>(["customer_group"]);
@@ -60,16 +61,27 @@ const Sidebar = memo(function Sidebar({ currentView, setView, onLogout }: Sideba
 
             <nav className={`flex-1 space-y-1 pr-1 no-scrollbar ${isCollapsed ? "overflow-visible" : "overflow-y-auto"}`}>
                 {mainMenus.map((item) => {
-                    const isActive = currentView === item.id || (item.children && item.children.some(child => child.id === currentView));
-                    const isExpanded = expandedMenus.includes(item.id);
+                    const isAdmin = userRole?.role?.toLowerCase() === 'admin';
 
+                    // Handle Group Items (like "ลูกค้า")
                     if (item.children) {
+                        // Filter visible children based on permissions
+                        const visibleChildren = item.children.filter(child =>
+                            isAdmin || userRole?.permissions?.[child.id]?.read
+                        );
+
+                        // If no children are visible, hide the group
+                        if (visibleChildren.length === 0) return null;
+
+                        const isActive = currentView === item.id || visibleChildren.some(child => child.id === currentView);
+                        const isExpanded = expandedMenus.includes(item.id);
+
                         return (
                             <div key={item.id} className="space-y-1 relative group">
                                 <button
                                     onClick={() => !isCollapsed ? toggleMenu(item.id) : null}
                                     className={`btn w-full text-sm transition-all duration-200 ${isCollapsed ? "justify-center p-2" : "justify-between"
-                                        } ${isActive && !item.children.some(c => c.id === currentView) // Highlight parent only if exact match (rare) or just style as group
+                                        } ${isActive && !visibleChildren.some(c => c.id === currentView)
                                             ? "text-slate-200"
                                             : "btn-ghost"
                                         }`}
@@ -89,7 +101,7 @@ const Sidebar = memo(function Sidebar({ currentView, setView, onLogout }: Sideba
                                 {/* Submenu for Expanded State */}
                                 {!isCollapsed && isExpanded && (
                                     <div className="ml-4 pl-3 border-l border-white/10 space-y-1 animate-in slide-in-from-top-1 duration-200">
-                                        {item.children.map((child) => (
+                                        {visibleChildren.map((child) => (
                                             <button
                                                 key={child.id}
                                                 onClick={() => setView(child.id)}
@@ -111,7 +123,7 @@ const Sidebar = memo(function Sidebar({ currentView, setView, onLogout }: Sideba
                                             <div className="px-2 py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 mb-1">
                                                 {item.label}
                                             </div>
-                                            {item.children.map((child) => (
+                                            {visibleChildren.map((child) => (
                                                 <button
                                                     key={child.id}
                                                     onClick={() => setView(child.id)}
@@ -126,6 +138,10 @@ const Sidebar = memo(function Sidebar({ currentView, setView, onLogout }: Sideba
                             </div>
                         );
                     }
+
+                    // Handle Single Items
+                    const canRead = isAdmin || userRole?.permissions?.[item.id]?.read;
+                    if (!canRead) return null;
 
                     return (
                         <button
@@ -149,69 +165,79 @@ const Sidebar = memo(function Sidebar({ currentView, setView, onLogout }: Sideba
                 })}
             </nav>
 
-            {/* Settings Section */}
-            <div className="pt-2 mt-2 border-t border-white/5 relative group">
-                <button
-                    onClick={() => !isCollapsed && setIsSettingsOpen(!isSettingsOpen)}
-                    className={`btn btn-ghost w-full text-slate-400 text-sm transition-all duration-200 ${isCollapsed ? "justify-center p-2" : "justify-start"
-                        }`}
-                    title={isCollapsed ? "ตั้งค่า" : ""}
-                >
-                    <div className={`flex items-center ${isCollapsed ? "justify-center" : "gap-3"}`}>
-                        <Settings className="w-4 h-4 flex-shrink-0" />
-                        {!isCollapsed && (
-                            <div className="flex-1 flex items-center justify-between">
-                                <span className="font-medium">ตั้งค่า</span>
-                                <ChevronRight className={`w-3 h-3 transition-transform ${isSettingsOpen ? "rotate-90" : ""}`} />
-                            </div>
-                        )}
-                    </div>
-                </button>
-
-                {/* Flyout Menu for Collapsed State */}
-                {isCollapsed && (
-                    <div className="absolute left-full top-0 ml-2 w-48 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-300 z-[100] translate-x-2 group-hover:translate-x-0">
-                        <div className="glass-card p-2 space-y-1 shadow-2xl border-white/20 bg-slate-900/95 backdrop-blur-xl">
-                            <div className="px-2 py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 mb-1">
-                                Settings
-                            </div>
-                            <button
-                                onClick={() => setView("user_management")}
-                                className={`btn w-full justify-start text-sm font-medium ${currentView === "user_management" ? "text-indigo-400 bg-indigo-500/10" : "btn-ghost"}`}
-                            >
-                                <UserCog className="w-3.5 h-3.5" />
-                                <span>จัดการผู้ใช้งาน</span>
-                            </button>
-                            <button
-                                onClick={() => setView("role_management")}
-                                className={`btn w-full justify-start text-sm font-medium ${currentView === "role_management" ? "text-indigo-400 bg-indigo-500/10" : "btn-ghost"}`}
-                            >
-                                <ShieldCheck className="w-3.5 h-3.5" />
-                                <span>จัดการบทบาท</span>
-                            </button>
+            {/* Settings Section - Only show if has permission for user_management OR role_management */}
+            {(userRole?.permissions?.['user_management']?.read || userRole?.permissions?.['role_management']?.read || userRole?.role?.toLowerCase() === 'admin') && (
+                <div className="pt-2 mt-2 border-t border-white/5 relative group">
+                    <button
+                        onClick={() => !isCollapsed && setIsSettingsOpen(!isSettingsOpen)}
+                        className={`btn btn-ghost w-full text-slate-400 text-sm transition-all duration-200 ${isCollapsed ? "justify-center p-2" : "justify-start"
+                            }`}
+                        title={isCollapsed ? "ตั้งค่า" : ""}
+                    >
+                        <div className={`flex items-center ${isCollapsed ? "justify-center" : "gap-3"}`}>
+                            <Settings className="w-4 h-4 flex-shrink-0" />
+                            {!isCollapsed && (
+                                <div className="flex-1 flex items-center justify-between">
+                                    <span className="font-medium">ตั้งค่า</span>
+                                    <ChevronRight className={`w-3 h-3 transition-transform ${isSettingsOpen ? "rotate-90" : ""}`} />
+                                </div>
+                            )}
                         </div>
-                    </div>
-                )}
+                    </button>
 
-                {!isCollapsed && isSettingsOpen && (
-                    <div className="mt-1 ml-4 pl-3 border-l border-white/10 space-y-1 animate-in slide-in-from-top-2 duration-200">
-                        <button
-                            onClick={() => setView("user_management")}
-                            className={`btn w-full justify-start text-sm h-9 font-medium ${currentView === "user_management" ? "text-indigo-400 bg-indigo-500/10" : "text-slate-400 hover:text-white hover:bg-white/5"}`}
-                        >
-                            <UserCog className="w-3.5 h-3.5 mr-2" />
-                            <span>จัดการผู้ใช้งาน</span>
-                        </button>
-                        <button
-                            onClick={() => setView("role_management")}
-                            className={`btn w-full justify-start text-sm h-9 font-medium ${currentView === "role_management" ? "text-indigo-400 bg-indigo-500/10" : "text-slate-400 hover:text-white hover:bg-white/5"}`}
-                        >
-                            <ShieldCheck className="w-3.5 h-3.5 mr-2" />
-                            <span>จัดการบทบาท</span>
-                        </button>
-                    </div>
-                )}
-            </div>
+                    {/* Flyout Menu for Collapsed State */}
+                    {isCollapsed && (
+                        <div className="absolute left-full top-0 ml-2 w-48 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-300 z-[100] translate-x-2 group-hover:translate-x-0">
+                            <div className="glass-card p-2 space-y-1 shadow-2xl border-white/20 bg-slate-900/95 backdrop-blur-xl">
+                                <div className="px-2 py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 mb-1">
+                                    Settings
+                                </div>
+                                {(userRole?.permissions?.['user_management']?.read || userRole?.role?.toLowerCase() === 'admin') && (
+                                    <button
+                                        onClick={() => setView("user_management")}
+                                        className={`btn w-full justify-start text-sm font-medium ${currentView === "user_management" ? "text-indigo-400 bg-indigo-500/10" : "btn-ghost"}`}
+                                    >
+                                        <UserCog className="w-3.5 h-3.5" />
+                                        <span>จัดการผู้ใช้งาน</span>
+                                    </button>
+                                )}
+                                {(userRole?.permissions?.['role_management']?.read || userRole?.role?.toLowerCase() === 'admin') && (
+                                    <button
+                                        onClick={() => setView("role_management")}
+                                        className={`btn w-full justify-start text-sm font-medium ${currentView === "role_management" ? "text-indigo-400 bg-indigo-500/10" : "btn-ghost"}`}
+                                    >
+                                        <ShieldCheck className="w-3.5 h-3.5" />
+                                        <span>จัดการบทบาท</span>
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {!isCollapsed && isSettingsOpen && (
+                        <div className="mt-1 ml-4 pl-3 border-l border-white/10 space-y-1 animate-in slide-in-from-top-2 duration-200">
+                            {(userRole?.permissions?.['user_management']?.read || userRole?.role?.toLowerCase() === 'admin') && (
+                                <button
+                                    onClick={() => setView("user_management")}
+                                    className={`btn w-full justify-start text-sm h-9 font-medium ${currentView === "user_management" ? "text-indigo-400 bg-indigo-500/10" : "text-slate-400 hover:text-white hover:bg-white/5"}`}
+                                >
+                                    <UserCog className="w-3.5 h-3.5 mr-2" />
+                                    <span>จัดการผู้ใช้งาน</span>
+                                </button>
+                            )}
+                            {(userRole?.permissions?.['role_management']?.read || userRole?.role?.toLowerCase() === 'admin') && (
+                                <button
+                                    onClick={() => setView("role_management")}
+                                    className={`btn w-full justify-start text-sm h-9 font-medium ${currentView === "role_management" ? "text-indigo-400 bg-indigo-500/10" : "text-slate-400 hover:text-white hover:bg-white/5"}`}
+                                >
+                                    <ShieldCheck className="w-3.5 h-3.5 mr-2" />
+                                    <span>จัดการบทบาท</span>
+                                </button>
+                            )}
+                        </div>
+                    )}
+                </div>
+            )}
 
             <button
                 onClick={onLogout}
