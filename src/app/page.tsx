@@ -95,8 +95,14 @@ export default function CRMPage() {
     setMounted(true);
     requestPermission();
 
-    // Restore user session only
+    // 1. Immediate Load from Cache (Stale-While-Revalidate)
     const savedUser = localStorage.getItem("crm_user_v2");
+    const cachedCustomers = localStorage.getItem("crm_customers_v2");
+    const cachedIssues = localStorage.getItem("crm_issues_v2");
+    const cachedInstallations = localStorage.getItem("crm_installations_v2");
+    const cachedUsers = localStorage.getItem("crm_system_users_v2");
+    const cachedRoles = localStorage.getItem("crm_roles_v2");
+
     if (savedUser) {
       try {
         const parsedUser = JSON.parse(savedUser);
@@ -107,6 +113,13 @@ export default function CRMPage() {
       }
     }
 
+    if (cachedCustomers) setCustomers(JSON.parse(cachedCustomers));
+    if (cachedIssues) setIssues(JSON.parse(cachedIssues));
+    if (cachedInstallations) setInstallations(JSON.parse(cachedInstallations));
+    if (cachedUsers) setUsers(JSON.parse(cachedUsers));
+    if (cachedRoles) setRoles(JSON.parse(cachedRoles));
+
+    // 2. Background Revalidation (Fetch from Supabase)
     const fetchData = async () => {
       try {
         const [cData, iData, instData, userData, roleData] = await Promise.all([
@@ -117,15 +130,21 @@ export default function CRMPage() {
           getRoles()
         ]);
 
-        // Use functional updates or handle empty sets safely
+        // Update states
         setCustomers(cData);
         setIssues(iData);
         setInstallations(instData);
         setUsers(userData);
         setRoles(roleData);
+
+        // Update cache for next load
+        localStorage.setItem("crm_customers_v2", JSON.stringify(cData));
+        localStorage.setItem("crm_issues_v2", JSON.stringify(iData));
+        localStorage.setItem("crm_installations_v2", JSON.stringify(instData));
+        localStorage.setItem("crm_system_users_v2", JSON.stringify(userData));
+        localStorage.setItem("crm_roles_v2", JSON.stringify(roleData));
       } catch (err) {
-        console.error("Failed to fetch initial data:", err);
-        setToast({ message: "ไม่สามารถเชื่อมต่อฐานข้อมูลได้", type: "error" });
+        console.error("Background fetch failed:", err);
       }
     };
 

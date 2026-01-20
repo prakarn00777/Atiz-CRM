@@ -74,7 +74,11 @@ export async function getCustomers(): Promise<Customer[]> {
             contactPhone: row.contact_phone ? String(row.contact_phone) : undefined,
             note: row.note ? String(row.note) : undefined,
             installationStatus: row.installation_status ? String(row.installation_status) : undefined,
-            branches: row.branches ? JSON.parse(String(row.branches)) : []
+            branches: row.branches ? JSON.parse(String(row.branches)) : [],
+            createdBy: row.created_by ? String(row.created_by) : undefined,
+            createdAt: row.created_at ? String(row.created_at) : undefined,
+            modifiedBy: row.modified_by ? String(row.modified_by) : undefined,
+            modifiedAt: row.modified_at ? String(row.modified_at) : undefined
         })) as Customer[];
     } catch (err) {
         console.error("Critical error in getCustomers:", err);
@@ -105,10 +109,8 @@ export async function getIssues(): Promise<any[]> {
             type: String(row.type),
             severity: String(row.severity),
             status: String(row.status),
-            reportedBy: String(row.reported_by),
-            reportedAt: String(row.reported_at),
-            createdBy: row.created_by ? String(row.created_by) : String(row.reported_by), // Map createdBy for frontend
-            createdAt: row.created_at ? String(row.created_at) : String(row.reported_at), // Map createdAt for frontend
+            createdBy: row.created_by ? String(row.created_by) : (row.reported_by ? String(row.reported_by) : undefined),
+            createdAt: row.created_at ? String(row.created_at) : (row.reported_at ? String(row.reported_at) : undefined),
             modifiedBy: row.modified_by ? String(row.modified_by) : undefined,
             modifiedAt: row.modified_at ? String(row.modified_at) : undefined,
             attachments: row.attachments ? String(row.attachments) : "[]",
@@ -137,12 +139,12 @@ export async function getInstallations(): Promise<any[]> {
             customerName: String(row.customer_name),
             branchName: row.branch_name ? String(row.branch_name) : undefined,
             status: String(row.status),
-            requestedBy: String(row.requested_by),
-            requestedAt: String(row.requested_at),
+            installationType: String(row.installation_type),
+            notes: row.notes ? String(row.notes) : undefined,
             assignedDev: row.assigned_dev ? String(row.assigned_dev) : undefined,
             completedAt: row.completed_at ? String(row.completed_at) : undefined,
-            notes: row.notes ? String(row.notes) : undefined,
-            installationType: String(row.installation_type),
+            createdBy: row.created_by ? String(row.created_by) : (row.requested_by ? String(row.requested_by) : undefined),
+            createdAt: row.created_at ? String(row.created_at) : (row.requested_at ? String(row.requested_at) : undefined),
             modifiedBy: row.modified_by ? String(row.modified_by) : undefined,
             modifiedAt: row.modified_at ? String(row.modified_at) : undefined,
         }));
@@ -350,12 +352,10 @@ export async function saveIssue(issueData: any) {
             severity: rest.severity,
             status: rest.status,
             attachments: rest.attachments,
-            reported_by: rest.createdBy || rest.reportedBy,
-            reported_at: rest.createdAt || rest.reportedAt,
-            modified_by: rest.modifiedBy,
-            modified_at: rest.modifiedAt,
             created_by: rest.createdBy,
-            created_at: rest.createdAt
+            created_at: rest.createdAt,
+            modified_by: rest.modifiedBy,
+            modified_at: rest.modifiedAt
         };
 
         let result;
@@ -407,10 +407,10 @@ export async function saveCustomer(customerData: any) {
             contact_name: rest.contactName,
             contact_phone: rest.contactPhone,
             note: rest.note,
-            modified_by: rest.modifiedBy,
-            modified_at: rest.modifiedAt,
             created_by: rest.createdBy,
             created_at: rest.createdAt,
+            modified_by: rest.modifiedBy,
+            modified_at: rest.modifiedAt,
             branches: JSON.stringify(rest.branches || [])
         };
 
@@ -452,8 +452,8 @@ export async function saveInstallation(instData: any) {
             customer_name: rest.customerName,
             branch_name: rest.branchName,
             status: rest.status,
-            requested_by: rest.requestedBy,
-            requested_at: rest.requestedAt,
+            created_by: rest.requestedBy || rest.createdBy,
+            created_at: rest.requestedAt || rest.createdAt,
             assigned_dev: rest.assignedDev,
             completed_at: rest.completedAt,
             notes: rest.notes,
