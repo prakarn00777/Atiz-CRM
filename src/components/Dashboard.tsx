@@ -215,36 +215,7 @@ export default function Dashboard({ customers, installations, issues, user, onVi
                         ))}
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 min-h-0">
-                        <div className="glass-card p-6 border-white/5 flex flex-col min-h-0">
-                            <h3 className="text-text-main font-bold flex items-center gap-2">
-                                <PieChart className="w-4 h-4 text-emerald-400" />
-                                Customer Status Distribution
-                            </h3>
-                            <p className="text-text-muted text-[10px] font-bold uppercase tracking-widest mb-4 flex-shrink-0">สัดส่วนสถานะลูกค้าทั้งหมด</p>
-                            <div className="flex-1 w-full min-h-0">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <RePieChart>
-                                        <Pie
-                                            data={MOCK_PIE_DATA}
-                                            innerRadius={60}
-                                            outerRadius={80}
-                                            paddingAngle={5}
-                                            dataKey="value"
-                                        >
-                                            {MOCK_PIE_DATA.map((entry, index) => (
-                                                <Cell key={`cell-${index}`} fill={entry.color} />
-                                            ))}
-                                        </Pie>
-                                        <Tooltip
-                                            contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '8px', color: '#fff' }}
-                                        />
-                                        <Legend verticalAlign="bottom" height={36} />
-                                    </RePieChart>
-                                </ResponsiveContainer>
-                            </div>
-                        </div>
-
+                    <div className="grid grid-cols-1 gap-6 flex-1 min-h-0">
                         <div className="glass-card p-6 border-white/5 flex flex-col min-h-0">
                             <h3 className="text-white font-bold flex items-center gap-2 flex-shrink-0">
                                 <Activity className="w-4 h-4 text-indigo-400" />
