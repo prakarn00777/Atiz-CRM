@@ -150,23 +150,82 @@ export default function CRMPage() {
 
     fetchData();
 
-    // Real-time Subscriptions
+    // Real-time Subscriptions with Broadcast Notifications
     const channels = [
       db.channel('public:issues')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'issues' }, () => fetchData())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'issues' }, (payload: any) => {
+          fetchData();
+
+          if (!user) return;
+          const { eventType, new: newRecord, old: oldRecord } = payload;
+          const actor = newRecord?.created_by || newRecord?.modified_by;
+
+          // Skip if current user is the actor (actor already got optimistic notification)
+          if (actor === user.name) return;
+
+          if (eventType === 'INSERT') {
+            pushNotification(
+              "📝 มีการแจ้งปัญหาใหม่",
+              `เคส: ${newRecord.title} (${newRecord.customer_name}) โดย ${actor || 'System'}`,
+              "info"
+            );
+          } else if (eventType === 'UPDATE' && newRecord.status !== oldRecord.status) {
+            pushNotification(
+              "🔄 อัปเดตสถานะเคส",
+              `เคส [${newRecord.case_number}] เปลี่ยนเป็น ${newRecord.status}`,
+              newRecord.status === "เสร็จสิ้น" ? "success" : "info"
+            );
+          }
+        })
         .subscribe(),
       db.channel('public:customers')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, () => fetchData())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, (payload: any) => {
+          fetchData();
+
+          if (!user) return;
+          if (payload.eventType === 'INSERT') {
+            const actor = payload.new.created_by;
+            if (actor === user.name) return;
+            pushNotification(
+              "👥 มีลูกค้าใหม่",
+              `เพิ่มลูกค้า: ${payload.new.name} โดย ${actor || 'System'}`,
+              "info"
+            );
+          }
+        })
         .subscribe(),
       db.channel('public:installations')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'installations' }, () => fetchData())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'installations' }, (payload: any) => {
+          fetchData();
+
+          if (!user) return;
+          const { eventType, new: newRecord, old: oldRecord } = payload;
+          const actor = newRecord?.created_by || newRecord?.modified_by;
+          if (actor === user.name) return;
+
+          if (eventType === 'INSERT') {
+            pushNotification(
+              newRecord.installation_type === "new" ? "🚀 แจ้งติดตั้งลูกค้าใหม่" : "📍 แจ้งติดตั้งสาขาเพิ่ม",
+              newRecord.installation_type === "new"
+                ? `มีการแจ้งติดตั้งใหม่สำหรับ: ${newRecord.customer_name}`
+                : `มีการแจ้งติดตั้งสาขาใหม่สำหรับ: ${newRecord.customer_name}`,
+              "info"
+            );
+          } else if (eventType === 'UPDATE' && newRecord.status !== oldRecord.status) {
+            pushNotification(
+              "🛠️ อัปเดตงานติดตั้ง",
+              `งานของ ${newRecord.customer_name} เปลี่ยนเป็น ${newRecord.status}`,
+              newRecord.status === "Completed" ? "success" : "info"
+            );
+          }
+        })
         .subscribe()
     ];
 
     return () => {
       channels.forEach(channel => db.removeChannel(channel));
     };
-  }, []);
+  }, [user?.name]);
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
