@@ -53,6 +53,7 @@ function TableSummary({ customers }: { customers: Customer[] }) {
 
 export default function CRMPage() {
   const [currentView, setView] = useState("dashboard");
+  const [isLoading, setIsLoading] = useState(false);
   const [isModalOpen, setModalOpen] = useState(false);
   const [isIssueModalOpen, setIssueModalOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
@@ -139,20 +140,30 @@ export default function CRMPage() {
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (isLoading) return;
+
     const formData = new FormData(e.currentTarget);
     const u_str = String(formData.get("username"));
     const p_str = String(formData.get("password"));
 
-    setToast({ message: "正在登录...", type: "info" });
+    setIsLoading(true);
+    setToast({ message: "กำลังเข้าสู่ระบบ...", type: "info" });
 
-    const result = await loginUser(u_str, p_str);
+    try {
+      const result = await loginUser(u_str, p_str);
 
-    if (result.success) {
-      setUser(result.user);
-      localStorage.setItem("crm_user_v2", JSON.stringify(result.user));
-      setToast({ message: "เข้าสู่ระบบสำเร็จ", type: "success" });
-    } else {
-      setToast({ message: result.error || "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง", type: "error" });
+      if (result.success) {
+        setUser(result.user);
+        localStorage.setItem("crm_user_v2", JSON.stringify(result.user));
+        setToast({ message: "เข้าสู่ระบบสำเร็จ", type: "success" });
+      } else {
+        setToast({ message: result.error || "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง", type: "error" });
+      }
+    } catch (err) {
+      console.error("Login failed:", err);
+      setToast({ message: "เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองใหม่", type: "error" });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -489,14 +500,23 @@ export default function CRMPage() {
           <form className="space-y-6" onSubmit={handleLogin}>
             <div>
               <label className="block text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">Username</label>
-              <input name="username" className="input-field py-3 text-sm h-12" placeholder="Enter username" required />
+              <input name="username" className="input-field py-3 text-sm h-12" placeholder="Enter username" required disabled={isLoading} />
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">Password</label>
-              <input name="password" type="password" className="input-field py-3 text-sm h-12" placeholder="••••••••" required />
+              <input name="password" type="password" className="input-field py-3 text-sm h-12" placeholder="••••••••" required disabled={isLoading} />
             </div>
-            <button type="submit" className="w-full btn btn-primary py-3 text-sm font-bold shadow-xl shadow-indigo-500/20 active:scale-95 transition-transform">
-              Sign In
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full btn btn-primary py-3 text-sm font-bold shadow-xl shadow-indigo-500/20 active:scale-95 transition-transform disabled:opacity-70 disabled:cursor-not-allowed"
+            >
+              {isLoading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  กำลังตรวจสอบ...
+                </span>
+              ) : "Sign In"}
             </button>
           </form>
         </div>
@@ -506,7 +526,12 @@ export default function CRMPage() {
 
   return (
     <div className="flex min-h-screen bg-[#020617] text-slate-300 font-sans selection:bg-indigo-500/30">
-      <Sidebar currentView={currentView} setView={setView} onLogout={() => { setUser(null); localStorage.removeItem("crm_user_v2"); }} />
+      <Sidebar
+        currentView={currentView}
+        setView={setView}
+        onLogout={() => { setUser(null); localStorage.removeItem("crm_user_v2"); }}
+        userRole={{ ...roles.find(r => r.id === user?.role), role: user?.role }}
+      />
       <main className="flex-1 overflow-auto bg-gradient-to-br from-[#020617] via-[#0f172a] to-[#020617] relative">
         <div className="p-4 lg:p-8 max-w-[1600px] mx-auto relative z-10">
           <div className="absolute top-4 lg:top-8 right-4 lg:right-8 z-[100]">
