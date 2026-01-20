@@ -196,8 +196,8 @@ export default function CustomerTable({ customers, onEdit, onDelete, onImport }:
                             <tr className="bg-white/5 text-slate-400 text-xs uppercase tracking-wider border-b border-white/5">
                                 <th className="px-4 py-3 font-semibold w-[5%] text-center">No.</th>
                                 <th className="px-4 py-3 font-semibold w-[10%] text-center">ID</th>
-                                <th className="px-4 py-3 font-semibold w-[20%]">Clinic/Shop Name</th>
-                                <th className="px-4 py-3 font-semibold w-[20%]">Subdomain</th>
+                                <th className="px-4 py-3 font-semibold w-[15%]">Clinic/Shop Name</th>
+                                <th className="px-4 py-3 font-semibold w-[25%]">Subdomain</th>
                                 <th className="px-4 py-3 font-semibold w-[10%] text-center">Package</th>
                                 <th className="px-4 py-3 font-semibold w-[10%] text-center">Status</th>
                                 <th className="px-4 py-3 font-semibold w-[10%] text-center">Branches</th>
@@ -231,9 +231,19 @@ export default function CustomerTable({ customers, onEdit, onDelete, onImport }:
                                             </div>
                                         </td>
                                         <td className="px-4 py-3">
-                                            <span className="text-xs text-indigo-400 truncate block max-w-[150px]" title={c.subdomain}>
-                                                {c.subdomain || "-"}
-                                            </span>
+                                            {c.subdomain ? (
+                                                <a
+                                                    href={c.subdomain.startsWith('http') ? c.subdomain : `https://${c.subdomain}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="block text-xs text-indigo-400 hover:text-indigo-300 hover:underline transition-colors max-w-[200px] truncate"
+                                                    title={c.subdomain}
+                                                >
+                                                    {c.subdomain}
+                                                </a>
+                                            ) : (
+                                                <span className="text-xs text-slate-600">-</span>
+                                            )}
                                         </td>
                                         <td className="px-4 py-3 text-center">
                                             <span className="text-xs text-slate-300 font-medium">{c.package}</span>

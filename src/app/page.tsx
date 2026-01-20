@@ -13,7 +13,9 @@ import SearchableCustomerSelect from "@/components/SearchableCustomerSelect";
 import SegmentedControl from "@/components/SegmentedControl";
 import Dashboard from "@/components/Dashboard";
 import InstallationManager from "@/components/InstallationManager";
+import NotificationBell from "@/components/NotificationBell";
 import { Customer, Branch, Installation, Issue, UsageStatus } from "@/types";
+import { useNotification } from "@/components/NotificationProvider";
 import {
   importCustomersFromCSV, getCustomers, getIssues, getInstallations,
   getUsers, saveUser, deleteUser, getRoles, saveRole, deleteRole, loginUser
@@ -82,9 +84,11 @@ export default function CRMPage() {
   const [modalUsageStatus, setModalUsageStatus] = useState<UsageStatus>("Active");
   const [modalIssueStatus, setModalIssueStatus] = useState<"แจ้งเคส" | "กำลังดำเนินการ" | "เสร็จสิ้น">("แจ้งเคส");
   const [showConfetti, setShowConfetti] = useState(false);
+  const { pushNotification, requestPermission } = useNotification();
 
   useEffect(() => {
     setMounted(true);
+    requestPermission();
     const savedUser = localStorage.getItem("crm_user_v2");
     const savedCustomers = localStorage.getItem("crm_customers_v2");
     const savedSystemUsers = localStorage.getItem("crm_system_users_v2");
@@ -238,6 +242,21 @@ export default function CRMPage() {
     localStorage.setItem("crm_issues_v2", JSON.stringify(updated));
     setIssueModalOpen(false);
     setEditingIssue(null);
+
+    // Trigger Notification
+    if (!editingIssue) {
+      pushNotification(
+        "📝 มีการแจ้งปัญหาใหม่",
+        `เคส: ${data.title} (${data.customerName}) ถูกสร้างขึ้นโดย ${user?.name || 'System'}`,
+        "info"
+      );
+    } else if (editingIssue.status !== modalIssueStatus) {
+      pushNotification(
+        "🔄 อัปเดตสถานะเคส",
+        `เคส [${data.caseNumber}] เปลี่ยนสถานะเป็น ${modalIssueStatus}`,
+        modalIssueStatus === "เสร็จสิ้น" ? "success" : "info"
+      );
+    }
 
     // Show confetti when completing an issue
     if (modalIssueStatus === "เสร็จสิ้น") {
@@ -489,7 +508,10 @@ export default function CRMPage() {
     <div className="flex min-h-screen bg-[#020617] text-slate-300 font-sans selection:bg-indigo-500/30">
       <Sidebar currentView={currentView} setView={setView} onLogout={() => { setUser(null); localStorage.removeItem("crm_user_v2"); }} />
       <main className="flex-1 overflow-auto bg-gradient-to-br from-[#020617] via-[#0f172a] to-[#020617] relative">
-        <div className="p-8 max-w-[1600px] mx-auto relative z-10">
+        <div className="p-4 lg:p-8 max-w-[1600px] mx-auto relative z-10">
+          <div className="absolute top-4 lg:top-8 right-4 lg:right-8 z-[100]">
+            <NotificationBell />
+          </div>
           {currentView === "dashboard" ? (
             <Dashboard
               customers={customers}
@@ -906,7 +928,7 @@ export default function CRMPage() {
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-slate-400">Description</label>
-                  <textarea name="description" defaultValue={editingIssue?.description} className="input-field min-h-[100px] text-xs" placeholder="Description..." />
+                  <textarea name="description" defaultValue={editingIssue?.description} className="input-field min-h-[100px] text-xs" />
                 </div>
 
                 {/* File Attachments */}
@@ -922,12 +944,16 @@ export default function CRMPage() {
                       id="file-input"
                       type="file"
                       multiple
-                      accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+                      accept="image/*"
                       className="hidden"
                       onChange={(e) => {
                         const files = e.target.files;
                         if (files) {
                           Array.from(files).forEach(file => {
+                            if (!file.type.startsWith('image/')) {
+                              setToast({ message: `ไฟล์ ${file.name} ต้องเป็นรูปภาพเท่านั้น`, type: "error" });
+                              return;
+                            }
                             if (file.size > 2 * 1024 * 1024) {
                               setToast({ message: `ไฟล์ ${file.name} ใหญ่เกิน 2MB`, type: "error" });
                               return;
@@ -952,8 +978,8 @@ export default function CRMPage() {
                         <Paperclip className="w-5 h-5 text-indigo-400" />
                       </div>
                       <div>
-                        <p className="text-xs text-slate-300">คลิกเพื่อเลือกไฟล์หรือลากไฟล์มาวาง</p>
-                        <p className="text-[10px] text-slate-500 mt-1">รองรับ: รูปภาพ, PDF, Word, Excel (สูงสุด 2MB ต่อไฟล์)</p>
+                        <p className="text-xs text-slate-300">คลิกเพื่อเลือกรูปภาพหรือลากไฟล์มาวาง</p>
+                        <p className="text-[10px] text-slate-500 mt-1">รองรับ: รูปภาพเท่านั้น (สูงสุด 2MB ต่อไฟล์)</p>
                       </div>
                     </div>
                   </div>

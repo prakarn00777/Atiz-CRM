@@ -68,20 +68,23 @@ export default function CustomDatePicker({
         setCurrentMonth(newDate);
     };
 
+    const getDateString = (date: Date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
     const handleDateClick = (day: number) => {
         const selectedDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
-        // Adjust for timezone offset to ensure correct string YYYY-MM-DD
-        const offset = selectedDate.getTimezoneOffset();
-        const localDate = new Date(selectedDate.getTime() - (offset * 60 * 1000));
-        const dateStr = localDate.toISOString().split('T')[0];
-
+        const dateStr = getDateString(selectedDate);
         onChange(dateStr);
         setIsOpen(false);
     };
 
     const isDateDisabled = (day: number) => {
         const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
-        const dateStr = date.toISOString().split('T')[0];
+        const dateStr = getDateString(date);
 
         if (min && dateStr < min) return true;
         if (max && dateStr > max) return true;
@@ -91,7 +94,7 @@ export default function CustomDatePicker({
     const isSelected = (day: number) => {
         if (!value) return false;
         const checkDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
-        const [checkStr] = checkDate.toISOString().split('T'); // Use simple ISO comparison
+        const checkStr = getDateString(checkDate);
         return value === checkStr;
     };
 

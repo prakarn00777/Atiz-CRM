@@ -183,7 +183,7 @@ export default function IssueManager({ issues, customers, onAdd, onEdit, onDelet
                                 value={dateRange.start}
                                 max={dateRange.end}
                                 onChange={(val) => { setDateRange({ ...dateRange, start: val }); setCurrentPage(1); }}
-                                className="w-[120px] !border-none !bg-transparent !h-full !py-0 shadow-none focus:ring-0"
+                                className="w-[140px] !border-none !bg-transparent !h-full !py-0 shadow-none focus:ring-0"
                             />
                             <span className="text-slate-500 text-xs">-</span>
                             <CustomDatePicker
@@ -191,7 +191,7 @@ export default function IssueManager({ issues, customers, onAdd, onEdit, onDelet
                                 value={dateRange.end}
                                 min={dateRange.start}
                                 onChange={(val) => { setDateRange({ ...dateRange, end: val }); setCurrentPage(1); }}
-                                className="w-[120px] !border-none !bg-transparent !h-full !py-0 shadow-none focus:ring-0"
+                                className="w-[140px] !border-none !bg-transparent !h-full !py-0 shadow-none focus:ring-0"
                             />
                         </div>
                     </div>

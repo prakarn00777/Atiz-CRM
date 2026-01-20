@@ -67,3 +67,13 @@ export interface Issue {
     modifiedBy?: string;
     modifiedAt?: string;
 }
+
+export interface CRMNotification {
+    id: string;
+    title: string;
+    message: string;
+    type: "info" | "success" | "warning" | "error";
+    timestamp: string;
+    isRead: boolean;
+    data?: any;
+}

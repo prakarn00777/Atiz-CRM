@@ -38,7 +38,7 @@ const Sidebar = memo(function Sidebar({ currentView, setView, onLogout }: Sideba
 
     return (
         <aside
-            className={`glass-card h-[calc(100vh-2rem)] m-4 flex flex-col p-4 fixed lg:relative z-50 transition-all duration-300 ease-in-out ${isCollapsed ? "w-20" : "w-64"
+            className={`glass-card min-h-[calc(100vh-2rem)] lg:h-[calc(100vh-2rem)] m-2 lg:m-4 flex flex-col p-4 fixed lg:relative z-50 transition-all duration-300 ease-in-out ${isCollapsed ? "w-20" : "w-64"
                 }`}
         >
             {/* Toggle Button */}
@@ -49,7 +49,7 @@ const Sidebar = memo(function Sidebar({ currentView, setView, onLogout }: Sideba
                 <ChevronRight className={`w-4 h-4 transition-transform duration-300 ${isCollapsed ? "" : "rotate-180"}`} />
             </button>
 
-            <div className={`flex items-center mb-8 px-2 transition-all duration-300 ${isCollapsed ? "justify-center gap-0" : "gap-3"}`}>
+            <div className={`flex items-center mb-6 px-2 transition-all duration-300 ${isCollapsed ? "justify-center gap-0" : "gap-3"}`}>
                 <div className="w-8 h-8 bg-indigo-500 rounded-lg flex-shrink-0 flex items-center justify-center shadow-lg shadow-indigo-500/20">
                     <Layers className="w-5 h-5 text-white" />
                 </div>

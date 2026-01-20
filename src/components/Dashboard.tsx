@@ -107,14 +107,14 @@ export default function Dashboard({ customers, installations, issues, user, onVi
     return (
         <div
             ref={dashboardRef}
-            className={`animate-in fade-in zoom-in-95 duration-500 relative custom-scrollbar flex flex-col
-                ${isFullscreen ? 'p-8 bg-slate-950 h-screen w-screen overflow-hidden gap-4' : 'space-y-6 pb-10 overflow-y-auto'}`}
+            className={`animate-in fade-in zoom-in-95 duration-500 relative custom-scrollbar flex flex-col pt-2
+                ${isFullscreen ? 'p-8 bg-slate-950 h-screen w-screen overflow-hidden gap-4' : 'space-y-4 pb-10 overflow-y-auto'}`}
         >
             <ParticlesBackground className="absolute inset-0 z-0" />
 
             {/* Header Section */}
-            <div className={`flex flex-col md:flex-row justify-between items-start md:items-end gap-4 relative z-10 px-1
-                ${isFullscreen ? 'mb-4' : ''}`}>
+            <div className={`flex flex-col md:flex-row justify-between items-start md:items-end gap-4 relative z-10
+                ${isFullscreen ? 'mb-4 px-1' : ''}`}>
                 <div>
                     <h1 className={`text-3xl font-black tracking-tight ${activeTab === 'business' ? 'text-white' : 'text-text-main bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-purple-400 to-indigo-400'}`}>
                         {activeTab === 'cs' ? 'CS Operational Center' : 'Business Insights'}
@@ -131,9 +131,9 @@ export default function Dashboard({ customers, installations, issues, user, onVi
                     </p>
                 </div>
 
-                <div className="flex flex-col items-end gap-3">
+                <div className="flex flex-col items-end gap-3 mr-1">
                     {/* Real-time Clock - Always visible */}
-                    <div className="flex items-center gap-3 text-text-muted">
+                    <div className="flex items-center gap-3 text-text-muted mr-12">
                         <div className="flex items-center gap-1.5 bg-white/5 px-3 py-1 rounded-lg border border-white/5">
                             <Clock className="w-3.5 h-3.5 text-indigo-400" />
                             <span className="text-[11px] font-bold tracking-wider font-mono">
