@@ -230,22 +230,30 @@ export default function CRMPage() {
       modifiedAt: new Date().toISOString()
     };
 
+    // Optimistic UI Update
+    const previousCustomers = [...customers];
+    if (editingCustomer) {
+      setCustomers(customers.map(c => c.id === data.id ? data : c));
+    } else {
+      setCustomers([data, ...customers]);
+    }
+
+    setModalOpen(false);
+    setEditingCustomer(null);
+    setIsEditingName(false);
+    setToast({ message: "บันทึกข้อมูลลูกค้าสำเร็จ", type: "success" });
+
     try {
       const result = await saveCustomer(data);
-      if (result.success) {
-        // Refresh local state from DB to get real IDs and latest data
-        const updatedCustomers = await getCustomers();
-        setCustomers(updatedCustomers);
-
-        setModalOpen(false);
-        setEditingCustomer(null);
-        setIsEditingName(false);
-        setToast({ message: "บันทึกข้อมูลลูกค้าสำเร็จ", type: "success" });
-      } else {
-        setToast({ message: "เกิดข้อผิดพลาด: " + result.error, type: "error" });
+      if (!result.success) {
+        // Rollback on error
+        setCustomers(previousCustomers);
+        setToast({ message: "เกิดข้อผิดพลาดในการบันทึก: " + result.error, type: "error" });
       }
+      // Note: Real-time subscription will update state with official DB ID if it was a new record
     } catch (err) {
       console.error("Failed to save customer:", err);
+      setCustomers(previousCustomers);
       setToast({ message: "เกิดข้อผิดพลาดในการเชื่อมต่อ", type: "error" });
     }
   };
@@ -302,44 +310,50 @@ export default function CRMPage() {
       modifiedAt: new Date().toISOString()
     };
 
+    // Optimistic UI Update
+    const previousIssues = [...issues];
+    if (editingIssue) {
+      setIssues(issues.map(i => i.id === data.id ? data : i));
+    } else {
+      setIssues([data, ...issues]);
+    }
+
+    setIssueModalOpen(false);
+    setEditingIssue(null);
+
+    // Trigger Notification & Confetti optimistically for instant feedback
+    if (!editingIssue) {
+      pushNotification(
+        "📝 มีการแจ้งปัญหาใหม่",
+        `เคส: ${data.title} (${data.customerName}) ถูกสร้างขึ้นโดย ${user?.name || 'System'}`,
+        "info"
+      );
+    } else if (editingIssue.status !== modalIssueStatus) {
+      pushNotification(
+        "🔄 อัปเดตสถานะเคส",
+        `เคส [${data.caseNumber}] เปลี่ยนสถานะเป็น ${modalIssueStatus}`,
+        modalIssueStatus === "เสร็จสิ้น" ? "success" : "info"
+      );
+    }
+
+    if (modalIssueStatus === "เสร็จสิ้น") {
+      setShowConfetti(true);
+      setTimeout(() => setShowConfetti(false), 3000);
+      setToast({ message: "🎉 ยินดี! แก้ไขเคสเสร็จสิ้นแล้ว", type: "success" });
+    } else {
+      setToast({ message: "บันทึกข้อมูลเคสเรียบร้อยแล้ว", type: "success" });
+    }
+
     try {
       const result = await saveIssue(data);
-      if (result.success) {
-        // Refresh issues from server
-        const updatedIssues = await getIssues();
-        setIssues(updatedIssues);
-
-        setIssueModalOpen(false);
-        setEditingIssue(null);
-
-        // Trigger Notification
-        if (!editingIssue) {
-          pushNotification(
-            "📝 มีการแจ้งปัญหาใหม่",
-            `เคส: ${data.title} (${data.customerName}) ถูกสร้างขึ้นโดย ${user?.name || 'System'}`,
-            "info"
-          );
-        } else if (editingIssue.status !== modalIssueStatus) {
-          pushNotification(
-            "🔄 อัปเดตสถานะเคส",
-            `เคส [${data.caseNumber}] เปลี่ยนสถานะเป็น ${modalIssueStatus}`,
-            modalIssueStatus === "เสร็จสิ้น" ? "success" : "info"
-          );
-        }
-
-        // Show confetti when completing an issue
-        if (modalIssueStatus === "เสร็จสิ้น") {
-          setShowConfetti(true);
-          setTimeout(() => setShowConfetti(false), 3000);
-          setToast({ message: "🎉 ยินดี! แก้ไขเคสเสร็จสิ้นแล้ว", type: "success" });
-        } else {
-          setToast({ message: "บันทึกข้อมูลเคสเรียบร้อยแล้ว", type: "success" });
-        }
-      } else {
-        setToast({ message: "เกิดข้อผิดพลาด: " + result.error, type: "error" });
+      if (!result.success) {
+        // Rollback on error
+        setIssues(previousIssues);
+        setToast({ message: "เกิดข้อผิดพลาดในการบันทึกเคส: " + result.error, type: "error" });
       }
     } catch (err) {
       console.error("Failed to save issue:", err);
+      setIssues(previousIssues);
       setToast({ message: "เกิดข้อผิดพลาดในการเชื่อมต่อ", type: "error" });
     }
   };
@@ -426,26 +440,29 @@ export default function CRMPage() {
         installationType: newInst.installationType
       };
 
+      // Optimistic UI Update
+      const previousInstallations = [...installations];
+      setInstallations([data, ...installations]);
+
+      setToast({ message: newInst.installationType === "new" ? "สร้างลูกค้าและเปิดงานติดตั้งสำเร็จ" : "แจ้งงานติดตั้งสาขาใหม่สำเร็จ", type: "success" });
+
+      // Real-time Notification optimistically
+      pushNotification(
+        newInst.installationType === "new" ? "🚀 แจ้งติดตั้งลูกค้าใหม่" : "📍 แจ้งติดตั้งสาขาเพิ่ม",
+        newInst.installationType === "new"
+          ? `มีการแจ้งติดตั้งใหม่สำหรับ: ${newInst.newCustomerName} (${newInst.newCustomerProduct})`
+          : `มีการแจ้งติดตั้งสาขาใหม่: ${newInst.branchName} สำหรับลูกค้า ${newInst.customerName}`,
+        "info"
+      );
+
       const result = await saveInstallation(data);
-      if (result.success) {
-        const updatedInst = await getInstallations();
-        setInstallations(updatedInst);
-
-        // Real-time Notification
-        pushNotification(
-          newInst.installationType === "new" ? "🚀 แจ้งติดตั้งลูกค้าใหม่" : "📍 แจ้งติดตั้งสาขาเพิ่ม",
-          newInst.installationType === "new"
-            ? `มีการแจ้งติดตั้งใหม่สำหรับ: ${newInst.newCustomerName} (${newInst.newCustomerProduct})`
-            : `มีการแจ้งติดตั้งสาขาใหม่: ${newInst.branchName} สำหรับลูกค้า ${newInst.customerName}`,
-          "info"
-        );
-
-        setToast({ message: newInst.installationType === "new" ? "สร้างลูกค้าและเปิดงานติดตั้งสำเร็จ" : "แจ้งงานติดตั้งสาขาใหม่สำเร็จ", type: "success" });
-      } else {
+      if (!result.success) {
+        setInstallations(previousInstallations);
         setToast({ message: "เกิดข้อผิดพลาด: " + result.error, type: "error" });
       }
     } catch (err: any) {
       console.error("Failed to add installation:", err);
+      // Rollback logic if possible
       setToast({ message: "เกิดข้อผิดพลาด: " + err.message, type: "error" });
     }
   };
