@@ -97,7 +97,7 @@ export default function Dashboard({ customers, installations, issues, user, onVi
     // Business Stats Calculation (Mocked for now)
     const businessStats = useMemo(() => {
         return [
-            { label: "Weekly Leads", subLabel: "ผู้สนใจรายสัปดาห์", value: "73", sub: "Dr.Ease: 40 | Ease: 33", icon: Briefcase, color: "text-amber-400", border: "border-amber-500/20", bg: "from-amber-500/10" },
+            { label: "Weekly Leads", subLabel: "ผู้สนใจรายสัปดาห์", value: "29", sub: "Dr.Ease: 23 | Ease: 6", icon: Briefcase, color: "text-amber-400", border: "border-amber-500/20", bg: "from-amber-500/10" },
             { label: "Weekly Demos", subLabel: "การทำ Demo รายสัปดาห์", value: "18", sub: "Dr.Ease: 10 | Ease: 8", icon: Monitor, color: "text-blue-400", border: "border-blue-500/20", bg: "from-blue-500/10" },
             { label: "New Sales (Revenue)", subLabel: "ยอดเงินปิดใหม่", value: "฿408,604", sub: "", icon: DollarSign, color: "text-emerald-400", border: "border-emerald-500/20", bg: "from-emerald-500/10" },
             { label: "Renewal (Revenue)", subLabel: "ยอดเงินต่อสัญญา", value: "฿882,120", sub: "", icon: TrendingUp, color: "text-purple-400", border: "border-purple-500/20", bg: "from-purple-500/10" },
