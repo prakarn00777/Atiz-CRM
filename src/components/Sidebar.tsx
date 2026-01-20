@@ -215,7 +215,7 @@ const Sidebar = memo(function Sidebar({ currentView, setView, onLogout }: Sideba
 
             <button
                 onClick={onLogout}
-                className={`btn btn-ghost w-full text-rose-400 hover:text-rose-300 hover:bg-rose-500/5 mt-auto pt-3 border-t border-white/5 transition-all duration-200 ${isCollapsed ? "justify-center p-2" : "justify-start"
+                className={`btn btn-ghost w-full text-rose-400 hover:text-rose-300 hover:bg-rose-500/5 pt-3 border-t border-white/5 transition-all duration-200 ${isCollapsed ? "justify-center p-2" : "justify-start"
                     }`}
                 title={isCollapsed ? "ออกจากระบบ" : ""}
             >
