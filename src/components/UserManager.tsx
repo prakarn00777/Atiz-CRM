@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Plus, Edit2, Trash2, User, X, Search, MoreVertical, Filter } from "lucide-react";
+import { Plus, Edit2, Trash2, User, X, Search, MoreVertical, Filter, AlertTriangle } from "lucide-react";
 import CustomSelect from "./CustomSelect";
 
 interface UserData {
@@ -41,6 +41,7 @@ export default function UserManager({ users, roles, onSave, onDelete }: UserMana
     // Action Menu States
     const [activeMenu, setActiveMenu] = useState<number | null>(null);
     const [menuPosition, setMenuPosition] = useState<{ top: number, left: number } | null>(null);
+    const [deleteConfirm, setDeleteConfirm] = useState<{ id: number, name: string } | null>(null);
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
@@ -320,7 +321,8 @@ export default function UserManager({ users, roles, onSave, onDelete }: UserMana
                     </button>
                     <button
                         onClick={() => {
-                            if (activeMenu) onDelete(activeMenu);
+                            const user = users.find(u => u.id === activeMenu);
+                            if (user) setDeleteConfirm({ id: user.id, name: user.name });
                             setActiveMenu(null);
                         }}
                         className="w-full px-4 py-2 text-left text-sm text-rose-400 hover:bg-rose-500/10 flex items-center gap-2"
@@ -332,7 +334,7 @@ export default function UserManager({ users, roles, onSave, onDelete }: UserMana
                 document.body
             )}
 
-            {/* Modal */}
+            {/* User Details Modal */}
             {isModalOpen && (
                 <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-black/80 backdrop-blur-md" />
@@ -418,6 +420,42 @@ export default function UserManager({ users, roles, onSave, onDelete }: UserMana
                             <button form="user-form" type="submit" className="btn btn-primary flex-1">
                                 บันทึก
                             </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Confirmation Modal */}
+            {deleteConfirm && (
+                <div className="fixed inset-0 z-[250] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setDeleteConfirm(null)} />
+                    <div className="glass-card w-full max-w-md relative shadow-2xl border-rose-500/20 animate-in zoom-in duration-200">
+                        <div className="p-6 text-center">
+                            <div className="w-16 h-16 rounded-full bg-rose-500/10 flex items-center justify-center text-rose-500 mx-auto mb-4">
+                                <AlertTriangle className="w-8 h-8" />
+                            </div>
+                            <h3 className="text-xl font-bold text-white mb-2">ยืนยันการลบผู้ใช้งาน</h3>
+                            <p className="text-slate-400 text-sm mb-6">
+                                คุณต้องการระงับการใช้งานคุณ <span className="text-white font-semibold">"{deleteConfirm.name}"</span> ใช่หรือไม่? <br />
+                                <span className="text-[10px] text-rose-400/80 mt-1 block">*(ผู้ใช้งานนี้จะไม่สามารถเข้าสู่ระบบได้ชั่วคราว)*</span>
+                            </p>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setDeleteConfirm(null)}
+                                    className="btn btn-ghost flex-1"
+                                >
+                                    ยกเลิก
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        onDelete(deleteConfirm.id);
+                                        setDeleteConfirm(null);
+                                    }}
+                                    className="btn bg-rose-500 hover:bg-rose-600 text-white flex-1"
+                                >
+                                    ยืนยันการลบ
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
