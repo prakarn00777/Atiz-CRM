@@ -218,7 +218,7 @@ export default function CRMPage() {
     const formData = new FormData(e.currentTarget);
 
     const data: Customer = {
-      id: editingCustomer ? editingCustomer.id : (customers.length > 0 ? Math.max(...customers.map(c => c.id)) + 1 : Date.now()),
+      id: editingCustomer ? editingCustomer.id : Date.now(),
       name: formData.get("name") as string,
       subdomain: formData.get("subdomain") as string,
       productType: formData.get("product") as any,
@@ -285,7 +285,7 @@ export default function CRMPage() {
     const formData = new FormData(e.currentTarget);
 
     const data: Issue = {
-      id: editingIssue ? editingIssue.id : (issues.length > 0 ? Math.max(...issues.map(i => i.id)) + 1 : Date.now()),
+      id: editingIssue ? editingIssue.id : Date.now(),
       caseNumber: editingIssue ? editingIssue.caseNumber : `CASE-${Math.floor(1000 + Math.random() * 9000)}`,
       title: formData.get("title") as string,
       customerId: selectedCustomerId || 0,
