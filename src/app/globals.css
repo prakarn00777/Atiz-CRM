@@ -5,8 +5,14 @@
   --primary-hover: #4f46e5;
   --bg-dark: #0f172a;
   --card-bg: rgba(30, 41, 59, 0.7);
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --input-bg: rgba(30, 41, 59, 0.5);
   --glass-blur: blur(12px);
   --border: rgba(255, 255, 255, 0.15);
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
 }
 
 [data-theme='light'] {
