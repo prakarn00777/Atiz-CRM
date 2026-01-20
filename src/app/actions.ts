@@ -154,6 +154,7 @@ export async function getUsers(): Promise<any[]> {
         const { data, error } = await db
             .from('users')
             .select('*')
+            .eq('is_active', true)
             .order('id', { ascending: true });
 
         if (error) {
@@ -233,6 +234,7 @@ export async function loginUser(username: string, password: string) {
             .from('users')
             .select('*, roles(name)')
             .eq('username', username)
+            .eq('is_active', true)
             .maybeSingle();
 
         console.log("Supabase login query result:", { data: data ? "Found" : "Not Found", error }); // Debug
@@ -279,7 +281,7 @@ export async function loginUser(username: string, password: string) {
 
 export async function deleteUser(id: number) {
     try {
-        const { error } = await db.from('users').delete().eq('id', id);
+        const { error } = await db.from('users').update({ is_active: false }).eq('id', id);
         if (error) throw error;
         return { success: true };
     } catch (err: any) {

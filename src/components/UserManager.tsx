@@ -11,6 +11,7 @@ interface UserData {
     username: string;
     password?: string;
     role: string;
+    is_active?: boolean;
     modifiedBy?: string;
     modifiedAt?: string;
 }

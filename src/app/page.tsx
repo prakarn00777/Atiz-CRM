@@ -369,6 +369,15 @@ export default function CRMPage() {
     setInstallations(updatedInst);
     localStorage.setItem("crm_installations_v2", JSON.stringify(updatedInst));
 
+    // Real-time Notification
+    pushNotification(
+      newInst.installationType === "new" ? "🚀 แจ้งติดตั้งลูกค้าใหม่" : "📍 แจ้งติดตั้งสาขาเพิ่ม",
+      newInst.installationType === "new"
+        ? `มีการแจ้งติดตั้งใหม่สำหรับ: ${newInst.newCustomerName} (${newInst.newCustomerProduct})`
+        : `มีการแจ้งติดตั้งสาขาใหม่: ${newInst.branchName} สำหรับลูกค้า ${newInst.customerName}`,
+      "info"
+    );
+
     setToast({ message: newInst.installationType === "new" ? "สร้างลูกค้าและเปิดงานติดตั้งสำเร็จ" : "แจ้งงานติดตั้งสาขาใหม่สำเร็จ", type: "success" });
   };
 
@@ -431,6 +440,19 @@ export default function CRMPage() {
     });
     setInstallations(updated);
     localStorage.setItem("crm_installations_v2", JSON.stringify(updated));
+
+    // Notification for completion
+    if (status === "Completed") {
+      const finishedInst = installations.find(i => i.id === id);
+      if (finishedInst) {
+        pushNotification(
+          "✅ ติดตั้งเสร็จสมบูรณ์",
+          `งานติดตั้งของ ${finishedInst.customerName}${finishedInst.branchName ? ` (${finishedInst.branchName})` : ''} เสร็จเรียบร้อยแล้ว`,
+          "success"
+        );
+      }
+    }
+
     setToast({ message: "อัปเดตสถานะงานติดตั้งเรียบร้อยแล้ว", type: "success" });
   };
 

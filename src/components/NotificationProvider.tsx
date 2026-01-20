@@ -24,8 +24,14 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         if (saved) {
             try {
                 const parsed = JSON.parse(saved);
-                setNotifications(parsed);
-                setUnreadCount(parsed.filter((n: CRMNotification) => !n.isRead).length);
+                // Sanitize: Ensure title and message are strings, not objects
+                const sanitized = (Array.isArray(parsed) ? parsed : []).filter((n: any) => {
+                    return n &&
+                        typeof n.title === 'string' &&
+                        typeof n.message === 'string';
+                });
+                setNotifications(sanitized);
+                setUnreadCount(sanitized.filter((n: CRMNotification) => !n.isRead).length);
             } catch (e) {
                 console.error("Failed to parse notifications", e);
             }
