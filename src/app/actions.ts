@@ -2,6 +2,7 @@
 
 import { db } from "@/lib/db";
 import { Customer, UsageStatus, ProductType } from "@/types";
+import bcrypt from "bcryptjs";
 
 export async function importCustomersFromCSV(data: any[]) {
     const customers = data.map((row) => {
@@ -160,10 +161,13 @@ export async function getUsers(): Promise<any[]> {
             return [];
         }
 
-        return (data || []).map(u => ({
-            ...u,
-            role: u.role_id
-        }));
+        return (data || []).map(u => {
+            const { password, ...userWithoutPassword } = u;
+            return {
+                ...userWithoutPassword,
+                role: u.role_id
+            };
+        });
     } catch (err) {
         console.error("Critical error in getUsers:", err);
         return [];
@@ -173,19 +177,28 @@ export async function getUsers(): Promise<any[]> {
 export async function saveUser(userData: any) {
     try {
         const { id, ...rest } = userData;
+
+        let hashedPassword = rest.password;
+        // Only hash if it's a new user or if password was explicitly updated
+        // In a real app, we might compare with old password hash, but for now we'll hash it
+        // if it looks like a plain text (short or provided in the form)
+        if (rest.password && (!rest.password.startsWith('$2a$') || rest.password.length < 30)) {
+            hashedPassword = await bcrypt.hash(rest.password, 10);
+        }
+
         const dbData = {
             name: rest.name,
             username: rest.username,
-            password: rest.password,
+            password: hashedPassword,
             role_id: rest.role
         };
 
         let result;
-        if (id && id > 1000000) { // New user
+        if (id && id > 1000000) { // New user (temporary ID from Date.now())
             const { data, error } = await db.from('users').insert(dbData).select();
             if (error) throw error;
             result = data?.[0];
-        } else if (id) { // Update
+        } else if (id) { // Update existing
             const { data, error } = await db.from('users').update(dbData).eq('id', id).select();
             if (error) throw error;
             result = data?.[0];
@@ -197,10 +210,52 @@ export async function saveUser(userData: any) {
 
         if (!result) throw new Error("No data returned from database");
 
-        return { success: true, data: { ...result, role: result.role_id } };
+        const { password, ...userWithoutPassword } = result;
+        return { success: true, data: { ...userWithoutPassword, role: result.role_id } };
     } catch (err: any) {
         console.error("Error in saveUser:", err);
         return { success: false, error: err.message || "Unknown database error" };
+    }
+}
+
+export async function loginUser(username: string, password: string) {
+    try {
+        const { data, error } = await db
+            .from('users')
+            .select('*, roles(name)')
+            .eq('username', username)
+            .single();
+
+        if (error || !data) {
+            return { success: false, error: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" };
+        }
+
+        const isValid = await bcrypt.compare(password, data.password);
+
+        // Fallback for migration: allow plain text match for 'admin:1234' if hash compare fails
+        let isMatch = isValid;
+        if (!isMatch && username === 'admin' && password === data.password) {
+            isMatch = true;
+            // Optionally auto-migrate to hashed password here
+            const newHash = await bcrypt.hash(password, 10);
+            await db.from('users').update({ password: newHash }).eq('id', data.id);
+        }
+
+        if (!isMatch) {
+            return { success: false, error: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" };
+        }
+
+        const { password: _, ...userWithoutPassword } = data;
+        return {
+            success: true,
+            user: {
+                ...userWithoutPassword,
+                role: data.role_id
+            }
+        };
+    } catch (err: any) {
+        console.error("Login error:", err);
+        return { success: false, error: "เกิดข้อผิดพลาดในการเข้าสู่ระบบ" };
     }
 }
 

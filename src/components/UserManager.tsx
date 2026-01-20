@@ -9,7 +9,7 @@ interface UserData {
     id: number;
     name: string;
     username: string;
-    password: string;
+    password?: string;
     role: string;
     modifiedBy?: string;
     modifiedAt?: string;
@@ -89,11 +89,14 @@ export default function UserManager({ users, roles, onSave, onDelete }: UserMana
             id: editingUser ? editingUser.id : Date.now(),
             name: formData.get("name") as string,
             username: formData.get("username") as string,
-            password: formData.get("password") as string,
             role: formData.get("role") as string,
             modifiedBy: userName,
             modifiedAt: new Date().toISOString(),
         };
+        const password = formData.get("password") as string;
+        if (password) {
+            data.password = password;
+        }
         onSave(data);
         setModalOpen(false);
     };
@@ -382,15 +385,14 @@ export default function UserManager({ users, roles, onSave, onDelete }: UserMana
                                     </div>
                                     <div className="space-y-1.5">
                                         <label className="text-xs font-medium text-slate-400 flex items-center gap-1">
-                                            Password <span className="text-rose-400">*</span>
+                                            Password {editingUser ? "" : <span className="text-rose-400">*</span>}
                                         </label>
                                         <input
                                             name="password"
                                             type="password"
-                                            defaultValue={editingUser?.password}
                                             className="input-field"
-                                            placeholder="รหัสผ่าน"
-                                            required
+                                            placeholder={editingUser ? "เว้นว่างเพื่อใช้รหัสเดิม" : "รหัสผ่าน"}
+                                            required={!editingUser}
                                         />
                                     </div>
                                 </div>

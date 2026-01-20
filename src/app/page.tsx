@@ -16,7 +16,7 @@ import InstallationManager from "@/components/InstallationManager";
 import { Customer, Branch, Installation, Issue, UsageStatus } from "@/types";
 import {
   importCustomersFromCSV, getCustomers, getIssues, getInstallations,
-  getUsers, saveUser, deleteUser, getRoles, saveRole, deleteRole
+  getUsers, saveUser, deleteUser, getRoles, saveRole, deleteRole, loginUser
 } from "./actions";
 
 function TableSummary({ customers }: { customers: Customer[] }) {
@@ -133,27 +133,22 @@ export default function CRMPage() {
     fetchData();
   }, []);
 
-  const handleLogin = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const u_str = String(formData.get("username"));
     const p_str = String(formData.get("password"));
 
-    const foundUser = users.find(u => u.username === u_str && u.password === p_str);
+    setToast({ message: "正在登录...", type: "info" });
 
-    // Fallback for hardcoded admin if DB is empty or for convenience
-    if (!foundUser && u_str === "admin" && p_str === "1234") {
-      const adminData = { name: "Admin", role: "admin" };
-      setUser(adminData);
-      localStorage.setItem("crm_user_v2", JSON.stringify(adminData));
-      return;
-    }
+    const result = await loginUser(u_str, p_str);
 
-    if (foundUser) {
-      setUser(foundUser);
-      localStorage.setItem("crm_user_v2", JSON.stringify(foundUser));
+    if (result.success) {
+      setUser(result.user);
+      localStorage.setItem("crm_user_v2", JSON.stringify(result.user));
+      setToast({ message: "เข้าสู่ระบบสำเร็จ", type: "success" });
     } else {
-      setToast({ message: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง", type: "error" });
+      setToast({ message: result.error || "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง", type: "error" });
     }
   };
 
