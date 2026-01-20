@@ -490,7 +490,13 @@ export default function CRMPage() {
           createdAt: new Date().toISOString()
         };
 
-        // Success - Wait for Real-time subscription to sync
+        const custResult = await saveCustomer(newCustomer);
+        if (!custResult.success) throw new Error(custResult.error);
+
+        // Update with actual database-generated ID to prevent FK violation
+        finalCustomerId = custResult.data.id;
+        data = { ...data, customerId: finalCustomerId };
+
       } else if (newInst.installationType === "branch" && newInst.branchName) {
         // If it's a new branch for an existing customer, update the customer
         const targetCust = customers.find(c => c.id === finalCustomerId);
