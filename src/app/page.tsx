@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import Sidebar from "@/components/Sidebar";
 import LoginTransition from "@/components/LoginTransition";
 import CustomerTable from "@/components/CustomerTable";
@@ -148,13 +148,22 @@ export default function CRMPage() {
       }
     };
 
+    // Debounced Refresh to prevent flickering and redundant requests
+    const debounceTimer = { current: null as any };
+    const fetchDataDebounced = () => {
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+      debounceTimer.current = setTimeout(() => {
+        fetchData();
+      }, 500); // 500ms debounce
+    };
+
     fetchData();
 
     // Real-time Subscriptions with Broadcast Notifications
     const channels = [
       db.channel('public:issues')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'issues' }, (payload: any) => {
-          fetchData();
+          fetchDataDebounced();
 
           if (!user) return;
           const { eventType, new: newRecord, old: oldRecord } = payload;
@@ -180,7 +189,7 @@ export default function CRMPage() {
         .subscribe(),
       db.channel('public:customers')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, (payload: any) => {
-          fetchData();
+          fetchDataDebounced();
 
           if (!user) return;
           if (payload.eventType === 'INSERT') {
@@ -196,7 +205,7 @@ export default function CRMPage() {
         .subscribe(),
       db.channel('public:installations')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'installations' }, (payload: any) => {
-          fetchData();
+          fetchDataDebounced();
 
           if (!user) return;
           const { eventType, new: newRecord, old: oldRecord } = payload;
@@ -223,6 +232,7 @@ export default function CRMPage() {
     ];
 
     return () => {
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
       channels.forEach(channel => db.removeChannel(channel));
     };
   }, [user?.name]);
@@ -480,16 +490,7 @@ export default function CRMPage() {
           createdAt: new Date().toISOString()
         };
 
-        const custResult = await saveCustomer(newCustomer);
-        if (!custResult.success) throw new Error(custResult.error);
-
-        // Update with actual database-generated ID to prevent FK violation
-        finalCustomerId = custResult.data.id;
-        data = { ...data, customerId: finalCustomerId };
-
-        // Refresh customers
-        const freshCusts = await getCustomers();
-        setCustomers(freshCusts);
+        // Success - Wait for Real-time subscription to sync
       } else if (newInst.installationType === "branch" && newInst.branchName) {
         // If it's a new branch for an existing customer, update the customer
         const targetCust = customers.find(c => c.id === finalCustomerId);
@@ -502,9 +503,6 @@ export default function CRMPage() {
             };
             const custResult = await saveCustomer(updatedCust);
             if (!custResult.success) throw new Error(custResult.error);
-
-            const freshCusts = await getCustomers();
-            setCustomers(freshCusts);
           }
         }
       }
@@ -552,20 +550,7 @@ export default function CRMPage() {
           }
         }
 
-        // Refresh all data
-        const [freshInsts, freshCusts] = await Promise.all([getInstallations(), getCustomers()]);
-        setInstallations(freshInsts);
-        setCustomers(freshCusts);
-
-        // Notification for completion
-        if (status === "Completed") {
-          pushNotification(
-            "✅ ติดตั้งเสร็จสมบูรณ์",
-            `งานติดตั้งของ ${inst.customer_name}${inst.branch_name ? ` (${inst.branch_name})` : ''} เสร็จเรียบร้อยแล้ว`,
-            "success"
-          );
-        }
-
+        // State will be synchronized via real-time subscription
         setToast({ message: "อัปเดตสถานะงานติดตั้งเรียบร้อยแล้ว", type: "success" });
       } else {
         setToast({ message: "เกิดข้อผิดพลาด: " + result.error, type: "error" });
