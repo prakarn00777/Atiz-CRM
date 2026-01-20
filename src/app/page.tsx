@@ -445,7 +445,7 @@ export default function CRMPage() {
         finalCustomerId = nextCustId;
       }
 
-      const data: Installation = {
+      let data: Installation = {
         id: Date.now(),
         customerId: finalCustomerId,
         customerName: newInst.installationType === "new" ? newInst.newCustomerName : (newInst.customerName || ""),
@@ -482,6 +482,10 @@ export default function CRMPage() {
 
         const custResult = await saveCustomer(newCustomer);
         if (!custResult.success) throw new Error(custResult.error);
+
+        // Update with actual database-generated ID to prevent FK violation
+        finalCustomerId = custResult.data.id;
+        data = { ...data, customerId: finalCustomerId };
 
         // Refresh customers
         const freshCusts = await getCustomers();
