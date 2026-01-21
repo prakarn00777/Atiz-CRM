@@ -398,7 +398,7 @@ export default function CRMPage() {
 
     const data: Issue = {
       id: editingIssue ? editingIssue.id : undefined as any,
-      caseNumber: editingIssue ? editingIssue.caseNumber : `CASE-${Math.floor(1000 + Math.random() * 9000)}`,
+      caseNumber: editingIssue ? editingIssue.caseNumber : `CASE-${Date.now().toString().slice(-6)}`,
       title: formData.get("title") as string,
       customerId: (selectedCustomerId && selectedCustomerId > 0) ? selectedCustomerId : null as any,
       customerName: selectedCustomerName,
@@ -407,7 +407,7 @@ export default function CRMPage() {
       status: modalIssueStatus,
       type: formData.get("type") as string,
       description: formData.get("description") as string,
-      attachments: JSON.stringify(selectedFiles),
+      attachments: selectedFiles as any,
       createdBy: editingIssue ? editingIssue.createdBy : user?.name,
       createdAt: editingIssue ? editingIssue.createdAt : new Date().toISOString(),
       modifiedBy: user?.name,

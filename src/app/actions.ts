@@ -90,7 +90,7 @@ export async function getIssues(): Promise<any[]> {
     try {
         const { data, error } = await db
             .from('issues')
-            .select('*')
+            .select('*, customers(name)')
             .order('id', { ascending: false });
 
         if (error) {
@@ -100,8 +100,8 @@ export async function getIssues(): Promise<any[]> {
 
         return (data || []).map(row => ({
             id: Number(row.id),
-            customerId: Number(row.customer_id),
-            customerName: String(row.customer_name),
+            customerId: row.customer_id ? Number(row.customer_id) : undefined,
+            customerName: (row.customers as any)?.name || "N/A",
             branchName: row.branch_name ? String(row.branch_name) : undefined,
             caseNumber: String(row.case_number),
             title: String(row.title),
@@ -109,11 +109,11 @@ export async function getIssues(): Promise<any[]> {
             type: String(row.type),
             severity: String(row.severity),
             status: String(row.status),
-            createdBy: row.created_by ? String(row.created_by) : (row.reported_by ? String(row.reported_by) : undefined),
-            createdAt: row.created_at ? String(row.created_at) : (row.reported_at ? String(row.reported_at) : undefined),
+            createdBy: row.created_by ? String(row.created_by) : undefined,
+            createdAt: row.created_at ? String(row.created_at) : undefined,
             modifiedBy: row.modified_by ? String(row.modified_by) : undefined,
             modifiedAt: row.modified_at ? String(row.modified_at) : undefined,
-            attachments: row.attachments ? String(row.attachments) : "[]",
+            attachments: row.attachments ? (typeof row.attachments === 'string' ? row.attachments : JSON.stringify(row.attachments)) : "[]",
         }));
     } catch (err) {
         console.error("Critical error in getIssues:", err);
@@ -125,7 +125,7 @@ export async function getInstallations(): Promise<any[]> {
     try {
         const { data, error } = await db
             .from('installations')
-            .select('*')
+            .select('*, customers(name)')
             .order('id', { ascending: false });
 
         if (error) {
@@ -135,16 +135,16 @@ export async function getInstallations(): Promise<any[]> {
 
         return (data || []).map(row => ({
             id: Number(row.id),
-            customerId: Number(row.customer_id),
-            customerName: String(row.customer_name),
+            customerId: row.customer_id ? Number(row.customer_id) : undefined,
+            customerName: (row.customers as any)?.name || "N/A",
             branchName: row.branch_name ? String(row.branch_name) : undefined,
             status: String(row.status),
             installationType: String(row.installation_type),
             notes: row.notes ? String(row.notes) : undefined,
             assignedDev: row.assigned_dev ? String(row.assigned_dev) : undefined,
             completedAt: row.completed_at ? String(row.completed_at) : undefined,
-            createdBy: row.created_by ? String(row.created_by) : (row.requested_by ? String(row.requested_by) : undefined),
-            createdAt: row.created_at ? String(row.created_at) : (row.requested_at ? String(row.requested_at) : undefined),
+            createdBy: row.created_by ? String(row.created_by) : undefined,
+            createdAt: row.created_at ? String(row.created_at) : undefined,
             modifiedBy: row.modified_by ? String(row.modified_by) : undefined,
             modifiedAt: row.modified_at ? String(row.modified_at) : undefined,
         }));
@@ -359,12 +359,20 @@ export async function saveIssue(issueData: any) {
 
         let result;
         if (id && typeof id === 'number' && id < 1000000) { // Existing issue
+            console.log("Updating issue:", id, dbData);
             const { data, error } = await db.from('issues').update(dbData).eq('id', id).select();
-            if (error) throw error;
+            if (error) {
+                console.error("Update issue error:", error);
+                throw error;
+            }
             result = data?.[0];
         } else { // New issue
+            console.log("Inserting new issue:", dbData);
             const { data, error } = await db.from('issues').insert(dbData).select();
-            if (error) throw error;
+            if (error) {
+                console.error("Insert issue error:", error);
+                throw error;
+            }
             result = data?.[0];
         }
 
@@ -462,12 +470,20 @@ export async function saveInstallation(instData: any) {
 
         let result;
         if (id && typeof id === 'number' && id < 1000000) {
+            console.log("Updating installation:", id, dbData);
             const { data, error } = await db.from('installations').update(dbData).eq('id', id).select();
-            if (error) throw error;
+            if (error) {
+                console.error("Update installation error:", error);
+                throw error;
+            }
             result = data?.[0];
         } else {
+            console.log("Inserting new installation:", dbData);
             const { data, error } = await db.from('installations').insert(dbData).select();
-            if (error) throw error;
+            if (error) {
+                console.error("Insert installation error:", error);
+                throw error;
+            }
             result = data?.[0];
         }
 
