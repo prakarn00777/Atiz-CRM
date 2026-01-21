@@ -27,6 +27,7 @@ export default function IssueManager({ issues, customers, onAdd, onEdit, onDelet
 
     useEffect(() => {
         setMounted(true);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     useEffect(() => {

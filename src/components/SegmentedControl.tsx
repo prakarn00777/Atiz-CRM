@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 interface Option {
     value: string;
@@ -43,8 +43,8 @@ export default function SegmentedControl({
                     type="button"
                     onClick={() => handleSelect(option.value)}
                     className={`flex-1 py-1.5 px-3 text-[10px] sm:text-xs font-medium rounded-lg transition-all duration-200 ${activeValue === option.value
-                            ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/20"
-                            : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
+                        ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/20"
+                        : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
                         }`}
                 >
                     {option.label}

@@ -436,7 +436,7 @@ export default function UserManager({ users, roles, onSave, onDelete }: UserMana
                             </div>
                             <h3 className="text-xl font-bold text-white mb-2">ยืนยันการลบผู้ใช้งาน</h3>
                             <p className="text-slate-400 text-sm mb-6">
-                                คุณต้องการระงับการใช้งานคุณ <span className="text-white font-semibold">"{deleteConfirm.name}"</span> ใช่หรือไม่? <br />
+                                คุณต้องการระงับการใช้งานคุณ <span className="text-white font-semibold">&quot;{deleteConfirm.name}&quot;</span> ใช่หรือไม่? <br />
                                 <span className="text-[10px] text-rose-400/80 mt-1 block">*(ผู้ใช้งานนี้จะไม่สามารถเข้าสู่ระบบได้ชั่วคราว)*</span>
                             </p>
                             <div className="flex gap-3">

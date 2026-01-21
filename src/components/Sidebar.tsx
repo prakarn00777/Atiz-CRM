@@ -1,13 +1,16 @@
 "use client";
 
 import { memo, useState } from "react";
-import { LayoutDashboard, Users, LogOut, Layers, Settings, ChevronRight, UserCog, ShieldCheck, AlertCircle, Play, History as HistoryIcon } from "lucide-react";
+import { LayoutDashboard, Users, LogOut, Layers, Settings, ChevronRight, UserCog, ShieldCheck, AlertCircle, History as HistoryIcon } from "lucide-react";
 
 interface SidebarProps {
     currentView: string;
     setView: (view: string) => void;
     onLogout: () => void;
-    userRole: any;
+    userRole: {
+        role?: string;
+        permissions?: Record<string, { read?: boolean; write?: boolean }>;
+    } | null;
 }
 
 const mainMenus = [

@@ -12,19 +12,18 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-    const [theme, setTheme] = useState<Theme>("dark");
+    const [theme, setTheme] = useState<Theme>(() => {
+        if (typeof window !== "undefined") {
+            const saved = localStorage.getItem("crm-theme") as Theme;
+            return saved || "dark";
+        }
+        return "dark";
+    });
 
     useEffect(() => {
-        const savedTheme = localStorage.getItem("crm-theme") as Theme;
-        if (savedTheme) {
-            setTheme(savedTheme);
-            document.documentElement.setAttribute("data-theme", savedTheme);
-        } else {
-            // Default to dark for the professional monitoring dashboard look
-            setTheme("dark");
-            document.documentElement.setAttribute("data-theme", "dark");
-        }
-    }, []);
+        // Apply theme to document element
+        document.documentElement.setAttribute("data-theme", theme);
+    }, [theme]);
 
     const toggleTheme = () => {
         const newTheme = theme === "dark" ? "light" : "dark";

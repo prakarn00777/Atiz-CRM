@@ -15,33 +15,28 @@ interface NotificationContextType {
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
-    const [notifications, setNotifications] = useState<CRMNotification[]>([]);
-    const [unreadCount, setUnreadCount] = useState(0);
-
-    // Initialize from localStorage
-    useEffect(() => {
+    const [notifications, setNotifications] = useState<CRMNotification[]>(() => {
+        if (typeof window === 'undefined') return [];
         const saved = localStorage.getItem('crm_notifications_v1');
         if (saved) {
             try {
                 const parsed = JSON.parse(saved);
-                // Sanitize: Ensure title and message are strings, not objects
-                const sanitized = (Array.isArray(parsed) ? parsed : []).filter((n: any) => {
-                    return n &&
-                        typeof n.title === 'string' &&
-                        typeof n.message === 'string';
+                return (Array.isArray(parsed) ? parsed : []).filter((n: any) => {
+                    return n && typeof n.title === 'string' && typeof n.message === 'string';
                 });
-                setNotifications(sanitized);
-                setUnreadCount(sanitized.filter((n: CRMNotification) => !n.isRead).length);
             } catch (e) {
                 console.error("Failed to parse notifications", e);
+                return [];
             }
         }
-    }, []);
+        return [];
+    });
+    const unreadCount = React.useMemo(() => notifications.filter(n => !n.isRead).length, [notifications]);
 
-    // Save to localStorage when changed
+
+
     useEffect(() => {
         localStorage.setItem('crm_notifications_v1', JSON.stringify(notifications));
-        setUnreadCount(notifications.filter(n => !n.isRead).length);
     }, [notifications]);
 
     const requestPermission = async () => {
@@ -55,7 +50,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         title: string,
         message: string,
         type: CRMNotification['type'] = "info",
-        data?: any
+        data?: Record<string, unknown>
     ) => {
         const newNotif: CRMNotification = {
             id: Date.now().toString(),

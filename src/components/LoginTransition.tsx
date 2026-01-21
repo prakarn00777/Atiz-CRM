@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Layers, ShieldCheck, Database, Server, Wifi } from "lucide-react";
+import { Layers, ShieldCheck, Server, Wifi } from "lucide-react";
 
 interface LoginTransitionProps {
     onComplete: () => void;

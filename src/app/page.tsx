@@ -794,7 +794,7 @@ export default function CRMPage() {
                     setEditingCustomer(c);
                     const branches = c.branches && c.branches.length > 0
                       ? c.branches
-                      : [{ name: "สำนักงานใหญ่", isMain: true, address: "", status: "Pending" as "Pending" }];
+                      : [{ name: "สำนักงานใหญ่", isMain: true, address: "", status: "Pending" } as const];
                     setBranchInputs(branches);
                     setModalUsageStatus(c.usageStatus || "Active");
                     setActiveBranchIndex(0);
