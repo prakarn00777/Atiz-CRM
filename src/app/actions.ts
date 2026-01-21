@@ -342,8 +342,7 @@ export async function saveIssue(issueData: any) {
     try {
         const { id, ...rest } = issueData;
         const dbData = {
-            customer_id: rest.customerId,
-            customer_name: rest.customerName,
+            customer_id: rest.customerId && rest.customerId > 0 ? rest.customerId : null,
             branch_name: rest.branchName,
             case_number: rest.caseNumber,
             title: rest.title,
@@ -359,7 +358,7 @@ export async function saveIssue(issueData: any) {
         };
 
         let result;
-        if (id && id < 1000000) { // Existing issue
+        if (id && typeof id === 'number' && id < 1000000) { // Existing issue
             const { data, error } = await db.from('issues').update(dbData).eq('id', id).select();
             if (error) throw error;
             result = data?.[0];
@@ -448,8 +447,7 @@ export async function saveInstallation(instData: any) {
     try {
         const { id, ...rest } = instData;
         const dbData = {
-            customer_id: rest.customerId,
-            customer_name: rest.customerName,
+            customer_id: rest.customerId && rest.customerId > 0 ? rest.customerId : null,
             branch_name: rest.branchName,
             status: rest.status,
             created_by: rest.requestedBy || rest.createdBy,
@@ -463,7 +461,7 @@ export async function saveInstallation(instData: any) {
         };
 
         let result;
-        if (id && id < 1000000) {
+        if (id && typeof id === 'number' && id < 1000000) {
             const { data, error } = await db.from('installations').update(dbData).eq('id', id).select();
             if (error) throw error;
             result = data?.[0];

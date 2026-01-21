@@ -397,10 +397,10 @@ export default function CRMPage() {
     const formData = new FormData(e.currentTarget);
 
     const data: Issue = {
-      id: editingIssue ? editingIssue.id : Date.now(),
+      id: editingIssue ? editingIssue.id : undefined as any,
       caseNumber: editingIssue ? editingIssue.caseNumber : `CASE-${Math.floor(1000 + Math.random() * 9000)}`,
       title: formData.get("title") as string,
-      customerId: selectedCustomerId || 0,
+      customerId: (selectedCustomerId && selectedCustomerId > 0) ? selectedCustomerId : null as any,
       customerName: selectedCustomerName,
       branchName: selectedBranchName,
       severity: formData.get("severity") as any,
@@ -491,8 +491,8 @@ export default function CRMPage() {
       }
 
       let data: Installation = {
-        id: Date.now(),
-        customerId: finalCustomerId,
+        id: undefined as any,
+        customerId: finalCustomerId && finalCustomerId > 0 ? finalCustomerId : null as any,
         customerName: newInst.installationType === "new" ? newInst.newCustomerName : (newInst.customerName || ""),
         customerLink: newInst.installationType === "new" ? newInst.newCustomerLink : undefined,
         branchName: newInst.installationType === "branch" ? newInst.branchName : undefined,
