@@ -407,7 +407,7 @@ export default function CRMPage() {
       status: modalIssueStatus,
       type: formData.get("type") as string,
       description: formData.get("description") as string,
-      attachments: JSON.stringify(selectedFiles),
+      attachments: selectedFiles,
       createdBy: editingIssue ? editingIssue.createdBy : user?.name,
       createdAt: editingIssue ? editingIssue.createdAt : new Date().toISOString(),
       modifiedBy: user?.name,
