@@ -123,6 +123,10 @@ export default function ActivityManager({ activities, customers, onAdd, onEdit, 
                                 { value: "Training", label: "Training" },
                                 { value: "Onboarding", label: "Onboarding" },
                                 { value: "Support", label: "Support" },
+                                { value: "Call", label: "Call" },
+                                { value: "Line", label: "Line" },
+                                { value: "Visit", label: "Visit" },
+                                { value: "Renewal", label: "Renewal" },
                                 { value: "Other", label: "Other" },
                             ]}
                             value={typeFilter}
