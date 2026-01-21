@@ -61,7 +61,7 @@ export interface Issue {
     status: "แจ้งเคส" | "กำลังดำเนินการ" | "เสร็จสิ้น";
     type: string;
     description?: string;
-    attachments?: string; // JSON string
+    attachments?: string | { name: string, type: string, size: number, data: string }[]; // JSON string or Array for optimistic UI
     createdBy?: string;
     createdAt?: string;
     modifiedBy?: string;

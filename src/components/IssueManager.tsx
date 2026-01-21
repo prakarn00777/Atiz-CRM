@@ -226,7 +226,7 @@ export default function IssueManager({ issues, customers: _customers, onAdd, onE
                         <tbody className="divide-y divide-white/5">
                             {paginatedIssues.length > 0 ? (
                                 paginatedIssues.map((issue, index) => (
-                                    <tr key={issue.id} className="group hover:bg-white/[0.02] transition-colors h-14">
+                                    <tr key={issue.id || issue.caseNumber} className="group hover:bg-white/[0.02] transition-colors h-14">
                                         <td className="px-4 py-3 text-center">
                                             <span className="text-xs text-slate-500">{(currentPage - 1) * itemsPerPage + index + 1}</span>
                                         </td>
@@ -240,7 +240,7 @@ export default function IssueManager({ issues, customers: _customers, onAdd, onE
                                                 <div className="font-semibold text-slate-200 text-xs truncate" title={issue.title}>
                                                     {issue.title}
                                                 </div>
-                                                {issue.attachments && issue.attachments.length > 2 && ( // Check for empty JSON string or similar
+                                                {issue.attachments && (typeof issue.attachments === 'string' ? issue.attachments.length > 2 : issue.attachments.length > 0) && (
                                                     <Paperclip className="w-3 h-3 text-slate-500 flex-shrink-0" />
                                                 )}
                                             </div>

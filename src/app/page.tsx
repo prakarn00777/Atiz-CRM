@@ -397,7 +397,7 @@ export default function CRMPage() {
     const formData = new FormData(e.currentTarget);
 
     const data: Issue = {
-      id: editingIssue ? editingIssue.id : undefined as any,
+      id: editingIssue ? editingIssue.id : Date.now(),
       caseNumber: editingIssue ? editingIssue.caseNumber : `CASE-${Date.now().toString().slice(-6)}`,
       title: formData.get("title") as string,
       customerId: (selectedCustomerId && selectedCustomerId > 0) ? selectedCustomerId : null as any,
@@ -407,7 +407,7 @@ export default function CRMPage() {
       status: modalIssueStatus,
       type: formData.get("type") as string,
       description: formData.get("description") as string,
-      attachments: selectedFiles as any,
+      attachments: JSON.stringify(selectedFiles),
       createdBy: editingIssue ? editingIssue.createdBy : user?.name,
       createdAt: editingIssue ? editingIssue.createdAt : new Date().toISOString(),
       modifiedBy: user?.name,
@@ -449,7 +449,9 @@ export default function CRMPage() {
     }
 
     try {
-      const result = await saveIssue(data);
+      // Remove id for new issues to let database handle auto-increment
+      const { id, ...rest } = data;
+      const result = await saveIssue(editingIssue ? data : rest);
       if (!result.success) {
         // Rollback on error
         setIssues(previousIssues);
@@ -811,7 +813,7 @@ export default function CRMPage() {
               ) : currentView === "role_management" ? (
                 <RoleManager roles={roles} onSave={handleSaveRole} onDelete={handleDeleteRole} />
               ) : currentView === "issues" ? (
-                <IssueManager issues={issues} customers={customers} onAdd={() => { setEditingIssue(null); setSelectedCustomerId(null); setSelectedCustomerName(""); setSelectedBranchName(""); setSelectedFiles([]); setModalMode('create'); setModalIssueStatus("แจ้งเคส"); setIssueModalOpen(true); }} onEdit={(issue) => { setEditingIssue(issue); setSelectedCustomerId(issue.customerId); setSelectedCustomerName(issue.customerName); setSelectedBranchName(issue.branchName || ""); setSelectedFiles(JSON.parse(issue.attachments || "[]")); setModalMode('edit'); setModalIssueStatus(issue.status); setIssueModalOpen(true); }} onDelete={(id) => { const issue = issues.find(i => i.id === id); setDeleteConfirm({ type: 'issue', id, title: issue?.title || 'Issue' }); }} />
+                <IssueManager issues={issues} customers={customers} onAdd={() => { setEditingIssue(null); setSelectedCustomerId(null); setSelectedCustomerName(""); setSelectedBranchName(""); setSelectedFiles([]); setModalMode('create'); setModalIssueStatus("แจ้งเคส"); setIssueModalOpen(true); }} onEdit={(issue) => { setEditingIssue(issue); setSelectedCustomerId(issue.customerId); setSelectedCustomerName(issue.customerName); setSelectedBranchName(issue.branchName || ""); setSelectedFiles(typeof issue.attachments === 'string' ? JSON.parse(issue.attachments || "[]") : (issue.attachments || [])); setModalMode('edit'); setModalIssueStatus(issue.status); setIssueModalOpen(true); }} onDelete={(id) => { const issue = issues.find(i => i.id === id); setDeleteConfirm({ type: 'issue', id, title: issue?.title || 'Issue' }); }} />
               ) : currentView === "cs_activity" ? (
                 <ActivityManager
                   activities={activities}
