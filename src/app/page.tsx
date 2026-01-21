@@ -328,6 +328,7 @@ export default function CRMPage() {
       package: formData.get("package") as string,
       usageStatus: modalUsageStatus,
       installationStatus: editingCustomer ? editingCustomer.installationStatus : "Pending",
+      clientCode: editingCustomer ? editingCustomer.clientCode : undefined,
       branches: branchInputs,
       modifiedBy: user?.name,
       modifiedAt: new Date().toISOString()
@@ -910,6 +911,7 @@ export default function CRMPage() {
                             ) : (
                               <div className="flex items-center justify-between bg-white/[0.03] border border-white/5 rounded-lg px-3 py-2 group hover:border-indigo-500/30 transition-all duration-200">
                                 <span className="text-sm font-semibold text-slate-200">{editingCustomer?.name}</span>
+                                <input type="hidden" name="name" value={editingCustomer?.name || ""} />
                                 <button
                                   type="button"
                                   onClick={() => setIsEditingName(true)}
@@ -932,6 +934,7 @@ export default function CRMPage() {
                           <div className="space-y-1">
                             <label className="text-xs font-medium text-slate-400">สถานะการใช้งาน</label>
                             <CustomSelect
+                              name="usageStatus"
                               options={[
                                 { value: "Training", label: "รอการเทรนนิ่ง" },
                                 { value: "Pending", label: "รอการใช้งาน" },
