@@ -77,3 +77,22 @@ export interface CRMNotification {
     isRead: boolean;
     data?: any;
 }
+export type ActivityType = "Training" | "Onboarding" | "Support" | "Other";
+export type SentimentType = "Positive" | "Neutral" | "Negative";
+
+export interface Activity {
+    id: number;
+    customerId: number;
+    customerName: string;
+    title: string;
+    activityType: ActivityType;
+    content?: string;
+    assignee?: string;
+    status: string;
+    sentiment: SentimentType;
+    followUpDate?: string;
+    createdBy?: string;
+    createdAt?: string;
+    modifiedBy?: string;
+    modifiedAt?: string;
+}

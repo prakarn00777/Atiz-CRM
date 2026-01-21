@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import Sidebar from "@/components/Sidebar";
 import LoginTransition from "@/components/LoginTransition";
 import CustomerTable from "@/components/CustomerTable";
-import { Layers, X, ChevronDown, Plus, Edit2, Trash2, Users, Activity, Award, TrendingUp, Clock, AlertTriangle, MapPin, Play, CheckCircle2, AlertCircle, Paperclip } from "lucide-react";
+import { Layers, X, ChevronDown, Plus, Edit2, Trash2, Users, Activity as ActivityIcon, Award, TrendingUp, Clock, AlertTriangle, MapPin, Play, CheckCircle2, AlertCircle, Paperclip, History as HistoryIcon, Download } from "lucide-react";
 import CustomSelect from "@/components/CustomSelect";
 import UserManager from "@/components/UserManager";
 import RoleManager from "@/components/RoleManager";
+import ActivityManager from "@/components/ActivityManager";
 import Toast from "@/components/Toast";
 import IssueManager from "@/components/IssueManager";
 import SearchableCustomerSelect from "@/components/SearchableCustomerSelect";
@@ -15,13 +16,14 @@ import SegmentedControl from "@/components/SegmentedControl";
 import Dashboard from "@/components/Dashboard";
 import InstallationManager from "@/components/InstallationManager";
 import NotificationBell from "@/components/NotificationBell";
-import { Customer, Branch, Installation, Issue, UsageStatus } from "@/types";
+import { Customer, Branch, Installation, Issue, UsageStatus, Activity as CSActivity, ActivityType, SentimentType } from "@/types";
 import { useNotification } from "@/components/NotificationProvider";
 import { db } from "@/lib/db";
 import {
   importCustomersFromCSV, getCustomers, getIssues, getInstallations,
   getUsers, saveUser, deleteUser, getRoles, saveRole, deleteRole, loginUser,
-  saveIssue, deleteIssue, saveCustomer, deleteCustomer, saveInstallation, updateInstallationStatus
+  saveIssue, deleteIssue, saveCustomer, deleteCustomer, saveInstallation, updateInstallationStatus,
+  getActivities, saveActivity, deleteActivity
 } from "./actions";
 
 function TableSummary({ customers }: { customers: Customer[] }) {
@@ -70,7 +72,15 @@ export default function CRMPage() {
   const [user, setUser] = useState<any>(null);
   const [mounted, setMounted] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'customer' | 'issue' | 'branch', id?: number, index?: number, title: string } | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'customer' | 'issue' | 'branch' | 'activity', id?: number, index?: number, title: string } | null>(null);
+  const [activities, setActivities] = useState<CSActivity[]>([]);
+  const [isActivityModalOpen, setActivityModalOpen] = useState(false);
+  const [editingActivity, setEditingActivity] = useState<CSActivity | null>(null);
+  const [activitySentiment, setActivitySentiment] = useState<SentimentType>("Neutral");
+  const [activityType, setActivityType] = useState<ActivityType>("Other");
+  const [activityStatus, setActivityStatus] = useState("Open");
+  const [activityAssignee, setActivityAssignee] = useState("");
+  const [activityFollowUp, setActivityFollowUp] = useState("");
 
   // New states for issue form
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
@@ -89,7 +99,47 @@ export default function CRMPage() {
   const [modalUsageStatus, setModalUsageStatus] = useState<UsageStatus>("Active");
   const [modalIssueStatus, setModalIssueStatus] = useState<"แจ้งเคส" | "กำลังดำเนินการ" | "เสร็จสิ้น">("แจ้งเคส");
   const [showConfetti, setShowConfetti] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const { pushNotification, requestPermission } = useNotification();
+  const debounceTimer = useRef<any>(null);
+
+  const fetchData = useCallback(async () => {
+    try {
+      const [cData, iData, instData, userData, roleData, actData] = await Promise.all([
+        getCustomers(),
+        getIssues(),
+        getInstallations(),
+        getUsers(),
+        getRoles(),
+        getActivities()
+      ]);
+
+      // Update states
+      setCustomers(cData);
+      setIssues(iData);
+      setInstallations(instData);
+      setUsers(userData);
+      setRoles(roleData);
+      setActivities(actData as CSActivity[]);
+
+      // Update cache for next load
+      localStorage.setItem("crm_customers_v2", JSON.stringify(cData));
+      localStorage.setItem("crm_issues_v2", JSON.stringify(iData));
+      localStorage.setItem("crm_installations_v2", JSON.stringify(instData));
+      localStorage.setItem("crm_system_users_v2", JSON.stringify(userData));
+      localStorage.setItem("crm_roles_v2", JSON.stringify(roleData));
+      localStorage.setItem("crm_activities_v2", JSON.stringify(actData));
+    } catch (err) {
+      console.error("Background fetch failed:", err);
+    }
+  }, []);
+
+  const fetchDataDebounced = useCallback(() => {
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => {
+      fetchData();
+    }, 500);
+  }, [fetchData]);
 
   useEffect(() => {
     setMounted(true);
@@ -102,6 +152,7 @@ export default function CRMPage() {
     const cachedInstallations = localStorage.getItem("crm_installations_v2");
     const cachedUsers = localStorage.getItem("crm_system_users_v2");
     const cachedRoles = localStorage.getItem("crm_roles_v2");
+    const cachedActivities = localStorage.getItem("crm_activities_v2");
 
     if (savedUser) {
       try {
@@ -118,45 +169,9 @@ export default function CRMPage() {
     if (cachedInstallations) setInstallations(JSON.parse(cachedInstallations));
     if (cachedUsers) setUsers(JSON.parse(cachedUsers));
     if (cachedRoles) setRoles(JSON.parse(cachedRoles));
+    if (cachedActivities) setActivities(JSON.parse(cachedActivities));
 
     // 2. Background Revalidation (Fetch from Supabase)
-    const fetchData = async () => {
-      try {
-        const [cData, iData, instData, userData, roleData] = await Promise.all([
-          getCustomers(),
-          getIssues(),
-          getInstallations(),
-          getUsers(),
-          getRoles()
-        ]);
-
-        // Update states
-        setCustomers(cData);
-        setIssues(iData);
-        setInstallations(instData);
-        setUsers(userData);
-        setRoles(roleData);
-
-        // Update cache for next load
-        localStorage.setItem("crm_customers_v2", JSON.stringify(cData));
-        localStorage.setItem("crm_issues_v2", JSON.stringify(iData));
-        localStorage.setItem("crm_installations_v2", JSON.stringify(instData));
-        localStorage.setItem("crm_system_users_v2", JSON.stringify(userData));
-        localStorage.setItem("crm_roles_v2", JSON.stringify(roleData));
-      } catch (err) {
-        console.error("Background fetch failed:", err);
-      }
-    };
-
-    // Debounced Refresh to prevent flickering and redundant requests
-    const debounceTimer = { current: null as any };
-    const fetchDataDebounced = () => {
-      if (debounceTimer.current) clearTimeout(debounceTimer.current);
-      debounceTimer.current = setTimeout(() => {
-        fetchData();
-      }, 500); // 500ms debounce
-    };
-
     fetchData();
 
     // Real-time Subscriptions with Broadcast Notifications
@@ -228,7 +243,27 @@ export default function CRMPage() {
             );
           }
         })
+        .subscribe(),
+      /*
+      db.channel('public:activities')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'activities' }, (payload: any) => {
+          fetchDataDebounced();
+
+          if (!user) return;
+          const { eventType, new: newRecord } = payload;
+          const actor = newRecord?.created_by || newRecord?.modified_by;
+          if (actor === user.name) return;
+
+          if (eventType === 'INSERT') {
+            pushNotification(
+              "📅 กิจกรรม CS ใหม่",
+              `${newRecord.customer_name}: ${newRecord.activity_type} โดย ${actor || 'System'}`,
+              "info"
+            );
+          }
+        })
         .subscribe()
+      */
     ];
 
     return () => {
@@ -349,7 +384,7 @@ export default function CRMPage() {
       const result = await importCustomersFromCSV(data);
       if (result.success) {
         setToast({ message: `นำเข้าข้อมูลสำเร็จ ${result.count} รายการ`, type: "success" });
-        // NOTE: In the future, this would fetch from Turso instead of local state
+        fetchData();
       }
     } catch (err) {
       console.error(err);
@@ -635,6 +670,57 @@ export default function CRMPage() {
     }
   };
 
+  const handleSaveActivity = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const data: CSActivity = {
+      id: editingActivity ? editingActivity.id : Date.now(),
+      customerId: selectedCustomerId || 0,
+      customerName: selectedCustomerName,
+      title: formData.get("title") as string,
+      activityType: activityType,
+      status: activityStatus,
+      sentiment: activitySentiment,
+      content: formData.get("content") as string,
+      assignee: activityAssignee,
+      followUpDate: activityFollowUp || undefined,
+      createdBy: editingActivity ? editingActivity.createdBy : user?.name,
+      createdAt: editingActivity ? editingActivity.createdAt : new Date().toISOString(),
+      modifiedBy: user?.name,
+      modifiedAt: new Date().toISOString()
+    };
+
+    const prevActivities = [...activities];
+    const updatedActivities = editingActivity
+      ? activities.map(a => a.id === data.id ? data : a)
+      : [data, ...activities];
+
+    setActivities(updatedActivities);
+    setActivityModalOpen(false);
+    setEditingActivity(null);
+    setToast({ message: "บันทึกข้อมูลกิจกรรมเรียบร้อยแล้ว", type: "success" });
+
+    try {
+      const result = await saveActivity(data);
+      if (!result.success) {
+        setActivities(prevActivities);
+        setToast({ message: "เกิดข้อผิดพลาดในการบันทึกกิจกรรม: " + result.error, type: "error" });
+      }
+    } catch (err) {
+      console.error("Failed to save activity:", err);
+      setActivities(prevActivities);
+      setToast({ message: "เกิดข้อผิดพลาดในการเชื่อมต่อ", type: "error" });
+    }
+  };
+
+  const handleDeleteActivity = (id: number) => {
+    setDeleteConfirm({
+      type: 'activity',
+      id,
+      title: 'คุณต้องการลบบันทึกกิจกรรมนี้ใช่หรือไม่?'
+    });
+  };
+
   if (!mounted) return null;
 
   return (
@@ -726,6 +812,34 @@ export default function CRMPage() {
                 <RoleManager roles={roles} onSave={handleSaveRole} onDelete={handleDeleteRole} />
               ) : currentView === "issues" ? (
                 <IssueManager issues={issues} customers={customers} onAdd={() => { setEditingIssue(null); setSelectedCustomerId(null); setSelectedCustomerName(""); setSelectedBranchName(""); setSelectedFiles([]); setModalMode('create'); setModalIssueStatus("แจ้งเคส"); setIssueModalOpen(true); }} onEdit={(issue) => { setEditingIssue(issue); setSelectedCustomerId(issue.customerId); setSelectedCustomerName(issue.customerName); setSelectedBranchName(issue.branchName || ""); setSelectedFiles(JSON.parse(issue.attachments || "[]")); setModalMode('edit'); setModalIssueStatus(issue.status); setIssueModalOpen(true); }} onDelete={(id) => { const issue = issues.find(i => i.id === id); setDeleteConfirm({ type: 'issue', id, title: issue?.title || 'Issue' }); }} />
+              ) : currentView === "cs_activity" ? (
+                <ActivityManager
+                  activities={activities}
+                  customers={customers}
+                  onAdd={() => {
+                    setEditingActivity(null);
+                    setSelectedCustomerId(null);
+                    setSelectedCustomerName("");
+                    setActivitySentiment("Neutral");
+                    setActivityType("Other");
+                    setActivityStatus("Open");
+                    setActivityAssignee(user?.name || "");
+                    setActivityFollowUp("");
+                    setActivityModalOpen(true);
+                  }}
+                  onEdit={(act) => {
+                    setEditingActivity(act);
+                    setSelectedCustomerId(act.customerId);
+                    setSelectedCustomerName(act.customerName);
+                    setActivitySentiment(act.sentiment);
+                    setActivityType(act.activityType);
+                    setActivityStatus(act.status || "Open");
+                    setActivityAssignee(act.assignee || "");
+                    setActivityFollowUp(act.followUpDate || "");
+                    setActivityModalOpen(true);
+                  }}
+                  onDelete={handleDeleteActivity}
+                />
               ) : currentView === "installations" ? (
                 <InstallationManager installations={installations} customers={customers} onAddInstallation={handleAddInstallation} onUpdateStatus={handleUpdateInstallationStatus} />
               ) : null}
@@ -1109,7 +1223,7 @@ export default function CRMPage() {
                     </div>
                     <div className="space-y-1">
                       <label className="text-xs font-medium text-slate-400">Description</label>
-                      <textarea name="description" defaultValue={editingIssue?.description} className="input-field min-h-[100px] text-xs" />
+                      <textarea name="description" defaultValue={editingIssue?.description} className="input-field min-h-[100px] text-xs py-3 resize-none" />
                     </div>
 
                     {/* File Attachments */}
@@ -1172,7 +1286,12 @@ export default function CRMPage() {
                             <div key={idx} className="flex items-center gap-3 p-2 bg-white/5 rounded-lg border border-white/10">
                               {/* Thumbnail for images */}
                               {file.type.startsWith('image/') ? (
-                                <img src={file.data} alt={file.name} className="w-10 h-10 object-cover rounded" />
+                                <img
+                                  src={file.data}
+                                  alt={file.name}
+                                  className="w-10 h-10 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity border border-white/10"
+                                  onClick={() => setPreviewImage(file.data)}
+                                />
                               ) : (
                                 <div className="w-10 h-10 bg-slate-700 rounded flex items-center justify-center text-[10px] font-bold text-slate-400">
                                   {file.name.split('.').pop()?.toUpperCase()}
@@ -1248,6 +1367,210 @@ export default function CRMPage() {
               ))}
             </div>
           )}
+          {/* Activity Modal */}
+          {isActivityModalOpen && (
+            <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+              <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setActivityModalOpen(false)} />
+              <div className="glass-card w-full max-w-lg relative shadow-2xl border-indigo-500/20 flex flex-col h-[85vh] max-h-[90vh] overflow-hidden">
+                <div className="p-6 border-b border-white/5 shrink-0">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-xl font-bold flex items-center gap-2 text-white">
+                      <HistoryIcon className="w-5 h-5 text-indigo-400" />
+                      {editingActivity ? "Edit Task" : "Add Task"}
+                    </h2>
+                    <button onClick={() => setActivityModalOpen(false)} className="text-slate-400 hover:text-white transition-colors p-1 hover:bg-white/5 rounded-lg">
+                      <X />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Status Flow Bar */}
+                <div className="px-6 py-4 bg-white/[0.02] border-b border-white/5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-slate-400">Status:</span>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setActivityStatus("Open")}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${activityStatus === "Open"
+                          ? "bg-amber-500 text-white shadow-lg shadow-amber-500/30 scale-105"
+                          : "bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20"
+                          }`}
+                      >
+                        Open
+                      </button>
+
+                      <span className="text-slate-600">→</span>
+
+                      <button
+                        type="button"
+                        onClick={() => setActivityStatus("In Progress")}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${activityStatus === "In Progress"
+                          ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/30 scale-105"
+                          : "bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 border border-indigo-500/20"
+                          }`}
+                      >
+                        In Progress
+                      </button>
+
+                      <span className="text-slate-600">→</span>
+
+                      <button
+                        type="button"
+                        onClick={() => setActivityStatus("Success")}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${activityStatus === "Success"
+                          ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 scale-105"
+                          : "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20"
+                          }`}
+                      >
+                        Success
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                  <form id="task-form" onSubmit={handleSaveActivity} className="space-y-5">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">ชื่อลูกค้า</label>
+                      <SearchableCustomerSelect
+                        customers={customers}
+                        value={selectedCustomerId}
+                        onChange={(id: number, name: string) => {
+                          setSelectedCustomerId(id);
+                          setSelectedCustomerName(name);
+                        }}
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">Summary</label>
+                      <input
+                        name="title"
+                        defaultValue={editingActivity?.title}
+                        className="input-field text-xs py-2"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">ประเภทงาน</label>
+                      <CustomSelect
+                        value={activityType}
+                        onChange={(val) => setActivityType(val as ActivityType)}
+                        options={[
+                          { value: "Training", label: "Training" },
+                          { value: "Onboarding", label: "Onboarding" },
+                          { value: "Support", label: "Support" },
+                          { value: "Other", label: "Other" },
+                        ]}
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">ผู้รับผิดชอบ (Assignee)</label>
+                      <CustomSelect
+                        value={activityAssignee}
+                        onChange={(val) => setActivityAssignee(val)}
+                        options={[
+                          { value: "", label: "ไม่ระบุ" },
+                          ...users.map(u => ({ value: u.name, label: u.name }))
+                        ]}
+                      />
+                    </div>
+
+
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-slate-400">Description</label>
+                      <textarea
+                        name="content"
+                        defaultValue={editingActivity?.content}
+                        className="input-field text-xs py-3 min-h-[100px] resize-none"
+                      />
+                    </div>
+                  </form>
+                </div>
+
+                <div className="p-6 border-t border-white/5 flex gap-3 shrink-0">
+                  <button type="button" onClick={() => setActivityModalOpen(false)} className="flex-1 btn btn-ghost py-3 rounded-xl font-bold text-slate-400 hover:bg-white/5">Cancel</button>
+                  <button form="task-form" type="submit" className="flex-1 btn btn-primary py-3 rounded-xl font-bold shadow-xl shadow-indigo-500/20 active:scale-95 transition-transform">Save Task</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Delete Confirmation Modal for Activity */}
+          {deleteConfirm?.type === 'activity' && (
+            <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
+              <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+              <div className="glass-card w-full max-w-sm p-6 relative">
+                <div className="flex flex-col items-center text-center space-y-4">
+                  <div className="w-12 h-12 rounded-full bg-rose-500/10 flex items-center justify-center text-rose-500">
+                    <Trash2 className="w-6 h-6" />
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="text-lg font-bold text-white">ยืนยันการลบ</h3>
+                    <p className="text-xs text-slate-400 leading-relaxed px-4">{deleteConfirm.title}</p>
+                  </div>
+                  <div className="flex gap-3 w-full">
+                    <button onClick={() => setDeleteConfirm(null)} className="flex-1 btn btn-ghost py-2">ยกเลิก</button>
+                    <button onClick={async () => {
+                      if (deleteConfirm.id) {
+                        const prevActivities = [...activities];
+                        const updated = activities.filter(a => a.id !== deleteConfirm.id);
+                        setActivities(updated);
+                        setDeleteConfirm(null);
+
+                        try {
+                          const result = await deleteActivity(deleteConfirm.id);
+                          if (result.success) {
+                            setToast({ message: "ลบกิจกรรมเรียบร้อยแล้ว", type: "success" });
+                          } else {
+                            setActivities(prevActivities);
+                            setToast({ message: "เกิดข้อผิดพลาดในการลบ: " + result.error, type: "error" });
+                          }
+                        } catch (err) {
+                          console.error("Failed to delete activity:", err);
+                          setActivities(prevActivities);
+                          setToast({ message: "เกิดข้อผิดพลาดในการเชื่อมต่อ", type: "error" });
+                        }
+                      }
+                    }} className="flex-1 bg-rose-500 hover:bg-rose-600 text-white font-bold py-2 rounded-xl transition-colors">ลบข้อมูล</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+      {/* Image Preview Modal */}
+      {previewImage && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setPreviewImage(null)}>
+          <div className="absolute top-4 right-4 flex gap-2">
+            <a
+              href={previewImage}
+              download={`image-${Date.now()}.png`}
+              className="p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors flex items-center justify-center"
+              onClick={(e) => e.stopPropagation()}
+              title="Download Image"
+            >
+              <Download className="w-6 h-6" />
+            </a>
+            <button
+              className="p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors flex items-center justify-center"
+              onClick={() => setPreviewImage(null)}
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+          <img
+            src={previewImage}
+            alt="Preview"
+            className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          />
         </div>
       )}
     </div>

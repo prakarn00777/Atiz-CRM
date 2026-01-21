@@ -553,11 +553,11 @@ export default function InstallationManager({
             {selectedInst && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
                     <div className="w-full max-w-lg glass-card p-6 shadow-2xl border-white/20">
-                        <div className="flex justify-between items-start mb-6">
+                        <div className="flex justify-between items-start mb-0">
                             <div>
                                 <h2 className="text-xl font-bold text-white flex items-center gap-2">
                                     <MessageSquare className="w-5 h-5 text-indigo-400" />
-                                    {selectedInst.installationType === "branch" ? "รายละเอียดการติดตั้งสาขาใหม่" : "รายละเอียดการติดตั้งลูกค้าใหม่"}
+                                    รายละเอียดการติดตั้ง
                                 </h2>
                             </div>
                             <button onClick={() => setSelectedInst(null)} className="p-2 hover:bg-white/5 rounded-full text-slate-400 hover:text-white transition-colors">
@@ -565,51 +565,98 @@ export default function InstallationManager({
                             </button>
                         </div>
 
-                        <div className="space-y-6 text-sm">
-                            <div className="bg-white/5 rounded-xl p-4 border border-white/5 space-y-4">
-                                <div>
-                                    <label className="text-[10px] font-bold text-slate-500 tracking-widest block mb-1">ลูกค้า</label>
-                                    <div className="text-slate-200 font-medium">{selectedInst.customerName}</div>
-                                </div>
-                                {selectedInst.branchName && (
-                                    <div>
-                                        <label className="text-[10px] font-bold text-sky-400 tracking-widest block mb-1">สาขา</label>
-                                        <div className="text-white font-medium">{selectedInst.branchName}</div>
-                                    </div>
-                                )}
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="text-[10px] font-bold text-slate-500 tracking-widest block mb-1">สถานะ</label>
-                                        <div className={`inline-flex items-center gap-2 px-2 py-1 rounded-lg text-xs font-bold border ${getStatusStyle(selectedInst.status)}`}>
-                                            {getStatusIcon(selectedInst.status)}
-                                            {selectedInst.status}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div>
-                                <label className="text-[10px] font-bold text-slate-500 tracking-widest block mb-2">หมายเหตุ</label>
-                                <div className="bg-slate-900/50 rounded-xl p-4 text-slate-300 border border-white/5 italic">
-                                    {selectedInst.notes || "ไม่มีข้อมูล"}
+                        {/* Status Flow Bar */}
+                        <div className="px-6 py-4 border-b border-white/5">
+                            <div className="flex items-center justify-end">
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => {
+                                            // Only update local state
+                                            setSelectedInst({ ...selectedInst, status: "Pending" });
+                                        }}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${selectedInst.status === "Pending"
+                                            ? "bg-amber-500 text-white shadow-lg shadow-amber-500/30 scale-105"
+                                            : "bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20"
+                                            }`}
+                                    >
+                                        Pending
+                                    </button>
+
+                                    <span className="text-slate-600">→</span>
+
+                                    <button
+                                        onClick={() => {
+                                            // Only update local state
+                                            setSelectedInst({ ...selectedInst, status: "Completed" });
+                                        }}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${selectedInst.status === "Completed"
+                                            ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 scale-105"
+                                            : "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20"
+                                            }`}
+                                    >
+                                        Completed
+                                    </button>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="mt-8 pt-6 border-t border-white/10 flex gap-2">
-                            {selectedInst.status === "Pending" && (
-                                <button onClick={() => { onUpdateStatus(selectedInst.id, "Installing"); setSelectedInst(null); }} className="btn btn-primary w-full py-3 flex items-center justify-center gap-2">
-                                    <Play className="w-5 h-5" /> เริ่มดำเนินการ
-                                </button>
-                            )}
-                            {selectedInst.status === "Installing" && (
-                                <button onClick={() => { onUpdateStatus(selectedInst.id, "Completed"); setSelectedInst(null); }} className="btn bg-emerald-500 hover:bg-emerald-600 text-white w-full py-3 flex items-center justify-center gap-2">
-                                    <CheckCircle2 className="w-5 h-5" /> ติดตั้งเสร็จสิ้น
-                                </button>
-                            )}
+                        <div className="flex-1 overflow-y-auto p-6">
+                            <div className="space-y-4">
+                                <div className="space-y-1">
+                                    <label className="text-xs font-medium text-slate-400">Type</label>
+                                    <input
+                                        readOnly
+                                        value={selectedInst.installationType === "branch" ? "ติดตั้งสาขาใหม่" : "ติดตั้งลูกค้าใหม่"}
+                                        className="input-field bg-white/5 text-slate-300 cursor-default"
+                                    />
+                                </div>
+
+                                <div className="space-y-1">
+                                    <label className="text-xs font-medium text-slate-400">Customer</label>
+                                    <input
+                                        readOnly
+                                        value={selectedInst.customerName}
+                                        className="input-field bg-white/5 text-slate-300 cursor-default"
+                                    />
+                                </div>
+
+                                {selectedInst.branchName && (
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-medium text-slate-400">Branch</label>
+                                        <input
+                                            readOnly
+                                            value={selectedInst.branchName}
+                                            className="input-field bg-white/5 text-slate-300 cursor-default"
+                                        />
+                                    </div>
+                                )}
+
+                                <div className="space-y-1">
+                                    <label className="text-xs font-medium text-slate-400">Notes</label>
+                                    <textarea
+                                        readOnly
+                                        value={selectedInst.notes || "ไม่มีข้อมูล"}
+                                        className="input-field min-h-[100px] text-xs py-3 resize-none bg-white/5 text-slate-300 cursor-default"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mt-8 pt-6 border-t border-white/10 flex justify-end">
+                            <button
+                                onClick={() => {
+                                    onUpdateStatus(selectedInst.id, selectedInst.status);
+                                    setSelectedInst(null);
+                                }}
+                                className="btn btn-primary px-6"
+                            >
+                                บันทึก
+                            </button>
                         </div>
                     </div>
                 </div>
-            )}
-        </div>
+            )
+            }
+        </div >
     );
 }

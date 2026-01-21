@@ -496,3 +496,93 @@ export async function updateInstallationStatus(id: number, status: string, modif
     }
 }
 
+
+export async function getActivities() {
+    try {
+        const { data, error } = await db.from('activities').select('*').order('created_at', { ascending: false });
+        if (error) throw error;
+        // Map snake_case to camelCase
+        return (data || []).map((item: any) => ({
+            id: item.id,
+            customerId: item.customer_id,
+            customerName: item.customer_name,
+            title: item.title,
+            activityType: item.activity_type,
+            content: item.content,
+            status: item.status,
+            sentiment: item.sentiment,
+            followUpDate: item.follow_up_date,
+            createdBy: item.created_by,
+            createdAt: item.created_at,
+            modifiedBy: item.modified_by,
+            modifiedAt: item.modified_at
+        }));
+    } catch (err) {
+        console.error("Error fetching activities:", err);
+        return [];
+    }
+}
+
+export async function saveActivity(activityData: any) {
+    try {
+        const { id, ...rest } = activityData;
+        const dbData = {
+            customer_id: rest.customerId,
+            customer_name: rest.customerName,
+            title: rest.title,
+            activity_type: rest.activityType,
+            content: rest.content,
+            status: rest.status,
+            sentiment: rest.sentiment,
+            follow_up_date: rest.followUpDate,
+            created_by: rest.createdBy,
+            created_at: rest.createdAt,
+            modified_by: rest.modifiedBy,
+            modified_at: rest.modifiedAt
+        };
+
+        let result;
+        if (id && id < 1000000) {
+            const { data, error } = await db.from('activities').update(dbData).eq('id', id).select();
+            if (error) throw error;
+            result = data?.[0];
+        } else {
+            const { data, error } = await db.from('activities').insert(dbData).select();
+            if (error) throw error;
+            result = data?.[0];
+        }
+
+        return {
+            success: true,
+            data: result ? {
+                id: result.id,
+                customerId: result.customer_id,
+                customerName: result.customer_name,
+                title: result.title,
+                activityType: result.activity_type,
+                content: result.content,
+                status: result.status,
+                sentiment: result.sentiment,
+                followUpDate: result.follow_up_date,
+                createdBy: result.created_by,
+                createdAt: result.created_at,
+                modified_by: result.modified_by,
+                modified_at: result.modified_at
+            } : null
+        };
+    } catch (err: any) {
+        console.error("Error in saveActivity:", err);
+        return { success: false, error: err.message };
+    }
+}
+
+export async function deleteActivity(id: number) {
+    try {
+        const { error } = await db.from('activities').delete().eq('id', id);
+        if (error) throw error;
+        return { success: true };
+    } catch (err: any) {
+        console.error("Error in deleteActivity:", err);
+        return { success: false, error: err.message };
+    }
+}
