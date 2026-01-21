@@ -183,9 +183,8 @@ export default function CRMPage() {
           if (!user) return;
           const { eventType, new: newRecord, old: oldRecord } = payload;
           const actor = newRecord?.created_by || newRecord?.modified_by;
-
-          // Skip if current user is the actor (actor already got optimistic notification)
-          if (actor === user.name) return;
+          // Skip notifications if no valid actor is found (e.g., direct DB edit) or if it's the current user
+          if (!actor || actor === "System" || actor === user.name) return;
 
           if (eventType === 'INSERT') {
             pushNotification(
@@ -209,7 +208,7 @@ export default function CRMPage() {
           if (!user) return;
           if (payload.eventType === 'INSERT') {
             const actor = payload.new.created_by;
-            if (actor === user.name) return;
+            if (!actor || actor === "System" || actor === user.name) return;
             pushNotification(
               "👥 มีลูกค้าใหม่",
               `เพิ่มลูกค้า: ${payload.new.name} โดย ${actor || 'System'}`,
@@ -225,7 +224,7 @@ export default function CRMPage() {
           if (!user) return;
           const { eventType, new: newRecord, old: oldRecord } = payload;
           const actor = newRecord?.created_by || newRecord?.modified_by;
-          if (actor === user.name) return;
+          if (!actor || actor === "System" || actor === user.name) return;
 
           if (eventType === 'INSERT') {
             pushNotification(
