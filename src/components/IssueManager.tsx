@@ -213,7 +213,7 @@ export default function IssueManager({ issues, customers: _customers, onAdd, onE
                             <tr className="bg-white/5 text-slate-400 text-xs uppercase tracking-wider border-b border-white/5">
                                 <th className="px-4 py-3 font-semibold w-[5%] text-center">No.</th>
                                 <th className="px-4 py-3 font-semibold w-[8%] text-center">Case Id</th>
-                                <th className="px-4 py-3 font-semibold w-[12%] text-center">Case Name</th>
+                                <th className="px-4 py-3 font-semibold w-[12%] text-right">Case Name</th>
                                 <th className="px-4 py-3 font-semibold w-[12%] text-center">Customer</th>
                                 <th className="px-4 py-3 font-semibold w-[8%] text-center">Severity</th>
                                 <th className="px-4 py-3 font-semibold w-[8%] text-center">Status</th>
@@ -235,9 +235,9 @@ export default function IssueManager({ issues, customers: _customers, onAdd, onE
                                                 {issue.caseNumber}
                                             </span>
                                         </td>
-                                        <td className="px-4 py-3 text-center">
-                                            <div className="flex items-center justify-center gap-2">
-                                                <div className="font-semibold text-slate-200 text-xs truncate" title={issue.title}>
+                                        <td className="px-4 py-3 text-right">
+                                            <div className="flex items-center justify-end gap-2">
+                                                <div className="font-normal text-slate-200 text-xs truncate" title={issue.title}>
                                                     {issue.title}
                                                 </div>
                                                 {issue.attachments && (typeof issue.attachments === 'string' ? issue.attachments.length > 2 : issue.attachments.length > 0) && (
