@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Search, Filter, Clock, CheckCircle2, Play, User, MessageSquare, AlertCircle, X, Edit2, ExternalLink, Layers, MoreVertical } from "lucide-react";
+import { Plus, Search, Filter, Clock, CheckCircle2, Play, User, MessageSquare, AlertCircle, X, Edit2, ExternalLink, MoreVertical } from "lucide-react";
 import { createPortal } from "react-dom";
 import SearchableCustomerSelect from "./SearchableCustomerSelect";
 import CustomSelect from "./CustomSelect";

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Search, Edit2, Trash2, Plus, AlertCircle, AlertTriangle, Info, CheckCircle2, Clock, Play, Paperclip, MoreVertical, Filter } from "lucide-react";
+import { Search, Edit2, Trash2, Plus, AlertCircle, AlertTriangle, Info, CheckCircle2, Clock, Play, Paperclip, MoreVertical } from "lucide-react";
 import CustomSelect from "./CustomSelect";
 import CustomDatePicker from "./CustomDatePicker";
 import { Customer, Issue } from "@/types";
@@ -15,7 +15,7 @@ interface IssueManagerProps {
     onDelete: (id: number) => void;
 }
 
-export default function IssueManager({ issues, customers, onAdd, onEdit, onDelete }: IssueManagerProps) {
+export default function IssueManager({ issues, customers: _customers, onAdd, onEdit, onDelete }: IssueManagerProps) {
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
     const [severityFilter, setSeverityFilter] = useState("all");
@@ -27,7 +27,6 @@ export default function IssueManager({ issues, customers, onAdd, onEdit, onDelet
 
     useEffect(() => {
         setMounted(true);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     useEffect(() => {

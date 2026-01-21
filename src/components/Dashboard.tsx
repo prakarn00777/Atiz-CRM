@@ -3,14 +3,13 @@
 import { useRef, useMemo, useState, useEffect } from "react";
 import {
     Users, Activity, Layers, Zap, Clock, AlertCircle,
-    DollarSign, ArrowUpRight, BarChart3, LineChart,
-    PieChart, Briefcase, TrendingUp, Monitor, Award,
-    Maximize, Minimize, Tv, Pause, Play, RefreshCw
+    DollarSign, BarChart3, LineChart,
+    Briefcase, TrendingUp, Monitor,
+    Tv, Pause, RefreshCw
 } from "lucide-react";
 import {
-    ResponsiveContainer, LineChart as ReLineChart, Line, AreaChart, Area,
-    XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart as RePieChart,
-    Pie, Cell, BarChart, Bar
+    ResponsiveContainer, AreaChart, Area,
+    XAxis, YAxis, CartesianGrid, Tooltip
 } from 'recharts';
 import ParticlesBackground from "./ParticlesBackground";
 import { Customer, Installation, Issue } from "@/types";
@@ -32,12 +31,6 @@ const MOCK_LINE_DATA = [
     { name: 'Fri', drease: 2, ease: 0 },
     { name: 'Sat', drease: 5, ease: 0 },
     { name: 'Sun', drease: 1, ease: 0 },
-];
-
-const MOCK_PIE_DATA = [
-    { name: 'Active', value: 75, color: '#10b981' },
-    { name: 'Pending', value: 15, color: '#f59e0b' },
-    { name: 'Canceled', value: 10, color: '#f43f5e' },
 ];
 
 export default function Dashboard({ customers, installations, issues, user, onViewChange }: DashboardProps) {
