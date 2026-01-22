@@ -936,6 +936,7 @@ export default function CRMPage() {
                   onEdit={(l) => { setEditingLead(l); setLeadModalOpen(true); }}
                   onDelete={(id) => {
                     const lead = leads.find(l => l.id === id);
+                    console.log('Delete lead clicked:', id, lead?.customerName);
                     setDeleteConfirm({ type: 'activity' as any, id, title: lead?.customerName || 'Lead' });
                   }}
                 />
@@ -1430,13 +1431,16 @@ export default function CRMPage() {
                 <p className="text-sm text-slate-400 mb-6">{deleteConfirm.title}</p>
                 <div className="flex gap-3">
                   <button onClick={() => setDeleteConfirm(null)} className="btn btn-ghost flex-1">ยกเลิก</button>
-                  <button onClick={() => {
+                  <button onClick={async () => {
                     if (deleteConfirm.type === 'customer' && deleteConfirm.id) handleDeleteCustomer(deleteConfirm.id);
                     if (deleteConfirm.type === 'issue' && deleteConfirm.id) handleDeleteIssue(deleteConfirm.id);
                     if (deleteConfirm.type === 'branch' && deleteConfirm.index !== undefined) {
                       const filtered = branchInputs.filter((_, i) => i !== deleteConfirm.index);
                       setBranchInputs(filtered);
                       setActiveBranchIndex(Math.max(0, (deleteConfirm.index || 0) - 1));
+                    }
+                    if ((deleteConfirm.type as string) === 'activity' && deleteConfirm.id && currentView === 'leads') {
+                      await handleDeleteLead(deleteConfirm.id);
                     }
                     setDeleteConfirm(null);
                   }} className="btn bg-rose-500 hover:bg-rose-600 text-white flex-1">ลบรายการ</button>
@@ -1763,10 +1767,12 @@ export default function CRMPage() {
                   <div className="flex gap-3 w-full">
                     <button onClick={() => setDeleteConfirm(null)} className="flex-1 btn btn-ghost py-2">ยกเลิก</button>
                     <button onClick={async () => {
+                      console.log('Delete confirm clicked, id:', deleteConfirm.id, 'currentView:', currentView);
                       if (deleteConfirm.id) {
                         // Check if it's in leads view
                         if (currentView === 'leads') {
-                          handleDeleteLead(deleteConfirm.id);
+                          console.log('Calling handleDeleteLead with id:', deleteConfirm.id);
+                          await handleDeleteLead(deleteConfirm.id);
                           setDeleteConfirm(null);
                         } else {
                           const prevActivities = [...activities];
