@@ -28,6 +28,7 @@ const AVAILABLE_MENUS = [
     { id: "customers", label: "จัดการลูกค้า", icon: "👥" },
     { id: "installations", label: "งานติดตั้ง", icon: "🔧" },
     { id: "issues", label: "แจ้งปัญหา", icon: "📝" },
+    { id: "leads", label: "ลีด (Leads)", icon: "📢" },
     { id: "user_management", label: "จัดการผู้ใช้งาน", icon: "👤" },
     { id: "role_management", label: "จัดการบทบาท", icon: "🛡️" },
 ];
@@ -224,8 +225,8 @@ export default function RoleManager({ roles, onSave, onDelete }: RoleManagerProp
                                                                         type="button"
                                                                         onClick={() => togglePermission(menu.id, action)}
                                                                         className={`w-8 h-8 rounded-lg border-2 transition-all flex items-center justify-center ${perm[action]
-                                                                                ? 'bg-indigo-500 border-indigo-500 text-white'
-                                                                                : 'bg-transparent border-slate-600 hover:border-slate-500'
+                                                                            ? 'bg-indigo-500 border-indigo-500 text-white'
+                                                                            : 'bg-transparent border-slate-600 hover:border-slate-500'
                                                                             }`}
                                                                     >
                                                                         {perm[action] && <Check className="w-4 h-4" />}
@@ -237,8 +238,8 @@ export default function RoleManager({ roles, onSave, onDelete }: RoleManagerProp
                                                                     type="button"
                                                                     onClick={() => toggleAllForMenu(menu.id)}
                                                                     className={`w-8 h-8 rounded-lg border-2 transition-all flex items-center justify-center ${allChecked
-                                                                            ? 'bg-emerald-500 border-emerald-500 text-white'
-                                                                            : 'bg-transparent border-slate-600 hover:border-slate-500'
+                                                                        ? 'bg-emerald-500 border-emerald-500 text-white'
+                                                                        : 'bg-transparent border-slate-600 hover:border-slate-500'
                                                                         }`}
                                                                 >
                                                                     {allChecked && <Check className="w-4 h-4" />}

@@ -16,6 +16,7 @@ interface SidebarProps {
 const mainMenus = [
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
     { id: "cs_activity", label: "CS Task", icon: HistoryIcon },
+    { id: "leads", label: "ลีด (Leads)", icon: Users },
     {
         id: "customer_group",
         label: "ลูกค้า",
@@ -144,7 +145,7 @@ const Sidebar = memo(function Sidebar({ currentView, setView, onLogout, userRole
                     }
 
                     // Handle Single Items
-                    const canRead = isAdmin || item.id === 'dashboard' || item.id === 'cs_activity' || userRole?.permissions?.[item.id]?.read;
+                    const canRead = isAdmin || item.id === 'dashboard' || item.id === 'cs_activity' || item.id === 'leads' || userRole?.permissions?.[item.id]?.read;
                     if (!canRead) return null;
 
                     return (

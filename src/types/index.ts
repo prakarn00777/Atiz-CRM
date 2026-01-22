@@ -77,7 +77,7 @@ export interface CRMNotification {
     isRead: boolean;
     data?: Record<string, unknown>;
 }
-export type ActivityType = "Training" | "Onboarding" | "Support" | "Call" | "Line" | "Visit" | "Renewal" | "Other";
+export type ActivityType = "Training" | "Onboarding" | "Support" | "Demo" | "Call" | "Line" | "Visit" | "Renewal" | "Other";
 export type SentimentType = "Positive" | "Neutral" | "Negative";
 
 export interface Activity {
@@ -91,6 +91,23 @@ export interface Activity {
     status: string;
     sentiment: SentimentType;
     followUpDate?: string;
+    createdBy?: string;
+    createdAt?: string;
+    modifiedBy?: string;
+    modifiedAt?: string;
+}
+
+export interface Lead {
+    id: number;
+    leadNumber: string;
+    product: string; // Dr.Ease, Ease POS
+    source: string; // ยิงแอด, เซลล์หา, พาร์ทเนอร์, บริษัทหา
+    leadType: string; // LINE, Facebook, Call, ลีดจากสัมนา, ลูกค้าเก่า ต่อสัญญา, ขบายสัญญาเพิ่ม, ลีดซ้ำ
+    salesName: string; // Aoey, Yo
+    customerName: string;
+    phone: string;
+    receivedDate: string; // ISO date string
+    notes?: string;
     createdBy?: string;
     createdAt?: string;
     modifiedBy?: string;

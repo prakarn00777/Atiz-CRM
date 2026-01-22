@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/lib/db";
-import { Customer, UsageStatus, ProductType } from "@/types";
+import { Customer, UsageStatus, ProductType, Lead } from "@/types";
 import bcrypt from "bcryptjs";
 
 export async function importCustomersFromCSV(data: any[]) {
@@ -597,6 +597,111 @@ export async function deleteActivity(id: number) {
         return { success: true };
     } catch (err: any) {
         console.error("Error in deleteActivity:", err);
+        return { success: false, error: err.message };
+    }
+}
+
+// Leads persistence
+export async function getLeads(): Promise<Lead[]> {
+    try {
+        const { data, error } = await db
+            .from('leads')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        return (data || []).map(row => ({
+            id: row.id,
+            leadNumber: row.lead_number,
+            product: row.product,
+            source: row.source,
+            leadType: row.lead_type,
+            salesName: row.sales_name,
+            customerName: row.customer_name,
+            phone: row.phone,
+            receivedDate: row.received_date,
+            notes: row.notes,
+            createdBy: row.created_by,
+            createdAt: row.created_at,
+            modifiedBy: row.modified_by,
+            modifiedAt: row.modified_at
+        }));
+    } catch (err: any) {
+        console.error("Error in getLeads:", err);
+        return [];
+    }
+}
+
+export async function saveLead(leadData: any) {
+    try {
+        const { id, ...rest } = leadData;
+        const dbData = {
+            lead_number: rest.leadNumber,
+            product: rest.product,
+            source: rest.source,
+            lead_type: rest.leadType,
+            sales_name: rest.salesName,
+            customer_name: rest.customerName,
+            phone: rest.phone,
+            received_date: rest.receivedDate,
+            notes: rest.notes,
+            created_by: rest.createdBy,
+            created_at: rest.createdAt,
+            modified_by: rest.modifiedBy,
+            modified_at: rest.modifiedAt
+        };
+
+        let result;
+        // Use a high threshold for local IDs vs DB IDs
+        if (id && id < 1000000000000) {
+            const { data, error } = await db.from('leads').update(dbData).eq('id', id).select();
+            if (error) throw error;
+            result = data?.[0];
+        } else {
+            const { data, error } = await db.from('leads').insert(dbData).select();
+            if (error) throw error;
+            result = data?.[0];
+        }
+
+        return { success: true, data: result };
+    } catch (err: any) {
+        console.error("Error in saveLead:", err);
+        return { success: false, error: err.message };
+    }
+}
+
+export async function deleteLead(id: number) {
+    try {
+        const { error } = await db.from('leads').delete().eq('id', id);
+        if (error) throw error;
+        return { success: true };
+    } catch (err: any) {
+        console.error("Error in deleteLead:", err);
+        return { success: false, error: err.message };
+    }
+}
+
+export async function importLeads(data: any[]) {
+    try {
+        const dbData = data.map(row => ({
+            lead_number: row.leadNumber || row.lead_number,
+            product: row.product,
+            source: row.source,
+            lead_type: row.leadType || row.lead_type,
+            sales_name: row.salesName || row.sales_name,
+            customer_name: row.customerName || row.customer_name,
+            phone: row.phone,
+            received_date: row.receivedDate || row.received_date,
+            notes: row.notes,
+            created_at: new Date().toISOString()
+        }));
+
+        const { error } = await db.from('leads').insert(dbData);
+        if (error) throw error;
+        return { success: true, count: dbData.length };
+    } catch (err: any) {
+        console.error("Error in importLeads:", err);
         return { success: false, error: err.message };
     }
 }

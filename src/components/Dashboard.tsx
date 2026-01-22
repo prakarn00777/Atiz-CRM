@@ -2,7 +2,7 @@
 
 import { useRef, useMemo, useState, useEffect } from "react";
 import {
-    Users, Activity, Layers, Zap, Clock, AlertCircle,
+    Users, Activity as ActivityIcon, Layers, Zap, Clock, AlertCircle,
     DollarSign, BarChart3, LineChart,
     Briefcase, TrendingUp, Monitor,
     Tv, Pause, RefreshCw
@@ -12,34 +12,43 @@ import {
     XAxis, YAxis, CartesianGrid, Tooltip
 } from 'recharts';
 import ParticlesBackground from "./ParticlesBackground";
-import { Customer, Installation, Issue } from "@/types";
+import type { Customer, Installation, Issue, Lead, Activity as CSActivity } from "@/types";
+
+import SegmentedControl from "./SegmentedControl";
+import CustomSelect from "./CustomSelect";
 
 interface DashboardProps {
     customers: Customer[];
     installations: Installation[];
     issues: Issue[];
+    activities: CSActivity[];
+    leads: Lead[];
     user: any;
     onViewChange: (view: string) => void;
 }
 
-// Mock Data for New Business Metrics
-const MOCK_LINE_DATA = [
-    { name: 'Mon', drease: 4, ease: 3 },
-    { name: 'Tue', drease: 3, ease: 0 },
-    { name: 'Wed', drease: 5, ease: 1 },
-    { name: 'Thu', drease: 3, ease: 2 },
-    { name: 'Fri', drease: 2, ease: 0 },
-    { name: 'Sat', drease: 5, ease: 0 },
-    { name: 'Sun', drease: 1, ease: 0 },
-];
+// Initial values for dynamic graph data
+const INITIAL_GRAPH_DATA = Array.from({ length: 7 }).map((_, i) => {
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const date = new Date(2026, 0, 21); // Base for initial static feel
+    date.setDate(date.getDate() - (6 - i));
+    return {
+        name: `${date.getDate()} ${days[date.getDay()]}`,
+        drease: [4, 3, 5, 3, 2, 5, 1][i],
+        ease: [3, 0, 1, 2, 0, 0, 0][i],
+    };
+});
 
-export default function Dashboard({ customers, installations, issues, user, onViewChange }: DashboardProps) {
+export default function Dashboard({ customers, installations, issues, activities, leads, user, onViewChange }: DashboardProps) {
     const dashboardRef = useRef<HTMLDivElement>(null);
-    const [currentTime, setCurrentTime] = useState(new Date());
     const [activeTab, setActiveTab] = useState<'cs' | 'business'>('cs');
+    const [timeRange, setTimeRange] = useState<'1w' | '1m'>('1w');
+    const [dataType, setDataType] = useState<'all' | 'lead' | 'demo'>('all');
+    const [productFilter, setProductFilter] = useState<'all' | 'Dr.Ease' | 'Ease POS'>('all');
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const [currentTime, setCurrentTime] = useState(new Date());
     const [isAutoCycle, setIsAutoCycle] = useState(false);
-
+    const cycleTimerRef = useRef<any>(null);
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
 
@@ -87,15 +96,93 @@ export default function Dashboard({ customers, installations, issues, user, onVi
         ];
     }, [customers, issues, installations]);
 
-    // Business Stats Calculation (Mocked for now)
+    // Business Stats Calculation
     const businessStats = useMemo(() => {
+        const todayAtMidnight = new Date();
+        todayAtMidnight.setHours(23, 59, 59, 999);
+
+        const last7Days = new Date();
+        last7Days.setDate(todayAtMidnight.getDate() - 7);
+        last7Days.setHours(0, 0, 0, 0);
+
+        const weeklyLeads = leads.filter(l => {
+            if (!l.receivedDate) return false;
+            const rDate = new Date(l.receivedDate);
+            return rDate >= last7Days && rDate <= todayAtMidnight;
+        });
+
+        const dreaseLeads = weeklyLeads.filter(l => l.product === "Dr.Ease").length;
+        const easeLeads = weeklyLeads.filter(l => l.product === "Ease POS").length;
+
         return [
-            { label: "Weekly Leads", subLabel: "ผู้สนใจรายสัปดาห์", value: "29", sub: "Dr.Ease: 23 | Ease: 6", icon: Briefcase, color: "text-amber-400", border: "border-amber-500/20", bg: "from-amber-500/10" },
+            { label: "Weekly Leads", subLabel: "ผู้สนใจรายสัปดาห์", value: weeklyLeads.length, sub: `Dr.Ease: ${dreaseLeads} | Ease: ${easeLeads}`, icon: Briefcase, color: "text-amber-400", border: "border-amber-500/20", bg: "from-amber-500/10" },
             { label: "Weekly Demos", subLabel: "การทำ Demo รายสัปดาห์", value: "18", sub: "Dr.Ease: 10 | Ease: 8", icon: Monitor, color: "text-blue-400", border: "border-blue-500/20", bg: "from-blue-500/10" },
             { label: "New Sales (Revenue)", subLabel: "ยอดเงินปิดใหม่", value: "฿408,604", sub: "", icon: DollarSign, color: "text-emerald-400", border: "border-emerald-500/20", bg: "from-emerald-500/10" },
             { label: "Renewal (Revenue)", subLabel: "ยอดเงินต่อสัญญา", value: "฿882,120", sub: "", icon: TrendingUp, color: "text-purple-400", border: "border-purple-500/20", bg: "from-purple-500/10" },
         ];
-    }, []);
+    }, [leads]);
+
+    // Generate last 7 or 30 days labels ending with today
+    const dynamicGraphData = useMemo(() => {
+        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const count = timeRange === '1w' ? 7 : 30;
+
+        return Array.from({ length: count }).map((_, i) => {
+            const date = new Date();
+            date.setHours(0, 0, 0, 0);
+            date.setDate(date.getDate() - (count - 1 - i));
+
+            const dateStr = date.toISOString().split('T')[0];
+
+            // Filter logic based on dataType
+            let dayLeads = 0;
+            let dayDemos = 0;
+
+            // 1. Calculate Leads
+            if (dataType === 'all' || dataType === 'lead') {
+                const leadsOnDay = leads.filter(l => l.receivedDate === dateStr);
+                if (productFilter === 'all') {
+                    dayLeads = leadsOnDay.length;
+                } else {
+                    dayLeads = leadsOnDay.filter(l => l.product === productFilter).length;
+                }
+            }
+
+            // 2. Calculate Demos
+            if (dataType === 'all' || dataType === 'demo') {
+                const demosOnDay = activities.filter(a =>
+                    a.activityType === "Demo" &&
+                    a.createdAt && a.createdAt.startsWith(dateStr)
+                );
+
+                if (productFilter === 'all') {
+                    dayDemos = demosOnDay.length;
+                } else {
+                    // Mapping activities to products is tricky as Activity doesn't have 'product' field
+                    // However, we can look up the customer's productType
+                    dayDemos = demosOnDay.filter(a => {
+                        const customer = customers.find(c => c.id === a.customerId);
+                        return customer?.productType === (productFilter === 'Ease POS' ? 'EasePos' : productFilter);
+                    }).length;
+                }
+            }
+
+            return {
+                name: `${date.getDate()} ${days[date.getDay()]}`,
+                drease: (dataType === 'all' || dataType === 'lead') && (productFilter === 'all' || productFilter === 'Dr.Ease')
+                    ? (leads.filter(l => l.receivedDate === dateStr && l.product === 'Dr.Ease').length +
+                        activities.filter(a => a.activityType === 'Demo' && a.createdAt?.startsWith(dateStr) && customers.find(c => c.id === a.customerId)?.productType === 'Dr.Ease').length)
+                    : 0,
+                ease: (dataType === 'all' || dataType === 'lead') && (productFilter === 'all' || productFilter === 'Ease POS')
+                    ? (leads.filter(l => l.receivedDate === dateStr && l.product === 'Ease POS').length +
+                        activities.filter(a => a.activityType === 'Demo' && a.createdAt?.startsWith(dateStr) && customers.find(c => c.id === a.customerId)?.productType === 'EasePos').length)
+                    : 0,
+                leads: dayLeads,
+                demos: dayDemos,
+                shortName: `${date.getDate()}`
+            };
+        });
+    }, [timeRange, leads, activities, dataType, productFilter, customers]);
 
     return (
         <div
@@ -168,7 +255,7 @@ export default function Dashboard({ customers, installations, issues, user, onVi
                                     className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all px-6
                                         ${activeTab === 'cs' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
                                 >
-                                    <Activity className="w-4 h-4" />
+                                    <ActivityIcon className="w-4 h-4" />
                                     CS Insights
                                 </button>
                                 <button
@@ -200,7 +287,7 @@ export default function Dashboard({ customers, installations, issues, user, onVi
                                     <div>
                                         <p className="text-text-muted text-[10px] uppercase font-bold tracking-widest">{stat.label}</p>
                                         <p className="text-indigo-400/80 text-[9px] font-bold -mt-0.5 mb-1">{stat.subLabel}</p>
-                                        <h3 className="text-2xl font-bold text-text-main tracking-tight leading-none">{stat.value}</h3>
+                                        <h3 className="text-7xl font-bold text-text-main tracking-tighter leading-none">{stat.value}</h3>
                                         <p className="text-text-muted text-[9px] mt-1 line-clamp-1">{stat.sub}</p>
                                     </div>
                                 </div>
@@ -211,7 +298,7 @@ export default function Dashboard({ customers, installations, issues, user, onVi
                     <div className="grid grid-cols-1 gap-6 flex-1 min-h-0">
                         <div className="glass-card p-6 border-white/5 flex flex-col min-h-0">
                             <h3 className="text-white font-bold flex items-center gap-2 flex-shrink-0">
-                                <Activity className="w-4 h-4 text-indigo-400" />
+                                <ActivityIcon className="w-4 h-4 text-indigo-400" />
                                 Recent Support Activity
                             </h3>
                             <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-4 flex-shrink-0">กิจกรรมการซัพพอร์ตล่าสุด</p>
@@ -247,10 +334,12 @@ export default function Dashboard({ customers, installations, issues, user, onVi
                                         <stat.icon className="w-4 h-4" />
                                     </div>
                                     <div>
-                                        <p className="text-text-muted text-[10px] uppercase font-bold tracking-widest">{stat.label}</p>
-                                        <p className="text-indigo-400/80 text-[9px] font-bold -mt-0.5 mb-1">{stat.subLabel}</p>
-                                        <h3 className="text-2xl font-bold text-text-main tracking-tight leading-none">{stat.value}</h3>
-                                        <p className="text-text-muted text-[9px] mt-1 line-clamp-1">{stat.sub}</p>
+                                        <p className="text-text-muted text-[12px] uppercase font-bold tracking-widest">{stat.label}</p>
+                                        <p className="text-indigo-400/80 text-[11px] font-bold -mt-0.5 mb-1">{stat.subLabel}</p>
+                                        <h3 className="text-7xl font-bold text-text-main tracking-tighter leading-none">
+                                            {stat.value}
+                                        </h3>
+                                        <p className="text-text-muted text-[11px] font-bold mt-1 line-clamp-1">{stat.sub}</p>
                                     </div>
                                 </div>
                             </div>
@@ -259,71 +348,135 @@ export default function Dashboard({ customers, installations, issues, user, onVi
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-0">
                         <div className="lg:col-span-2 glass-card p-6 border-white/5 flex flex-col min-h-0">
-                            <h3 className="text-white font-bold flex items-center gap-2">
-                                <LineChart className="w-4 h-4 text-indigo-400" />
-                                Weekly Leads & Demos Growth
-                            </h3>
-                            <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-4 flex-shrink-0">อัตราการเติบโตของ Lead และ Demo รายสัปดาห์</p>
+                            <div className="flex items-center justify-between mb-2">
+                                <div className="flex flex-col">
+                                    <h3 className="text-white font-bold flex items-center gap-2">
+                                        <LineChart className="w-4 h-4 text-indigo-400" />
+                                        {timeRange === '1w' ? 'Weekly' : 'Monthly'} Leads & Demos Growth
+                                    </h3>
+                                    <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">อัตราการเติบโตของ Lead และ Demo {timeRange === '1w' ? 'รายสัปดาห์' : 'รายเดือน'}</p>
+                                </div>
+                                <div className="flex items-center gap-2 scale-90 origin-right">
+                                    <div className="w-36 flex-shrink-0">
+                                        <CustomSelect
+                                            options={[
+                                                { value: 'all', label: 'All Data' },
+                                                { value: 'lead', label: 'Leads' },
+                                                { value: 'demo', label: 'Demos' }
+                                            ]}
+                                            value={dataType}
+                                            onChange={(val) => setDataType(val as 'all' | 'lead' | 'demo')}
+                                            className="h-9"
+                                        />
+                                    </div>
+                                    <div className="w-36 flex-shrink-0">
+                                        <CustomSelect
+                                            options={[
+                                                { value: 'all', label: 'All Products' },
+                                                { value: 'Dr.Ease', label: 'Dr.Ease' },
+                                                { value: 'Ease POS', label: 'Ease POS' }
+                                            ]}
+                                            value={productFilter}
+                                            onChange={(val) => setProductFilter(val as 'all' | 'Dr.Ease' | 'Ease POS')}
+                                            className="h-9"
+                                        />
+                                    </div>
+                                    <div className="w-24 flex-shrink-0">
+                                        <CustomSelect
+                                            options={[
+                                                { value: '1w', label: '1W' },
+                                                { value: '1m', label: '1M' }
+                                            ]}
+                                            value={timeRange}
+                                            onChange={(val) => setTimeRange(val as '1w' | '1m')}
+                                            className="h-9"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
                             <div className="flex-1 w-full min-h-0">
                                 <ResponsiveContainer width="100%" height="100%">
-                                    <AreaChart data={MOCK_LINE_DATA}>
+                                    <AreaChart data={dynamicGraphData}>
                                         <defs>
                                             <linearGradient id="colorDrease" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
-                                                <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                                                <stop offset="5%" stopColor="#7053E1" stopOpacity={0.3} />
+                                                <stop offset="95%" stopColor="#7053E1" stopOpacity={0} />
                                             </linearGradient>
                                             <linearGradient id="colorEase" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                                                <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                                                <stop offset="5%" stopColor="#F76D85" stopOpacity={0.3} />
+                                                <stop offset="95%" stopColor="#F76D85" stopOpacity={0} />
                                             </linearGradient>
+                                            <filter id="glowDrease" x="-20%" y="-20%" width="140%" height="140%">
+                                                <feGaussianBlur stdDeviation="3" result="blur" />
+                                                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                                            </filter>
+                                            <filter id="glowEase" x="-20%" y="-20%" width="140%" height="140%">
+                                                <feGaussianBlur stdDeviation="3" result="blur" />
+                                                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                                            </filter>
                                         </defs>
                                         <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
-                                        <XAxis dataKey="name" stroke="#64748b" fontSize={10} />
+                                        <XAxis
+                                            dataKey="name"
+                                            stroke="#64748b"
+                                            fontSize={10}
+                                            interval={timeRange === '1w' ? 0 : 4} // Skip labels for 1m to avoid overlap
+                                        />
                                         <YAxis stroke="#64748b" fontSize={10} />
                                         <Tooltip
-                                            contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '8px', color: '#fff' }}
+                                            content={({ active, payload, label }) => {
+                                                if (active && payload && payload.length) {
+                                                    return (
+                                                        <div className="bg-slate-900/90 backdrop-blur-xl border border-white/10 p-4 rounded-2xl shadow-2xl shadow-purple-500/20 animate-in fade-in zoom-in-95 duration-200">
+                                                            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-white/5">
+                                                                <Clock className="w-3.5 h-3.5 text-[#7053E1]" />
+                                                                <span className="text-white font-bold text-sm tracking-tight">{label}</span>
+                                                            </div>
+                                                            <div className="space-y-2.5">
+                                                                {payload.map((entry, index) => (
+                                                                    <div key={index} className="flex items-center justify-between gap-8">
+                                                                        <div className="flex items-center gap-2.5">
+                                                                            <div
+                                                                                className="w-2.5 h-2.5 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.5)]"
+                                                                                style={{ backgroundColor: entry.color, boxShadow: `0 0 10px ${entry.color}80` }}
+                                                                            />
+                                                                            <span className="text-slate-400 text-xs font-medium">{entry.name}</span>
+                                                                        </div>
+                                                                        <span className="text-white font-bold text-sm tabular-nums">{entry.value}</span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                }
+                                                return null;
+                                            }}
+                                            cursor={{ stroke: 'rgba(112, 83, 225, 0.2)', strokeWidth: 2, strokeDasharray: '4 4' }}
                                         />
                                         <Area
                                             type="monotone"
                                             dataKey="drease"
                                             name="Dr.Ease"
-                                            stroke="#6366f1"
+                                            stroke="#7053E1"
                                             fillOpacity={1}
                                             fill="url(#colorDrease)"
-                                            strokeWidth={2}
+                                            strokeWidth={3}
+                                            activeDot={{ r: 6, stroke: '#7053E1', strokeWidth: 2, fill: '#fff', filter: 'url(#glowDrease)' }}
+                                            style={{ filter: 'drop-shadow(0 0 5px rgba(112, 83, 225, 0.6))' }}
                                         />
-                                        <Area
-                                            type="monotone"
-                                            dataKey="drease"
-                                            stroke="#818cf8"
-                                            fill="transparent"
-                                            strokeWidth={4}
-                                            strokeDasharray="4 20"
-                                            className="animate-flow"
-                                            style={{ filter: 'drop-shadow(0 0 4px rgba(99, 102, 241, 0.8))' }}
-                                            activeDot={false}
-                                        />
+
                                         <Area
                                             type="monotone"
                                             dataKey="ease"
                                             name="Ease"
-                                            stroke="#10b981"
+                                            stroke="#F76D85"
                                             fillOpacity={1}
                                             fill="url(#colorEase)"
-                                            strokeWidth={2}
-                                            activeDot={false}
+                                            strokeWidth={3}
+                                            activeDot={{ r: 6, stroke: '#F76D85', strokeWidth: 2, fill: '#fff', filter: 'url(#glowEase)' }}
+                                            style={{ filter: 'drop-shadow(0 0 5px rgba(247, 109, 133, 0.6))' }}
                                         />
-                                        <Area
-                                            type="monotone"
-                                            dataKey="ease"
-                                            stroke="#34d399"
-                                            fill="transparent"
-                                            strokeWidth={4}
-                                            strokeDasharray="4 20"
-                                            className="animate-flow"
-                                            style={{ filter: 'drop-shadow(0 0 4px rgba(16, 185, 129, 0.8))' }}
-                                            activeDot={false}
-                                        />
+
                                     </AreaChart>
                                 </ResponsiveContainer>
                             </div>

@@ -16,14 +16,16 @@ import SegmentedControl from "@/components/SegmentedControl";
 import Dashboard from "@/components/Dashboard";
 import InstallationManager from "@/components/InstallationManager";
 import NotificationBell from "@/components/NotificationBell";
-import { Customer, Branch, Installation, Issue, UsageStatus, Activity as CSActivity, ActivityType, SentimentType } from "@/types";
+import LeadManager from "@/components/LeadManager";
+import { Customer, Branch, Installation, Issue, UsageStatus, Activity as CSActivity, ActivityType, SentimentType, Lead } from "@/types";
 import { useNotification } from "@/components/NotificationProvider";
 import { db } from "@/lib/db";
 import {
   importCustomersFromCSV, getCustomers, getIssues, getInstallations,
   getUsers, saveUser, deleteUser, getRoles, saveRole, deleteRole, loginUser,
   saveIssue, deleteIssue, saveCustomer, deleteCustomer, saveInstallation, updateInstallationStatus,
-  getActivities, saveActivity, deleteActivity
+  getActivities, saveActivity, deleteActivity,
+  getLeads, saveLead, deleteLead, importLeads
 } from "./actions";
 
 function TableSummary({ customers }: { customers: Customer[] }) {
@@ -81,6 +83,9 @@ export default function CRMPage() {
   const [activityStatus, setActivityStatus] = useState("Open");
   const [activityAssignee, setActivityAssignee] = useState("");
   const [activityFollowUp, setActivityFollowUp] = useState("");
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [isLeadModalOpen, setLeadModalOpen] = useState(false);
+  const [editingLead, setEditingLead] = useState<Lead | null>(null);
 
   // New states for issue form
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
@@ -105,13 +110,14 @@ export default function CRMPage() {
 
   const fetchData = useCallback(async () => {
     try {
-      const [cData, iData, instData, userData, roleData, actData] = await Promise.all([
+      const [cData, iData, instData, userData, roleData, actData, lData] = await Promise.all([
         getCustomers(),
         getIssues(),
         getInstallations(),
         getUsers(),
         getRoles(),
-        getActivities()
+        getActivities(),
+        getLeads()
       ]);
 
       // Update states
@@ -121,6 +127,7 @@ export default function CRMPage() {
       setUsers(userData);
       setRoles(roleData);
       setActivities(actData as CSActivity[]);
+      setLeads(lData);
 
       // Update cache for next load
       localStorage.setItem("crm_customers_v2", JSON.stringify(cData));
@@ -129,6 +136,7 @@ export default function CRMPage() {
       localStorage.setItem("crm_system_users_v2", JSON.stringify(userData));
       localStorage.setItem("crm_roles_v2", JSON.stringify(roleData));
       localStorage.setItem("crm_activities_v2", JSON.stringify(actData));
+      localStorage.setItem("crm_leads_v2", JSON.stringify(lData));
     } catch (err) {
       console.error("Background fetch failed:", err);
     }
@@ -375,6 +383,79 @@ export default function CRMPage() {
     } catch (err) {
       console.error("Failed to delete customer:", err);
       setToast({ message: "เกิดข้อผิดพลาดในการเชื่อมต่อ", type: "error" });
+    }
+  };
+
+  const handleSaveLead = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const data: any = {
+      leadNumber: formData.get("leadNumber"),
+      customerName: formData.get("customerName"),
+      product: formData.get("product"),
+      source: formData.get("source"),
+      leadType: formData.get("leadType"),
+      salesName: formData.get("salesName"),
+      phone: formData.get("phone"),
+      receivedDate: formData.get("receivedDate"),
+      notes: formData.get("notes"),
+      modifiedBy: user?.name,
+      modifiedAt: new Date().toISOString()
+    };
+
+    if (editingLead) {
+      data.id = editingLead.id;
+    } else {
+      data.createdBy = user?.name;
+      data.createdAt = new Date().toISOString();
+    }
+
+    // Optimistic UI
+    const optimisticLead = { ...data, id: data.id || Date.now() };
+    const previousLeads = [...leads];
+    setLeads(prev => {
+      if (editingLead) return prev.map(l => l.id === editingLead.id ? optimisticLead : l);
+      return [optimisticLead, ...prev];
+    });
+
+    setLeadModalOpen(false);
+    setEditingLead(null);
+    setToast({ message: "บันทึกข้อมูลลีดสำเร็จ", type: "success" });
+
+    const res = await saveLead(data);
+    if (!res.success) {
+      setLeads(previousLeads);
+      setToast({ message: "ผิดพลาด: " + res.error, type: "error" });
+      fetchDataDebounced();
+    }
+  };
+
+  const handleImportLeads = async (data: any[]) => {
+    try {
+      setToast({ message: "กำลังนำเข้าข้อมูลลีด...", type: "info" });
+      const result = await importLeads(data);
+      if (result.success) {
+        setToast({ message: `นำเข้าข้อมูลลีดสำเร็จ ${result.count} รายการ`, type: "success" });
+        fetchData();
+      } else {
+        setToast({ message: "เกิดข้อผิดพลาด: " + result.error, type: "error" });
+      }
+    } catch (err) {
+      console.error(err);
+      setToast({ message: "เกิดข้อผิดพลาดในการนำเข้าข้อมูล", type: "error" });
+    }
+  };
+
+  const handleDeleteLead = async (id: number) => {
+    const previousLeads = [...leads];
+    setLeads(prev => prev.filter(l => l.id !== id));
+    setToast({ message: "ลบข้อมูลลีดเรียบร้อยแล้ว", type: "success" });
+
+    const res = await deleteLead(id);
+    if (!res.success) {
+      setLeads(previousLeads);
+      setToast({ message: "ผิดพลาด: " + res.error, type: "error" });
+      fetchDataDebounced();
     }
   };
 
@@ -786,6 +867,8 @@ export default function CRMPage() {
                   customers={customers}
                   installations={installations}
                   issues={issues}
+                  activities={activities}
+                  leads={leads}
                   user={user}
                   onViewChange={setView}
                 />
@@ -844,6 +927,16 @@ export default function CRMPage() {
                 />
               ) : currentView === "installations" ? (
                 <InstallationManager installations={installations} customers={customers} onAddInstallation={handleAddInstallation} onUpdateStatus={handleUpdateInstallationStatus} />
+              ) : currentView === "leads" ? (
+                <LeadManager
+                  leads={leads}
+                  onAdd={() => { setEditingLead(null); setLeadModalOpen(true); }}
+                  onEdit={(l) => { setEditingLead(l); setLeadModalOpen(true); }}
+                  onDelete={(id) => {
+                    const lead = leads.find(l => l.id === id);
+                    setDeleteConfirm({ type: 'activity' as any, id, title: lead?.customerName || 'Lead' });
+                  }}
+                />
               ) : null}
             </div>
           </main>
@@ -1509,7 +1602,150 @@ export default function CRMPage() {
             </div>
           )}
 
-          {/* Delete Confirmation Modal for Activity */}
+          {/* Lead Modal */}
+          {isLeadModalOpen && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+              <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setLeadModalOpen(false)} />
+              <div className="glass-card w-full max-w-2xl max-h-[90vh] flex flex-col relative shadow-2xl">
+                <div className="p-6 border-b border-white/5 flex items-center justify-between shrink-0">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400">
+                      <Plus className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold text-white">{editingLead ? "แก้ไขข้อมูลลีด" : "เพิ่มลีดใหม่"}</h2>
+                      <p className="text-xs text-slate-400">กรอกข้อมูลลีดให้ครบถ้วนเพื่อใช้ในการติดตาม</p>
+                    </div>
+                  </div>
+                  <button onClick={() => setLeadModalOpen(false)} className="p-2 hover:bg-white/5 rounded-lg text-slate-400 hover:text-white transition-colors">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="overflow-y-auto p-6 custom-scrollbar flex-1">
+                  <form id="lead-form" onSubmit={handleSaveLead} className="grid grid-cols-2 gap-6">
+                    <div className="space-y-1.5 col-span-2 md:col-span-1">
+                      <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">เลขที่ลีด (Lead Number)</label>
+                      <input
+                        name="leadNumber"
+                        defaultValue={editingLead?.leadNumber || `L${Date.now().toString().slice(-6)}`}
+                        className="input-field text-sm font-bold text-indigo-400"
+                        required
+                        placeholder="L000000"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5 col-span-2 md:col-span-1">
+                      <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">Product</label>
+                      <CustomSelect
+                        name="product"
+                        defaultValue={editingLead?.product || "Dr.Ease"}
+                        options={[
+                          { value: "Dr.Ease", label: "Dr.Ease" },
+                          { value: "Ease POS", label: "Ease POS" },
+                        ]}
+                      />
+                    </div>
+
+                    <div className="space-y-1.5 col-span-2">
+                      <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">ชื่อลูกค้า / คลินิก / ร้าน</label>
+                      <input
+                        name="customerName"
+                        defaultValue={editingLead?.customerName}
+                        className="input-field text-sm font-semibold"
+                        required
+                        placeholder="ระบุชื่อลูกค้า"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5 col-span-2 md:col-span-1">
+                      <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">เบอร์โทรศัพท์</label>
+                      <input
+                        name="phone"
+                        defaultValue={editingLead?.phone}
+                        className="input-field text-sm font-mono"
+                        required
+                        placeholder="08X-XXXXXXX"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5 col-span-2 md:col-span-1">
+                      <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">เซลล์ผู้ดูแล (Sales)</label>
+                      <CustomSelect
+                        name="salesName"
+                        defaultValue={editingLead?.salesName || "Aoey"}
+                        options={[
+                          { value: "Aoey", label: "Aoey" },
+                          { value: "Yo", label: "Yo" },
+                        ]}
+                      />
+                    </div>
+
+                    <div className="space-y-1.5 col-span-2 md:col-span-1">
+                      <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">ที่มาลีด (Lead Source)</label>
+                      <CustomSelect
+                        name="source"
+                        defaultValue={editingLead?.source || "ยิงแอด"}
+                        options={[
+                          { value: "ยิงแอด", label: "ยิงแอด" },
+                          { value: "เซลล์หา", label: "เซลล์หา" },
+                          { value: "พาร์ทเนอร์", label: "พาร์ทเนอร์" },
+                          { value: "บริษัทหา", label: "บริษัทหา" },
+                        ]}
+                      />
+                    </div>
+
+                    <div className="space-y-1.5 col-span-2 md:col-span-1">
+                      <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">วันที่รับลีด (Received Date)</label>
+                      <input
+                        type="date"
+                        name="receivedDate"
+                        defaultValue={editingLead?.receivedDate || new Date().toISOString().split('T')[0]}
+                        className="input-field text-sm"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-1.5 col-span-2 md:col-span-1">
+                      <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">ประเภทลีด (Lead Type)</label>
+                      <CustomSelect
+                        name="leadType"
+                        defaultValue={editingLead?.leadType || "LINE"}
+                        options={[
+                          { value: "LINE", label: "LINE" },
+                          { value: "Facebook", label: "Facebook" },
+                          { value: "Call", label: "Call" },
+                          { value: "ลีดจากสัมนา", label: "ลีดจากสัมนา" },
+                          { value: "ลูกค้าเก่า ต่อสัญญา", label: "ลูกค้าเก่า ต่อสัญญา" },
+                          { value: "ขบายสัญญาเพิ่ม", label: "ขบายสัญญาเพิ่ม" },
+                          { value: "ลีดซ้ำ", label: "ลีดซ้ำ" },
+                        ]}
+                      />
+                    </div>
+
+                    <div className="space-y-1.5 col-span-2">
+                      <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">หมายเหตุ (Notes)</label>
+                      <textarea
+                        name="notes"
+                        defaultValue={editingLead?.notes}
+                        className="input-field text-sm min-h-[100px] resize-none py-3"
+                        placeholder="เพิ่มเติม..."
+                      />
+                    </div>
+                  </form>
+                </div>
+
+                <div className="p-6 border-t border-white/5 flex gap-3 shrink-0">
+                  <button type="button" onClick={() => setLeadModalOpen(false)} className="flex-1 btn btn-ghost py-3 rounded-xl font-bold">Cancel</button>
+                  <button form="lead-form" type="submit" className="flex-1 btn btn-primary py-3 rounded-xl font-bold shadow-xl shadow-indigo-500/20 active:scale-95 transition-transform">
+                    {editingLead ? "Save Changes" : "Create Lead"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Delete Confirmation Modal for Activity & Leads */}
           {deleteConfirm?.type === 'activity' && (
             <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
               <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
@@ -1526,23 +1762,28 @@ export default function CRMPage() {
                     <button onClick={() => setDeleteConfirm(null)} className="flex-1 btn btn-ghost py-2">ยกเลิก</button>
                     <button onClick={async () => {
                       if (deleteConfirm.id) {
-                        const prevActivities = [...activities];
-                        const updated = activities.filter(a => a.id !== deleteConfirm.id);
-                        setActivities(updated);
-                        setDeleteConfirm(null);
+                        // Check if it's in leads view
+                        if (currentView === 'leads') {
+                          handleDeleteLead(deleteConfirm.id);
+                        } else {
+                          const prevActivities = [...activities];
+                          const updated = activities.filter(a => a.id !== deleteConfirm.id);
+                          setActivities(updated);
+                          setDeleteConfirm(null);
 
-                        try {
-                          const result = await deleteActivity(deleteConfirm.id);
-                          if (result.success) {
-                            setToast({ message: "ลบกิจกรรมเรียบร้อยแล้ว", type: "success" });
-                          } else {
+                          try {
+                            const result = await deleteActivity(deleteConfirm.id);
+                            if (result.success) {
+                              setToast({ message: "ลบกิจกรรมเรียบร้อยแล้ว", type: "success" });
+                            } else {
+                              setActivities(prevActivities);
+                              setToast({ message: "เกิดข้อผิดพลาดในการลบ: " + result.error, type: "error" });
+                            }
+                          } catch (err) {
+                            console.error("Failed to delete activity:", err);
                             setActivities(prevActivities);
-                            setToast({ message: "เกิดข้อผิดพลาดในการลบ: " + result.error, type: "error" });
+                            setToast({ message: "เกิดข้อผิดพลาดในการเชื่อมต่อ", type: "error" });
                           }
-                        } catch (err) {
-                          console.error("Failed to delete activity:", err);
-                          setActivities(prevActivities);
-                          setToast({ message: "เกิดข้อผิดพลาดในการเชื่อมต่อ", type: "error" });
                         }
                       }
                     }} className="flex-1 bg-rose-500 hover:bg-rose-600 text-white font-bold py-2 rounded-xl transition-colors">ลบข้อมูล</button>
