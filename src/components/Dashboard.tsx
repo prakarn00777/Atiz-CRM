@@ -336,7 +336,7 @@ export default function Dashboard({ customers, installations, issues, activities
                                     <div>
                                         <p className="text-text-muted text-[12px] uppercase font-bold tracking-widest">{stat.label}</p>
                                         <p className="text-indigo-400/80 text-[11px] font-bold -mt-0.5 mb-1">{stat.subLabel}</p>
-                                        <h3 className="text-7xl font-bold text-text-main tracking-tighter leading-none">
+                                        <h3 className="text-3xl font-bold text-text-main tracking-tighter leading-none">
                                             {stat.value}
                                         </h3>
                                         <p className="text-text-muted text-[11px] font-bold mt-1 line-clamp-1">{stat.sub}</p>
