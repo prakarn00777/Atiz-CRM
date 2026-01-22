@@ -161,6 +161,7 @@ export default function CRMPage() {
     const cachedUsers = localStorage.getItem("crm_system_users_v2");
     const cachedRoles = localStorage.getItem("crm_roles_v2");
     const cachedActivities = localStorage.getItem("crm_activities_v2");
+    const cachedLeads = localStorage.getItem("crm_leads_v2");
 
     if (savedUser) {
       try {
@@ -178,6 +179,7 @@ export default function CRMPage() {
     if (cachedUsers) setUsers(JSON.parse(cachedUsers));
     if (cachedRoles) setRoles(JSON.parse(cachedRoles));
     if (cachedActivities) setActivities(JSON.parse(cachedActivities));
+    if (cachedLeads) setLeads(JSON.parse(cachedLeads));
 
     // 2. Background Revalidation (Fetch from Supabase)
     fetchData();
@@ -1765,6 +1767,7 @@ export default function CRMPage() {
                         // Check if it's in leads view
                         if (currentView === 'leads') {
                           handleDeleteLead(deleteConfirm.id);
+                          setDeleteConfirm(null);
                         } else {
                           const prevActivities = [...activities];
                           const updated = activities.filter(a => a.id !== deleteConfirm.id);
