@@ -291,7 +291,7 @@ export default function LeadManager({ leads, onEdit, onDelete, onAdd }: LeadMana
                                                         </button>
                                                         <div className="my-1 border-t border-white/5" />
                                                         <button
-                                                            onClick={() => { onDelete(l.id); setActiveMenu(null); }}
+                                                            onClick={(e) => { e.stopPropagation(); onDelete(l.id); setActiveMenu(null); }}
                                                             className="w-full flex items-center gap-2 px-3 py-2 text-xs text-rose-400 hover:bg-rose-500/10 transition-colors"
                                                         >
                                                             <Trash2 className="w-3.5 h-3.5" />
