@@ -7,6 +7,7 @@ import {
     Briefcase, TrendingUp, Monitor,
     Tv, Pause, RefreshCw, Info
 } from "lucide-react";
+import ActiveItemEffect from "./ActiveItemEffect";
 
 // Animated Number Component - counts up from 0 to target value
 const AnimatedNumber = ({ value, duration = 1500, prefix = "", suffix = "" }: {
@@ -570,13 +571,16 @@ export default function Dashboard({ customers, installations, issues, activities
                             <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-4 flex-shrink-0">กิจกรรมการซัพพอร์ตล่าสุด</p>
                             <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 min-h-0 space-y-4">
                                 {issues.slice(0, 5).map((issue, i) => (
-                                    <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-indigo-500/5 border border-indigo-500/10 hover:bg-indigo-500/10 transition-colors">
-                                        <div className={`w-2 h-2 rounded-full ${issue.status === 'เสร็จสิ้น' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-xs font-semibold text-text-main truncate">{issue.title}</p>
+                                    <div key={i} className="group relative flex items-center gap-3 p-3 rounded-lg bg-indigo-500/5 border border-indigo-500/10 hover:border-indigo-500/30 transition-all overflow-hidden cursor-pointer">
+                                        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                                            <ActiveItemEffect />
+                                        </div>
+                                        <div className={`w-2 h-2 rounded-full relative z-10 ${issue.status === 'เสร็จสิ้น' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                                        <div className="flex-1 min-w-0 relative z-10">
+                                            <p className="text-xs font-semibold text-text-main truncate group-hover:text-indigo-300 transition-colors">{issue.title}</p>
                                             <p className="text-[10px] text-text-muted">{issue.customerName} • {issue.status}</p>
                                         </div>
-                                        <div className="text-[10px] text-text-muted font-mono">
+                                        <div className="text-[10px] text-text-muted font-mono relative z-10">
                                             {issue.createdAt?.split('T')[0]}
                                         </div>
                                     </div>
