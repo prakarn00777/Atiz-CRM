@@ -497,8 +497,8 @@ export default function Dashboard({ customers, installations, issues, activities
             )}
 
             {activeTab === 'business' && (
-                <div className="relative z-10 animate-in slide-in-from-right-4 duration-500 flex flex-col min-h-0 flex-1 gap-3 overflow-hidden">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 flex-shrink-0">
+                <div className="relative z-10 animate-in slide-in-from-right-4 duration-500 flex flex-col min-h-0 flex-1 gap-3 overflow-visible">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 flex-shrink-0 pt-1">
                         {businessStats.map((stat, i) => (
                             <div key={i} className={`glass-card p-4 border transition-all duration-300 hover:-translate-y-1 hover:z-20 ${stat.border}`}>
                                 <div className={`absolute inset-0 bg-gradient-to-br ${stat.bg} to-transparent opacity-30 transition-opacity duration-300 group-hover:opacity-50`} />

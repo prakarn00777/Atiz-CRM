@@ -144,8 +144,8 @@ const Sidebar = memo(function Sidebar({ currentView, setView, onLogout, userRole
                         );
                     }
 
-                    // Handle Single Items
-                    const canRead = isAdmin || item.id === 'dashboard' || item.id === 'cs_activity' || item.id === 'leads' || userRole?.permissions?.[item.id]?.read;
+                    // Handle Single Items - Check permission (dashboard always visible)
+                    const canRead = isAdmin || item.id === 'dashboard' || userRole?.permissions?.[item.id]?.read;
                     if (!canRead) return null;
 
                     return (

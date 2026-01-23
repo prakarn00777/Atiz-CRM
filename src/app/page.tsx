@@ -377,6 +377,7 @@ export default function CRMPage() {
         // If we refactored structure, transition stays mounted.
         setUser(userToLogin);
         localStorage.setItem("crm_user_v2", JSON.stringify(result.user));
+        setView("dashboard"); // Always open dashboard after login
         setToast({ message: "เข้าสู่ระบบสำเร็จ", type: "success" });
       } else {
         setToast({ message: result.error || "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง", type: "error" });

@@ -30,7 +30,7 @@ const AVAILABLE_MENUS = [
     { id: "issues", label: "แจ้งปัญหา", icon: "📝" },
     { id: "leads", label: "ลีด (Leads)", icon: "📢" },
     { id: "user_management", label: "จัดการผู้ใช้งาน", icon: "👤" },
-    { id: "cs_task", label: "CS Task", icon: "📋" },
+    { id: "cs_activity", label: "CS Task", icon: "📋" },
     { id: "role_management", label: "จัดการบทบาท", icon: "🛡️" },
 ];
 
