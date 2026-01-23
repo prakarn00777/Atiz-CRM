@@ -17,7 +17,10 @@ const getGoogleSheetsClient = async () => {
     const auth = new google.auth.GoogleAuth({
       credentials: {
         client_email: email,
-        private_key: key.replace(/\\n/g, '\n'),
+        private_key: key
+          .trim() // Remove extra spaces/newlines
+          .replace(/^"(.*)"$/, '$1') // Remove surrounding double quotes if present
+          .replace(/\\n/g, '\n'), // Replace literal \n with real newlines
       },
       scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
     });
