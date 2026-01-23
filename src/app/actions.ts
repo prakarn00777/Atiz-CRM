@@ -503,7 +503,26 @@ export async function updateInstallationStatus(id: number, status: string, modif
         }).eq('id', id).select();
 
         if (error) throw error;
-        return { success: true, data: data?.[0] };
+
+        const row = data?.[0];
+        if (!row) return { success: true, data: null };
+
+        const mapped = {
+            id: Number(row.id),
+            customerId: row.customer_id ? Number(row.customer_id) : undefined,
+            branchName: row.branch_name ? String(row.branch_name) : undefined,
+            status: String(row.status),
+            installationType: String(row.installation_type),
+            notes: row.notes ? String(row.notes) : undefined,
+            assignedDev: row.assigned_dev ? String(row.assigned_dev) : undefined,
+            completedAt: row.completed_at ? String(row.completed_at) : undefined,
+            createdBy: row.created_by ? String(row.created_by) : undefined,
+            createdAt: row.created_at ? String(row.created_at) : undefined,
+            modifiedBy: row.modified_by ? String(row.modified_by) : undefined,
+            modifiedAt: row.modified_at ? String(row.modified_at) : undefined,
+        };
+
+        return { success: true, data: mapped };
     } catch (err: any) {
         console.error("Error in updateInstallationStatus:", err);
         return { success: false, error: err.message };

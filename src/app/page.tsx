@@ -744,6 +744,16 @@ export default function CRMPage() {
         setInstallations(previousInstallations);
         setCustomers(previousCustomers);
         setToast({ message: "เกิดข้อผิดพลาด: " + result.error, type: "error" });
+      } else if (result.data) {
+        // Replace optimism with reality (Sync ID)
+        setInstallations(prev => {
+          const syncData = {
+            ...data,
+            id: result.data.id,
+            customerId: finalCustomerId // Ensure it's the latest ID
+          };
+          return prev.map(inst => inst === data ? syncData : inst);
+        });
       }
     } catch (err: any) {
       console.error("Failed to add installation:", err);
@@ -756,19 +766,24 @@ export default function CRMPage() {
 
   const handleUpdateInstallationStatus = async (id: number, status: Installation["status"]) => {
     try {
+      if (!id || id >= 1000000000000) {
+        setToast({ message: "กรุณารอสักครู่ กำลังเตรียมความพร้อมข้อมูล...", type: "info" });
+        return;
+      }
+
       const result = await updateInstallationStatus(id, status, user?.name);
-      if (result.success) {
+      if (result.success && result.data) {
         const inst = result.data;
 
         // If installation completed, also update customer/branch status
         if (status === "Completed" || status === "Installing") {
-          const targetCust = customers.find(c => c.id === inst.customer_id);
+          const targetCust = customers.find(c => c.id === inst.customerId);
           if (targetCust) {
-            const updatedBranches = targetCust.branches?.map(b => {
-              if (inst.installation_type === "branch" && b.name === inst.branch_name) {
+            const updatedBranches = (targetCust.branches || []).map(b => {
+              if (inst.installationType === "branch" && b.name === inst.branchName) {
                 return { ...b, status: status as any };
               }
-              if (inst.installation_type === "new" && b.isMain) {
+              if (inst.installationType === "new" && b.isMain) {
                 return { ...b, status: status as any };
               }
               return b;
