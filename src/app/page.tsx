@@ -181,6 +181,7 @@ export default function CRMPage() {
   const [tempBranchName, setTempBranchName] = useState("");
   const [tempBranchAddress, setTempBranchAddress] = useState("");
   const [modalUsageStatus, setModalUsageStatus] = useState<UsageStatus>("Active");
+
   const [modalIssueStatus, setModalIssueStatus] = useState<"แจ้งเคส" | "กำลังดำเนินการ" | "เสร็จสิ้น">("แจ้งเคส");
   const [modalLeadDate, setModalLeadDate] = useState("");
 
@@ -407,31 +408,18 @@ export default function CRMPage() {
       const result = await loginUser(u_str, p_str);
 
       if (result.success) {
-        // Start transition instead of immediate login
         setShowLoginTransition(true);
-        // Delay setting user until transition is done (handled by onComplete) or handled here with delay?
-        // Better: Set transition true. Wait for animation.
-        // Actually, logic: Set showTransition true.
-        // pass callback to Transition component to finalize login.
-        // But we need the user object.
-        // Let's store it in a temp ref or just closure? Closure works.
-        const userToLogin = result.user;
+        const userToLogin = result.data;
 
-        // We defer setUser to the onComplete callback of the component
-        // But we can't pass props dynamically easily if we don't store it.
-        // Wait, simpler:
-        // Set user immediately?
-        // If we set user, page re-renders. 
-        // If we refactored structure, transition stays mounted.
         setUser(userToLogin);
-        localStorage.setItem("crm_user_v2", JSON.stringify(result.user));
+        localStorage.setItem("crm_user_v2", JSON.stringify(result.data));
+
         setView("dashboard"); // Always open dashboard after login
         setToast({ message: "เข้าสู่ระบบสำเร็จ", type: "success" });
       } else {
         setToast({ message: result.error || "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง", type: "error" });
       }
     } catch (err) {
-      console.error("Login failed:", err);
       setToast({ message: "เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองใหม่", type: "error" });
     } finally {
       setIsLoading(false);
@@ -558,7 +546,7 @@ export default function CRMPage() {
       setToast({ message: "กำลังนำเข้าข้อมูลลีด...", type: "info" });
       const result = await importLeads(data);
       if (result.success) {
-        setToast({ message: `นำเข้าข้อมูลลีดสำเร็จ ${result.count} รายการ`, type: "success" });
+        setToast({ message: `นำเข้าข้อมูลลีดสำเร็จ ${result.data.count} รายการ`, type: "success" });
         fetchData();
       } else {
         setToast({ message: "เกิดข้อผิดพลาด: " + result.error, type: "error" });
@@ -589,7 +577,7 @@ export default function CRMPage() {
       setToast({ message: "กำลังนำเข้าข้อมูล...", type: "info" });
       const result = await importCustomersFromCSV(data);
       if (result.success) {
-        setToast({ message: `นำเข้าข้อมูลสำเร็จ ${result.count} รายการ`, type: "success" });
+        setToast({ message: `นำเข้าข้อมูลสำเร็จ ${result.data.count} รายการ`, type: "success" });
         fetchData();
       }
     } catch (err) {
@@ -750,7 +738,9 @@ export default function CRMPage() {
         const savedCustomer: Customer = {
           ...newCustomer,
           id: finalCustomerId,
-          branches: JSON.parse(custResult.data.branches || "[]") // Get processed branches
+          branches: typeof custResult.data.branches === 'string'
+            ? JSON.parse(custResult.data.branches)
+            : (custResult.data.branches || [])
         };
         setCustomers(prev => [savedCustomer, ...prev]);
 
@@ -764,7 +754,7 @@ export default function CRMPage() {
           if (!branches.some(b => b.name === newInst.branchName)) {
             const updatedCust = {
               ...targetCust,
-              branches: [...branches, { name: newInst.branchName, isMain: false, status: "Pending" }]
+              branches: [...branches, { name: newInst.branchName, isMain: false, status: "Pending" as const }]
             };
             const custResult = await saveCustomer(updatedCust);
             if (!custResult.success) throw new Error(custResult.error);
@@ -776,7 +766,7 @@ export default function CRMPage() {
       if (!result.success) {
         setInstallations(previousInstallations);
         setCustomers(previousCustomers);
-        setToast({ message: "เกิดข้อผิดพลาด: " + result.error, type: "error" });
+        setToast({ message: "เกิดข้อผิดพลาด: " + (result as any).error, type: "error" });
       } else if (result.data) {
         // Replace optimism with reality (Sync ID)
         setInstallations(prev => {
@@ -833,7 +823,7 @@ export default function CRMPage() {
         // State will be synchronized via real-time subscription
         setToast({ message: "อัปเดตสถานะงานติดตั้งเรียบร้อยแล้ว", type: "success" });
       } else {
-        setToast({ message: "เกิดข้อผิดพลาด: " + result.error, type: "error" });
+        setToast({ message: "เกิดข้อผิดพลาด: " + (result as any).error, type: "error" });
       }
     } catch (err: any) {
       console.error("Failed to update installation status:", err);

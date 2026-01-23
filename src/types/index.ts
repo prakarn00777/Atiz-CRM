@@ -102,11 +102,12 @@ export interface Installation {
     customerLink?: string;
     branchName?: string;
     status: "Pending" | "Installing" | "Completed";
-    requestedBy: string;
-    requestedAt: string;
+    assignedDev?: string;
     completedAt?: string;
     notes?: string;
     installationType?: "new" | "branch";
+    requestedBy: string;
+    requestedAt: string;
     modifiedBy?: string;
     modifiedAt?: string;
 }

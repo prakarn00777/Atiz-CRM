@@ -69,45 +69,49 @@ function isTemporaryId(id: number | string | undefined): boolean {
     return numId > 1000000000000; // Temporary IDs from Date.now()
 }
 
-export async function importCustomersFromCSV(data: any[]) {
-    const customers = data.map((row) => {
-        const name = row['ชื่อคลินิก/ร้าน (ไทย)'] || row['ชื่อคลินิก/ร้าน (English)'] || row['ชื่อคลินิก/ร้าน "สำหรับใช้ค้นหาตอนแจ้งเคส"'];
+export async function importCustomersFromCSV(data: any[]): Promise<ApiResponse<{ count: number }>> {
+    try {
+        const customers = data.map((row) => {
+            const name = row['ชื่อคลินิก/ร้าน (ไทย)'] || row['ชื่อคลินิก/ร้าน (English)'] || row['ชื่อคลินิก/ร้าน "สำหรับใช้ค้นหาตอนแจ้งเคส"'];
 
-        let usageStatus: UsageStatus = "Active";
-        if (row['สถานะ'] === "ยกเลิก") usageStatus = "Canceled";
-        else if (row['สถานะ'] === "รอการใช้งาน") usageStatus = "Pending";
+            let usageStatus: UsageStatus = "Active";
+            if (row['สถานะ'] === "ยกเลิก") usageStatus = "Canceled";
+            else if (row['สถานะ'] === "รอการใช้งาน") usageStatus = "Pending";
 
-        let productType: ProductType = "Dr.Ease";
-        if (row['สินค้า'] === "EasePos") productType = "EasePos";
+            let productType: ProductType = "Dr.Ease";
+            if (row['สินค้า'] === "EasePos") productType = "EasePos";
 
-        return {
-            name,
-            client_code: row['Client Code'],
-            subdomain: row['Sub-domain'],
-            product_type: productType,
-            package: row['Package'],
-            usage_status: usageStatus,
-            business_type: row['ประเภทธุรกิจ'],
-            contract_number: row['เลขที่สัญญา'],
-            contract_start: row['วันเริ่มสัญญา'],
-            contract_end: row['วันหมดสัญญา'],
-            sales_name: row['เซลล์'],
-            contact_name: row['ชื่อผู้ทำสัญญา'],
-            contact_phone: row['เบอร์โทร'],
-            note: row['โน็ต'],
-            installation_status: usageStatus === "Active" ? "Installed" : "Pending"
-        };
-    }).filter(c => c.name);
+            return {
+                name,
+                client_code: row['Client Code'],
+                subdomain: row['Sub-domain'],
+                product_type: productType,
+                package: row['Package'],
+                usage_status: usageStatus,
+                business_type: row['ประเภทธุรกิจ'],
+                contract_number: row['เลขที่สัญญา'],
+                contract_start: row['วันเริ่มสัญญา'],
+                contract_end: row['วันหมดสัญญา'],
+                sales_name: row['เซลล์'],
+                contact_name: row['ชื่อผู้ทำสัญญา'],
+                contact_phone: row['เบอร์โทร'],
+                note: row['โน็ต'],
+                installation_status: usageStatus === "Active" ? "Installed" : "Pending"
+            };
+        }).filter(c => c.name);
 
-    if (customers.length > 0) {
-        const { error } = await db.from('customers').insert(customers);
-        if (error) {
-            console.error("Error importing customers:", error);
-            return { success: false, error: error.message };
+        if (customers.length > 0) {
+            const { error } = await db.from('customers').insert(customers);
+            if (error) {
+                console.error("Error importing customers:", error);
+                return createError(error.message, 'DATABASE_ERROR');
+            }
         }
-    }
 
-    return { success: true, count: customers.length };
+        return createSuccess({ count: customers.length });
+    } catch (err) {
+        return handleDbError(err, "importCustomersFromCSV");
+    }
 }
 
 export async function getCustomers(params?: PaginationParams): Promise<Customer[]> {
@@ -312,7 +316,6 @@ export async function saveUser(userData: Partial<User> & { password?: string }):
 }
 
 export async function loginUser(username: string, password: string): Promise<ApiResponse<User & { permissions?: Record<string, unknown> }>> {
-    log.debug("Attempting login for:", username);
     try {
         if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
             log.error("Missing Supabase Env Vars");
@@ -326,15 +329,12 @@ export async function loginUser(username: string, password: string): Promise<Api
             .eq('is_active', true)
             .maybeSingle();
 
-        log.debug("Login query result:", data ? "Found" : "Not Found");
-
         if (error) {
             log.error("Database error during login:", error);
             return createError(`Database Error: ${error.message}`, 'DATABASE_ERROR');
         }
 
         if (!data) {
-            log.debug("Login failed: User not found");
             return createError("ไม่พบชื่อผู้ใช้งานนี้ในระบบ", 'NOT_FOUND');
         }
 
@@ -344,13 +344,11 @@ export async function loginUser(username: string, password: string): Promise<Api
         let isMatch = isValid;
         if (!isMatch && username === 'admin' && password === data.password) {
             isMatch = true;
-            // Auto-migrate to hashed password
             const newHash = await bcrypt.hash(password, 10);
             await db.from('users').update({ password: newHash }).eq('id', data.id);
         }
 
         if (!isMatch) {
-            log.debug("Login failed: Password mismatch");
             return createError("รหัสผ่านไม่ถูกต้อง", 'UNAUTHORIZED');
         }
 

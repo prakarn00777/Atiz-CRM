@@ -2,6 +2,7 @@
 
 import { memo, useState } from "react";
 import { LayoutDashboard, Users, LogOut, Layers, Settings, ChevronRight, UserCog, ShieldCheck, AlertCircle, History as HistoryIcon, Wrench, Megaphone } from "lucide-react";
+import ActiveItemEffect from "./ActiveItemEffect";
 
 interface SidebarProps {
     currentView: string;
@@ -92,17 +93,20 @@ const Sidebar = memo(function Sidebar({ currentView, setView, onLogout, userRole
                             <div key={item.id} className="space-y-1 relative group">
                                 <button
                                     onClick={() => !isCollapsed ? toggleMenu(item.id) : null}
-                                    className={`btn w-full text-sm transition-all duration-200 ${isCollapsed ? "justify-center p-2" : "justify-between"
+                                    className={`btn w-full text-sm transition-all duration-200 relative overflow-hidden ${isCollapsed ? "justify-center p-2" : "justify-between"
                                         } ${isActive && !visibleChildren.some(c => c.id === currentView)
                                             ? "text-slate-200"
                                             : "btn-ghost"
                                         }`}
                                     title={isCollapsed ? item.label : ""}
                                 >
-                                    <div className={`flex items-center ${isCollapsed ? "justify-center" : "gap-3"}`}>
-                                        <item.icon className={`w-4 h-4 flex-shrink-0 ${isActive ? "text-indigo-400" : "text-slate-400"}`} />
+                                    {isActive && !visibleChildren.some(c => c.id === currentView) && <ActiveItemEffect />}
+                                    <div className={`flex items-center relative z-10 ${isCollapsed ? "justify-center" : "gap-3"}`}>
+                                        <item.icon className={`w-4 h-4 flex-shrink-0 ${isActive && !visibleChildren.some(c => c.id === currentView) ? "text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.8)]" : "text-slate-400"}`} />
                                         {!isCollapsed && (
-                                            <span className="truncate animate-in fade-in duration-300 font-medium">{item.label}</span>
+                                            <span className={`truncate animate-in fade-in duration-300 font-medium ${isActive && !visibleChildren.some(c => c.id === currentView) ? "text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.6)]" : ""}`}>
+                                                {item.label}
+                                            </span>
                                         )}
                                     </div>
                                     {!isCollapsed && (
@@ -117,12 +121,15 @@ const Sidebar = memo(function Sidebar({ currentView, setView, onLogout, userRole
                                             <button
                                                 key={child.id}
                                                 onClick={() => setView(child.id)}
-                                                className={`btn w-full justify-start text-sm h-9 font-medium ${currentView === child.id
-                                                    ? "bg-indigo-500/10 text-indigo-400 border-indigo-500/20"
+                                                className={`btn w-full justify-start text-sm h-9 font-medium relative overflow-hidden ${currentView === child.id
+                                                    ? "bg-indigo-500/10 text-white border-indigo-500/20"
                                                     : "text-slate-400 hover:text-white hover:bg-white/5"
                                                     }`}
                                             >
-                                                <span className="truncate">{child.label}</span>
+                                                {currentView === child.id && <ActiveItemEffect />}
+                                                <span className={`truncate relative z-10 ${currentView === child.id ? "text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.7)]" : ""}`}>
+                                                    {child.label}
+                                                </span>
                                             </button>
                                         ))}
                                     </div>
@@ -139,9 +146,12 @@ const Sidebar = memo(function Sidebar({ currentView, setView, onLogout, userRole
                                                 <button
                                                     key={child.id}
                                                     onClick={() => setView(child.id)}
-                                                    className={`btn w-full justify-start text-sm font-medium ${currentView === child.id ? "text-indigo-400 bg-indigo-500/10" : "btn-ghost"}`}
+                                                    className={`btn w-full justify-start text-sm font-medium relative overflow-hidden ${currentView === child.id ? "text-white bg-indigo-500/10" : "btn-ghost"}`}
                                                 >
-                                                    <span className="truncate">{child.label}</span>
+                                                    {currentView === child.id && <ActiveItemEffect />}
+                                                    <span className={`truncate relative z-10 ${currentView === child.id ? "text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.7)]" : ""}`}>
+                                                        {child.label}
+                                                    </span>
                                                 </button>
                                             ))}
                                         </div>
@@ -159,17 +169,20 @@ const Sidebar = memo(function Sidebar({ currentView, setView, onLogout, userRole
                         <button
                             key={item.id}
                             onClick={() => setView(item.id)}
-                            className={`btn w-full text-sm transition-all duration-200 ${isCollapsed ? "justify-center p-2" : "justify-start"
+                            className={`btn w-full text-sm transition-all duration-200 relative overflow-hidden ${isCollapsed ? "justify-center p-2" : "justify-start"
                                 } ${currentView === item.id
-                                    ? "bg-indigo-500/10 text-indigo-400 border-indigo-500/20"
+                                    ? "bg-indigo-500/10 text-white border-indigo-500/20"
                                     : "btn-ghost"
                                 }`}
                             title={isCollapsed ? item.label : ""}
                         >
-                            <div className={`flex items-center ${isCollapsed ? "justify-center" : "gap-3"}`}>
-                                <item.icon className={`w-4 h-4 flex-shrink-0 ${currentView === item.id ? "text-indigo-400" : "text-slate-400"}`} />
+                            {currentView === item.id && <ActiveItemEffect />}
+                            <div className={`flex items-center relative z-10 ${isCollapsed ? "justify-center" : "gap-3"}`}>
+                                <item.icon className={`w-4 h-4 flex-shrink-0 ${currentView === item.id ? "text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.8)]" : "text-slate-400"}`} />
                                 {!isCollapsed && (
-                                    <span className="truncate animate-in fade-in duration-300 font-medium">{item.label}</span>
+                                    <span className={`truncate animate-in fade-in duration-300 font-medium ${currentView === item.id ? "text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.6)]" : ""}`}>
+                                        {item.label}
+                                    </span>
                                 )}
                             </div>
                         </button>
@@ -207,19 +220,25 @@ const Sidebar = memo(function Sidebar({ currentView, setView, onLogout, userRole
                                 {(userRole?.permissions?.['user_management']?.read || userRole?.role?.toLowerCase() === 'admin') && (
                                     <button
                                         onClick={() => setView("user_management")}
-                                        className={`btn w-full justify-start text-sm font-medium ${currentView === "user_management" ? "text-indigo-400 bg-indigo-500/10" : "btn-ghost"}`}
+                                        className={`btn w-full justify-start text-sm font-medium relative overflow-hidden ${currentView === "user_management" ? "text-white bg-indigo-500/10" : "btn-ghost"}`}
                                     >
-                                        <UserCog className="w-3.5 h-3.5" />
-                                        <span>User Management</span>
+                                        {currentView === "user_management" && <ActiveItemEffect />}
+                                        <UserCog className={`w-3.5 h-3.5 relative z-10 ${currentView === "user_management" ? "text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.8)]" : ""}`} />
+                                        <span className={`relative z-10 ${currentView === "user_management" ? "text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.7)]" : ""}`}>
+                                            User Management
+                                        </span>
                                     </button>
                                 )}
                                 {(userRole?.permissions?.['role_management']?.read || userRole?.role?.toLowerCase() === 'admin') && (
                                     <button
                                         onClick={() => setView("role_management")}
-                                        className={`btn w-full justify-start text-sm font-medium ${currentView === "role_management" ? "text-indigo-400 bg-indigo-500/10" : "btn-ghost"}`}
+                                        className={`btn w-full justify-start text-sm font-medium relative overflow-hidden ${currentView === "role_management" ? "text-white bg-indigo-500/10" : "btn-ghost"}`}
                                     >
-                                        <ShieldCheck className="w-3.5 h-3.5" />
-                                        <span>Role Management</span>
+                                        {currentView === "role_management" && <ActiveItemEffect />}
+                                        <ShieldCheck className={`w-3.5 h-3.5 relative z-10 ${currentView === "role_management" ? "text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.8)]" : ""}`} />
+                                        <span className={`relative z-10 ${currentView === "role_management" ? "text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.7)]" : ""}`}>
+                                            Role Management
+                                        </span>
                                     </button>
                                 )}
                             </div>
@@ -231,19 +250,25 @@ const Sidebar = memo(function Sidebar({ currentView, setView, onLogout, userRole
                             {(userRole?.permissions?.['user_management']?.read || userRole?.role?.toLowerCase() === 'admin') && (
                                 <button
                                     onClick={() => setView("user_management")}
-                                    className={`btn w-full justify-start text-sm h-9 font-medium ${currentView === "user_management" ? "text-indigo-400 bg-indigo-500/10" : "text-slate-400 hover:text-white hover:bg-white/5"}`}
+                                    className={`btn w-full justify-start text-sm h-9 font-medium relative overflow-hidden ${currentView === "user_management" ? "text-white bg-indigo-500/10" : "text-slate-400 hover:text-white hover:bg-white/5"}`}
                                 >
-                                    <UserCog className="w-3.5 h-3.5 mr-2" />
-                                    <span>User Management</span>
+                                    {currentView === "user_management" && <ActiveItemEffect />}
+                                    <UserCog className={`w-3.5 h-3.5 mr-2 relative z-10 ${currentView === "user_management" ? "text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.8)]" : ""}`} />
+                                    <span className={`relative z-10 ${currentView === "user_management" ? "text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.7)]" : ""}`}>
+                                        User Management
+                                    </span>
                                 </button>
                             )}
                             {(userRole?.permissions?.['role_management']?.read || userRole?.role?.toLowerCase() === 'admin') && (
                                 <button
                                     onClick={() => setView("role_management")}
-                                    className={`btn w-full justify-start text-sm h-9 font-medium ${currentView === "role_management" ? "text-indigo-400 bg-indigo-500/10" : "text-slate-400 hover:text-white hover:bg-white/5"}`}
+                                    className={`btn w-full justify-start text-sm h-9 font-medium relative overflow-hidden ${currentView === "role_management" ? "text-white bg-indigo-500/10" : "text-slate-400 hover:text-white hover:bg-white/5"}`}
                                 >
-                                    <ShieldCheck className="w-3.5 h-3.5 mr-2" />
-                                    <span>Role Management</span>
+                                    {currentView === "role_management" && <ActiveItemEffect />}
+                                    <ShieldCheck className={`w-3.5 h-3.5 mr-2 relative z-10 ${currentView === "role_management" ? "text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.8)]" : ""}`} />
+                                    <span className={`relative z-10 ${currentView === "role_management" ? "text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.7)]" : ""}`}>
+                                        Role Management
+                                    </span>
                                 </button>
                             )}
                         </div>

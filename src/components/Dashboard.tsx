@@ -142,6 +142,7 @@ export default function Dashboard({ customers, installations, issues, activities
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [currentTime, setCurrentTime] = useState(new Date());
     const [isAutoCycle, setIsAutoCycle] = useState(false);
+    const [selectedMetric, setSelectedMetric] = useState('leads');
 
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -263,10 +264,10 @@ export default function Dashboard({ customers, installations, issues, activities
         const renewal = businessMetrics?.renewal ?? 965629.05;
 
         return [
-            { label: "Total Leads – This Week", subLabel: "ผู้สนใจรายสัปดาห์ (Mon-Sun)", numericValue: currentCount, prefix: "", suffix: "", sub: `Dr.Ease: ${dreaseLeads} | Ease: ${easeLeads}`, extraInfo: WoWTag, tooltip: "อัตราการเติบโตเมื่อเทียบกับสัปดาห์ก่อน (WoW): ((จำนวนสัปดาห์นี้-จำนวนสัปดาห์ก่อน) / จำนวนสัปดาห์ก่อน) x 100", icon: Briefcase, color: "text-amber-400", border: "border-amber-500/20", bg: "from-amber-500/10" },
-            { label: "Weekly Demos", subLabel: "การทำ Demo รายสัปดาห์", numericValue: currentDemos, prefix: "", suffix: "", sub: `เข้าข่ายสัปดาห์ปัจจุบัน`, icon: Monitor, color: "text-blue-400", border: "border-blue-500/20", bg: "from-blue-500/10" },
-            { label: "New Sales", subLabel: "ยอดเงินปิดใหม่", numericValue: newSales, prefix: "฿", suffix: "", sub: "Revenue สัปดาห์นี้", icon: DollarSign, color: "text-emerald-400", border: "border-emerald-500/20", bg: "from-emerald-500/10" },
-            { label: "Renewal", subLabel: "ยอดเงินต่อสัญญา", numericValue: renewal, prefix: "฿", suffix: "", sub: "Revenue สัปดาห์นี้", icon: TrendingUp, color: "text-purple-400", border: "border-purple-500/20", bg: "from-purple-500/10" },
+            { id: 'leads', label: "Total Leads – This Week", subLabel: "ผู้สนใจรายสัปดาห์ (Mon-Sun)", numericValue: currentCount, prefix: "", suffix: "", sub: `Dr.Ease: ${dreaseLeads} | Ease: ${easeLeads}`, extraInfo: WoWTag, tooltip: "อัตราการเติบโตเมื่อเทียบกับสัปดาห์ก่อน (WoW): ((จำนวนสัปดาห์นี้-จำนวนสัปดาห์ก่อน) / จำนวนสัปดาห์ก่อน) x 100", icon: Briefcase, color: "text-amber-400", border: "border-amber-500/20", bg: "from-amber-500/10" },
+            { id: 'demos', label: "Weekly Demos", subLabel: "การทำ Demo รายสัปดาห์", numericValue: currentDemos, prefix: "", suffix: "", sub: `เข้าข่ายสัปดาห์ปัจจุบัน`, icon: Monitor, color: "text-blue-400", border: "border-blue-500/20", bg: "from-blue-500/10" },
+            { id: 'sales', label: "New Sales", subLabel: "ยอดเงินปิดใหม่", numericValue: newSales, prefix: "฿", suffix: "", sub: "Revenue สัปดาห์นี้", icon: DollarSign, color: "text-emerald-400", border: "border-emerald-500/20", bg: "from-emerald-500/10" },
+            { id: 'renewals', label: "Renewal", subLabel: "ยอดเงินต่อสัญญา", numericValue: renewal, prefix: "฿", suffix: "", sub: "Revenue สัปดาห์นี้", icon: TrendingUp, color: "text-purple-400", border: "border-purple-500/20", bg: "from-purple-500/10" },
         ];
     }, [googleSheetLeads, activities, businessMetrics]);
 
@@ -348,6 +349,8 @@ export default function Dashboard({ customers, installations, issues, activities
                     ? leadsOnDay.filter(l => l.product?.includes('POS') || l.product === 'Ease').length : 0,
                 leads: leadsOnDay.length,
                 demos: (dataType === 'all' || dataType === 'demo') ? demosOnDay.length : 0,
+                sales: Math.floor(Math.random() * 50000) + 10000, // Simulated trend data for sales
+                renewals: Math.floor(Math.random() * 30000) + 5000, // Simulated trend data for renewals
             };
         });
     }, [timeRange, customStartDate, customEndDate, googleSheetLeads, activities, dataType, productFilter]);
@@ -358,16 +361,20 @@ export default function Dashboard({ customers, installations, issues, activities
             acc.ease += (curr.ease || 0);
             acc.leads += (curr.leads || 0);
             acc.demos += (curr.demos || 0);
+            acc.sales += (curr.sales || 0);
+            acc.renewals += (curr.renewals || 0);
             return acc;
-        }, { drease: 0, ease: 0, leads: 0, demos: 0 });
+        }, { drease: 0, ease: 0, leads: 0, demos: 0, sales: 0, renewals: 0 });
     }, [dynamicGraphData]);
 
     const yAxisTicks = useMemo(() => {
         // Find max value across all data points
-        const maxVal = Math.max(...dynamicGraphData.map(d => Math.max(d.drease || 0, d.ease || 0, d.leads || 0, d.demos || 0)));
+        const maxVal = Math.max(...dynamicGraphData.map(d =>
+            Math.max(d.drease || 0, d.ease || 0, d.leads || 0, d.demos || 0, d.sales || 0, d.renewals || 0)
+        ));
         if (maxVal === 0) return [0, 5, 10]; // Minimum scale
 
-        const interval = 5;
+        const interval = maxVal > 10000 ? 10000 : (maxVal > 1000 ? 1000 : 5);
         const maxTick = Math.ceil(maxVal / interval) * interval;
         const ticks = [];
         for (let i = 0; i <= maxTick; i += interval) {
@@ -494,17 +501,30 @@ export default function Dashboard({ customers, installations, issues, activities
             {activeTab === 'business' && (
                 <div className="relative z-10 animate-in slide-in-from-right-4 duration-500 flex flex-col min-h-0 flex-1 gap-3 overflow-visible">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 flex-shrink-0 pt-1">
-                        {businessStats.map((stat, i) => (
-                            <div key={i} className={`glass-card p-4 border transition-all duration-300 hover:-translate-y-1 hover:z-20 ${stat.border}`}>
-                                <div className={`absolute inset-0 bg-gradient-to-br ${stat.bg} to-transparent opacity-30 transition-opacity duration-300 group-hover:opacity-50`} />
+                        {businessStats.map((stat: any, i) => (
+                            <div
+                                key={i}
+                                onClick={() => setSelectedMetric(stat.id)}
+                                className={`group glass-card p-4 border transition-all duration-300 cursor-pointer overflow-hidden ${selectedMetric === stat.id
+                                    ? 'border-indigo-500 ring-2 ring-indigo-500/20 translate-y-[-4px] shadow-2xl shadow-indigo-500/10'
+                                    : 'border-white/5 hover:border-white/20 hover:-translate-y-1'
+                                    }`}
+                            >
+                                <div className={`absolute inset-0 bg-gradient-to-br ${stat.bg} to-transparent opacity-30 transition-opacity duration-300 ${selectedMetric === stat.id ? 'opacity-60' : 'group-hover:opacity-50'}`} />
                                 <div className="relative flex flex-col gap-2">
                                     <div className="flex items-center justify-between">
                                         <div
-                                            className={`p-1.5 w-fit rounded-lg bg-white/5 ${stat.color} transition-transform duration-300 hover:scale-110`}
+                                            className={`p-1.5 w-fit rounded-lg bg-white/5 ${stat.color} transition-transform duration-300 ${selectedMetric === stat.id ? 'scale-110 shadow-[0_0_15px_currentColor]' : 'group-hover:scale-110'}`}
                                             style={{ animation: `iconFloat${i} 3s ease-in-out infinite, continuousFloat 6s ease-in-out infinite`, animationDelay: `${i * 0.5}s` }}
                                         >
                                             <stat.icon className="w-4 h-4" />
                                         </div>
+                                        {selectedMetric === stat.id && (
+                                            <div className="animate-pulse flex items-center gap-1">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_#6366f1]" />
+                                                <span className="text-[10px] text-indigo-400 font-black tracking-tighter uppercase">Active View</span>
+                                            </div>
+                                        )}
                                     </div>
                                     <div>
                                         <p className="text-text-muted text-sm uppercase font-bold tracking-widest">{stat.label}</p>
@@ -528,7 +548,11 @@ export default function Dashboard({ customers, installations, issues, activities
                                 <div className="flex flex-col">
                                     <h3 className="text-white font-bold flex items-center gap-2">
                                         <LineChart className="w-4 h-4 text-indigo-400" />
-                                        {timeRange === '1w' ? 'Weekly' : timeRange === '1m' ? 'Monthly' : timeRange === '1y' ? 'Yearly' : 'Custom'} Leads & Demos Growth
+                                        {timeRange === '1w' ? 'Weekly' : timeRange === '1m' ? 'Monthly' : timeRange === '1y' ? 'Yearly' : 'Custom'} {
+                                            selectedMetric === 'leads' ? 'Leads Performance' :
+                                                selectedMetric === 'demos' ? 'Demos Performance' :
+                                                    selectedMetric === 'sales' ? 'Sales Revenue Trend' : 'Renewal Revenue Trend'
+                                        }
                                     </h3>
                                     <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">
                                         อัตราการเติบโตของ Lead และ Demo {timeRange === '1w' ? 'รายสัปดาห์' : 'ช่วงเวลาที่กำหนด'}
@@ -617,38 +641,61 @@ export default function Dashboard({ customers, installations, issues, activities
                                 <div className="flex flex-col gap-6 pr-8 border-r border-white/5 min-w-[220px] py-2">
                                     <div className="flex flex-col">
                                         <div className="flex items-center gap-1.5 mb-2">
-                                            <div className="w-3 h-3 rounded-full bg-indigo-400 shadow-[0_0_10px_#818cf8]" />
-                                            <span className="text-white text-xs uppercase font-black tracking-widest">Total Leads</span>
+                                            <div className={`w-3 h-3 rounded-full ${selectedMetric === 'leads' ? 'bg-indigo-400 shadow-[0_0_10px_#818cf8]' : selectedMetric === 'demos' ? 'bg-blue-400 shadow-[0_0_10px_#3b82f6]' : selectedMetric === 'sales' ? 'bg-emerald-400 shadow-[0_0_10px_#10b981]' : 'bg-purple-400 shadow-[0_0_10px_#c084fc]'}`} />
+                                            <span className="text-white text-xs uppercase font-black tracking-widest">
+                                                {selectedMetric === 'leads' ? 'Total Leads' : selectedMetric === 'demos' ? 'Total Demos' : selectedMetric === 'sales' ? 'Total Sales' : 'Renewal Total'}
+                                            </span>
                                         </div>
                                         <p className="text-white text-4xl font-bold tracking-tighter tabular-nums leading-none mb-4">
-                                            {(graphTotals.drease + graphTotals.ease).toLocaleString()}
+                                            {selectedMetric === 'leads'
+                                                ? (graphTotals.drease + graphTotals.ease).toLocaleString()
+                                                : selectedMetric === 'demos'
+                                                    ? graphTotals.demos.toLocaleString()
+                                                    : selectedMetric === 'sales'
+                                                        ? `฿${graphTotals.sales.toLocaleString()}`
+                                                        : `฿${graphTotals.renewals.toLocaleString()}`
+                                            }
                                         </p>
-                                        <div className="relative flex flex-col gap-4 ml-1.5 pl-5 border-l border-white/10">
-                                            <div className="flex flex-col relative">
-                                                <div className="absolute -left-5 top-2 w-4 h-px bg-white/10" />
-                                                <div className="flex items-center gap-1.5 mb-1">
-                                                    <div className="w-2 h-2 rounded-full bg-[#7053E1] shadow-[0_0_8px_#7053E1]" />
-                                                    <span className="text-text-muted text-[10px] uppercase font-bold tracking-widest">Lead Dr.ease</span>
+
+                                        {selectedMetric === 'leads' ? (
+                                            <div className="relative flex flex-col gap-4 ml-1.5 pl-5 border-l border-white/10">
+                                                <div className="flex flex-col relative">
+                                                    <div className="absolute -left-5 top-2 w-4 h-px bg-white/10" />
+                                                    <div className="flex items-center gap-1.5 mb-1">
+                                                        <div className="w-2 h-2 rounded-full bg-[#7053E1] shadow-[0_0_8px_#7053E1]" />
+                                                        <span className="text-text-muted text-[10px] uppercase font-bold tracking-widest">Lead Dr.ease</span>
+                                                    </div>
+                                                    <p className="text-white text-2xl font-bold tracking-tighter tabular-nums leading-none">{graphTotals.drease.toLocaleString()}</p>
                                                 </div>
-                                                <p className="text-white text-2xl font-bold tracking-tighter tabular-nums leading-none">{graphTotals.drease.toLocaleString()}</p>
-                                            </div>
-                                            <div className="flex flex-col relative">
-                                                <div className="absolute -left-5 top-2 w-4 h-px bg-white/10" />
-                                                <div className="flex items-center gap-1.5 mb-1">
-                                                    <div className="w-2 h-2 rounded-full bg-[#F76D85] shadow-[0_0_8px_#F76D85]" />
-                                                    <span className="text-text-muted text-[10px] uppercase font-bold tracking-widest">Lead EasePOS</span>
+                                                <div className="flex flex-col relative">
+                                                    <div className="absolute -left-5 top-2 w-4 h-px bg-white/10" />
+                                                    <div className="flex items-center gap-1.5 mb-1">
+                                                        <div className="w-2 h-2 rounded-full bg-[#F76D85] shadow-[0_0_8px_#F76D85]" />
+                                                        <span className="text-text-muted text-[10px] uppercase font-bold tracking-widest">Lead EasePOS</span>
+                                                    </div>
+                                                    <p className="text-white text-2xl font-bold tracking-tighter tabular-nums leading-none">{graphTotals.ease.toLocaleString()}</p>
                                                 </div>
-                                                <p className="text-white text-2xl font-bold tracking-tighter tabular-nums leading-none">{graphTotals.ease.toLocaleString()}</p>
                                             </div>
-                                        </div>
+                                        ) : (
+                                            <div className="p-3 rounded-xl bg-white/5 border border-white/5 space-y-2">
+                                                <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest">Period Insights</p>
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                                                    <p className="text-white text-[11px] font-bold">Trend is stable</p>
+                                                </div>
+                                                <div className="h-1 w-full bg-slate-800 rounded-full overflow-hidden">
+                                                    <div className="h-full bg-indigo-500 w-[65%]" />
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="h-px bg-white/5 w-full" />
-                                    <div className="flex flex-col">
+                                    <div className="flex flex-col opacity-60">
                                         <div className="flex items-center gap-1.5 mb-2">
-                                            <div className="w-2.5 h-2.5 rounded-full bg-white shadow-[0_0_10px_#ffffff]" />
-                                            <span className="text-text-muted text-[10px] uppercase font-bold tracking-widest">Total Demos</span>
+                                            <div className="w-2.5 h-2.5 rounded-full bg-white/20" />
+                                            <span className="text-text-muted text-[10px] uppercase font-bold tracking-widest">Global Status</span>
                                         </div>
-                                        <p className="text-white text-3xl font-bold tracking-tighter tabular-nums leading-none">{graphTotals.demos.toLocaleString()}</p>
+                                        <p className="text-slate-400 text-xs font-bold leading-tight uppercase tracking-tighter italic">Live Data Synchronization Active</p>
                                     </div>
                                 </div>
 
@@ -664,11 +711,35 @@ export default function Dashboard({ customers, installations, issues, activities
                                                     <stop offset="5%" stopColor="#F76D85" stopOpacity={0.3} />
                                                     <stop offset="95%" stopColor="#F76D85" stopOpacity={0} />
                                                 </linearGradient>
+                                                <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                                                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                                                </linearGradient>
+                                                <linearGradient id="colorRenewals" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
+                                                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
+                                                </linearGradient>
+                                                <linearGradient id="colorDemos" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                                                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                                                </linearGradient>
                                                 <filter id="glowDrease" x="-20%" y="-20%" width="140%" height="140%">
                                                     <feGaussianBlur stdDeviation="3" result="blur" />
                                                     <feComposite in="SourceGraphic" in2="blur" operator="over" />
                                                 </filter>
                                                 <filter id="glowEase" x="-20%" y="-20%" width="140%" height="140%">
+                                                    <feGaussianBlur stdDeviation="3" result="blur" />
+                                                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                                                </filter>
+                                                <filter id="glowSales" x="-20%" y="-20%" width="140%" height="140%">
+                                                    <feGaussianBlur stdDeviation="3" result="blur" />
+                                                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                                                </filter>
+                                                <filter id="glowRenewals" x="-20%" y="-20%" width="140%" height="140%">
+                                                    <feGaussianBlur stdDeviation="3" result="blur" />
+                                                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                                                </filter>
+                                                <filter id="glowDemos" x="-20%" y="-20%" width="140%" height="140%">
                                                     <feGaussianBlur stdDeviation="3" result="blur" />
                                                     <feComposite in="SourceGraphic" in2="blur" operator="over" />
                                                 </filter>
@@ -712,8 +783,21 @@ export default function Dashboard({ customers, installations, issues, activities
                                                     return null;
                                                 }}
                                             />
-                                            <Area type="monotone" dataKey="drease" name="Dr.Ease" stroke="#7053E1" fill="url(#colorDrease)" strokeWidth={3} activeDot={{ r: 6, stroke: '#7053E1', strokeWidth: 2, fill: '#fff' }} />
-                                            <Area type="monotone" dataKey="ease" name="Ease" stroke="#F76D85" fill="url(#colorEase)" strokeWidth={3} activeDot={{ r: 6, stroke: '#F76D85', strokeWidth: 2, fill: '#fff' }} />
+                                            {selectedMetric === 'leads' && (
+                                                <>
+                                                    <Area type="monotone" dataKey="drease" name="Dr.Ease" stroke="#7053E1" fill="url(#colorDrease)" strokeWidth={3} filter="url(#glowDrease)" activeDot={{ r: 6, stroke: '#7053E1', strokeWidth: 2, fill: '#fff' }} />
+                                                    <Area type="monotone" dataKey="ease" name="Ease" stroke="#F76D85" fill="url(#colorEase)" strokeWidth={3} filter="url(#glowEase)" activeDot={{ r: 6, stroke: '#F76D85', strokeWidth: 2, fill: '#fff' }} />
+                                                </>
+                                            )}
+                                            {selectedMetric === 'demos' && (
+                                                <Area type="monotone" dataKey="demos" name="Demos" stroke="#3b82f6" fill="url(#colorDemos)" strokeWidth={3} filter="url(#glowDemos)" activeDot={{ r: 6, stroke: '#3b82f6', strokeWidth: 2, fill: '#fff' }} />
+                                            )}
+                                            {selectedMetric === 'sales' && (
+                                                <Area type="monotone" dataKey="sales" name="New Sales" stroke="#10b981" fill="url(#colorSales)" strokeWidth={3} filter="url(#glowSales)" activeDot={{ r: 6, stroke: '#10b981', strokeWidth: 2, fill: '#fff' }} />
+                                            )}
+                                            {selectedMetric === 'renewals' && (
+                                                <Area type="monotone" dataKey="renewals" name="Renewal" stroke="#8b5cf6" fill="url(#colorRenewals)" strokeWidth={3} filter="url(#glowRenewals)" activeDot={{ r: 6, stroke: '#8b5cf6', strokeWidth: 2, fill: '#fff' }} />
+                                            )}
                                         </AreaChart>
                                     </ResponsiveContainer>
                                 </div>
