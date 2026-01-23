@@ -95,23 +95,58 @@ const ModalWrapper = ({ isOpen, onClose, children, maxWidth = "max-w-2xl", zInde
 };
 
 export default function CRMPage() {
-  const [currentView, setView] = useState("dashboard");
+  const [currentView, setView] = useState(() => {
+    if (typeof window === 'undefined') return "dashboard";
+    return localStorage.getItem("crm_last_view_v2") || "dashboard";
+  });
   const [showLoginTransition, setShowLoginTransition] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isModalOpen, setModalOpen] = useState(false);
   const [isIssueModalOpen, setIssueModalOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [editingIssue, setEditingIssue] = useState<Issue | null>(null);
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [issues, setIssues] = useState<Issue[]>([]);
-  const [installations, setInstallations] = useState<Installation[]>([]);
-  const [users, setUsers] = useState<any[]>([]);
-  const [roles, setRoles] = useState<any[]>([]);
-  const [user, setUser] = useState<any>(null);
+  const [customers, setCustomers] = useState<Customer[]>(() => {
+    if (typeof window === 'undefined') return [];
+    const cached = localStorage.getItem("crm_customers_v2");
+    return cached ? JSON.parse(cached) : [];
+  });
+  const [issues, setIssues] = useState<Issue[]>(() => {
+    if (typeof window === 'undefined') return [];
+    const cached = localStorage.getItem("crm_issues_v2");
+    return cached ? JSON.parse(cached) : [];
+  });
+  const [installations, setInstallations] = useState<Installation[]>(() => {
+    if (typeof window === 'undefined') return [];
+    const cached = localStorage.getItem("crm_installations_v2");
+    return cached ? JSON.parse(cached) : [];
+  });
+  const [users, setUsers] = useState<any[]>(() => {
+    if (typeof window === 'undefined') return [];
+    const cached = localStorage.getItem("crm_system_users_v2");
+    return cached ? JSON.parse(cached) : [];
+  });
+  const [roles, setRoles] = useState<any[]>(() => {
+    if (typeof window === 'undefined') return [];
+    const cached = localStorage.getItem("crm_roles_v2");
+    return cached ? JSON.parse(cached) : [];
+  });
+  const [user, setUser] = useState<any>(() => {
+    if (typeof window === 'undefined') return null;
+    const cached = localStorage.getItem("crm_user_v2");
+    try {
+      return cached ? JSON.parse(cached) : null;
+    } catch (e) {
+      return null;
+    }
+  });
   const [mounted, setMounted] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'customer' | 'issue' | 'branch' | 'activity', id?: number, index?: number, title: string } | null>(null);
-  const [activities, setActivities] = useState<CSActivity[]>([]);
+  const [activities, setActivities] = useState<CSActivity[]>(() => {
+    if (typeof window === 'undefined') return [];
+    const cached = localStorage.getItem("crm_activities_v2");
+    return cached ? JSON.parse(cached) : [];
+  });
   const [isActivityModalOpen, setActivityModalOpen] = useState(false);
   const [editingActivity, setEditingActivity] = useState<CSActivity | null>(null);
   const [activitySentiment, setActivitySentiment] = useState<SentimentType>("Neutral");
@@ -119,7 +154,11 @@ export default function CRMPage() {
   const [activityStatus, setActivityStatus] = useState("Open");
   const [activityAssignee, setActivityAssignee] = useState("");
   const [activityFollowUp, setActivityFollowUp] = useState("");
-  const [leads, setLeads] = useState<Lead[]>([]);
+  const [leads, setLeads] = useState<Lead[]>(() => {
+    if (typeof window === 'undefined') return [];
+    const cached = localStorage.getItem("crm_leads_v2");
+    return cached ? JSON.parse(cached) : [];
+  });
   const [googleSheetLeads, setGoogleSheetLeads] = useState<GoogleSheetLead[]>([]);
   const [isGoogleSheetLeadsLoading, setGoogleSheetLeadsLoading] = useState(true);
   const [isLeadModalOpen, setLeadModalOpen] = useState(false);
@@ -215,39 +254,17 @@ export default function CRMPage() {
   }, [fetchGoogleSheetLeads]);
 
   useEffect(() => {
+    if (mounted) {
+      localStorage.setItem("crm_last_view_v2", currentView);
+    }
+  }, [currentView, mounted]);
+
+  useEffect(() => {
     setMounted(true);
     requestPermission();
     if ("Notification" in window) {
       setNotificationPermission(Notification.permission);
     }
-
-    // 1. Immediate Load from Cache (Stale-While-Revalidate)
-    const savedUser = localStorage.getItem("crm_user_v2");
-    const cachedCustomers = localStorage.getItem("crm_customers_v2");
-    const cachedIssues = localStorage.getItem("crm_issues_v2");
-    const cachedInstallations = localStorage.getItem("crm_installations_v2");
-    const cachedUsers = localStorage.getItem("crm_system_users_v2");
-    const cachedRoles = localStorage.getItem("crm_roles_v2");
-    const cachedActivities = localStorage.getItem("crm_activities_v2");
-    const cachedLeads = localStorage.getItem("crm_leads_v2");
-
-    if (savedUser) {
-      try {
-        const parsedUser = JSON.parse(savedUser);
-        setUser(parsedUser);
-      } catch (e) {
-        console.error("Failed to parse saved user", e);
-        localStorage.removeItem("crm_user_v2");
-      }
-    }
-
-    if (cachedCustomers) setCustomers(JSON.parse(cachedCustomers));
-    if (cachedIssues) setIssues(JSON.parse(cachedIssues));
-    if (cachedInstallations) setInstallations(JSON.parse(cachedInstallations));
-    if (cachedUsers) setUsers(JSON.parse(cachedUsers));
-    if (cachedRoles) setRoles(JSON.parse(cachedRoles));
-    if (cachedActivities) setActivities(JSON.parse(cachedActivities));
-    if (cachedLeads) setLeads(JSON.parse(cachedLeads));
 
     // 2. Background Revalidation (Fetch from Supabase)
     fetchData();
@@ -968,7 +985,7 @@ export default function CRMPage() {
             onLogout={() => { setUser(null); localStorage.removeItem("crm_user_v2"); }}
             userRole={{ ...roles.find(r => r.id === user?.role), role: user?.role }}
           />
-          <main className="flex-1 overflow-auto bg-gradient-to-br from-[#020617] via-[#0f172a] to-[#020617] relative animate-in fade-in duration-1000">
+          <main className="flex-1 overflow-auto bg-gradient-to-br from-[#020617] via-[#0f172a] to-[#020617] relative animate-in fade-in duration-300">
             <div className="p-4 lg:p-8 max-w-[1600px] mx-auto relative z-10">
               <div className="absolute top-4 lg:top-8 right-4 lg:right-8 z-[100] flex items-center gap-3">
                 {notificationPermission !== "granted" && (
