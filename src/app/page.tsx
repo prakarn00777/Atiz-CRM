@@ -187,6 +187,11 @@ export default function CRMPage() {
   const { pushNotification, requestPermission } = useNotification();
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>("default");
   const debounceTimer = useRef<any>(null);
+  const customersRef = useRef<Customer[]>(customers);
+
+  useEffect(() => {
+    customersRef.current = customers;
+  }, [customers]);
 
   const fetchData = useCallback(async () => {
     try {
@@ -283,15 +288,17 @@ export default function CRMPage() {
           fetchDataDebounced();
 
           if (eventType === 'INSERT') {
+            const customerName = customersRef.current.find(c => c.id === newRecord.customer_id)?.name || "ไม่ทราบชื่อลูกค้า";
             pushNotification(
               "📝 มีการแจ้งปัญหาใหม่",
-              `เคส: ${newRecord.title} (${newRecord.customer_name}) โดย ${actor || 'System'}`,
+              `เคส: ${newRecord.title} (${customerName}) โดย ${actor || 'System'}`,
               "info"
             );
           } else if (eventType === 'UPDATE' && newRecord.status !== oldRecord.status) {
+            const customerName = customersRef.current.find(c => c.id === newRecord.customer_id)?.name || "ไม่ทราบชื่อลูกค้า";
             pushNotification(
               "🔄 อัปเดตสถานะเคส",
-              `เคส [${newRecord.case_number}] เปลี่ยนเป็น ${newRecord.status}`,
+              `เคส [${newRecord.case_number}] ของ ${customerName} เปลี่ยนเป็น ${newRecord.status}`,
               newRecord.status === "เสร็จสิ้น" ? "success" : "info"
             );
           }
@@ -324,17 +331,19 @@ export default function CRMPage() {
           }
 
           if (eventType === 'INSERT') {
+            const customerName = customersRef.current.find(c => c.id === newRecord.customer_id)?.name || "ไม่ทราบชื่อลูกค้า";
             pushNotification(
               newRecord.installation_type === "new" ? "🚀 แจ้งติดตั้งลูกค้าใหม่" : "📍 แจ้งติดตั้งสาขาเพิ่ม",
               newRecord.installation_type === "new"
-                ? `มีการแจ้งติดตั้งใหม่สำหรับ: ${newRecord.customer_name}`
-                : `มีการแจ้งติดตั้งสาขาใหม่สำหรับ: ${newRecord.customer_name}`,
+                ? `มีการแจ้งติดตั้งใหม่สำหรับ: ${customerName}`
+                : `มีการแจ้งติดตั้งสาขาใหม่สำหรับ: ${customerName}`,
               "info"
             );
           } else if (eventType === 'UPDATE' && newRecord.status !== oldRecord.status) {
+            const customerName = customersRef.current.find(c => c.id === newRecord.customer_id)?.name || "ไม่ทราบชื่อลูกค้า";
             pushNotification(
               "🛠️ อัปเดตงานติดตั้ง",
-              `งานของ ${newRecord.customer_name} เปลี่ยนเป็น ${newRecord.status}`,
+              `งานของ ${customerName} เปลี่ยนเป็น ${newRecord.status}`,
               newRecord.status === "Completed" ? "success" : "info"
             );
           }
@@ -721,6 +730,15 @@ export default function CRMPage() {
 
         // Update with actual database-generated ID to prevent FK violation
         finalCustomerId = custResult.data.id;
+
+        // Immediate Customer State Update (Instant visibility in manage customers)
+        const savedCustomer: Customer = {
+          ...newCustomer,
+          id: finalCustomerId,
+          branches: JSON.parse(custResult.data.branches || "[]") // Get processed branches
+        };
+        setCustomers(prev => [savedCustomer, ...prev]);
+
         data = { ...data, customerId: finalCustomerId };
 
       } else if (newInst.installationType === "branch" && newInst.branchName) {
