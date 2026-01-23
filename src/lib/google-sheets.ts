@@ -2,6 +2,11 @@ import { google } from 'googleapis';
 
 // Initialize Google Sheets API client
 const getGoogleSheetsClient = async () => {
+  if (!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY) {
+    console.error('Missing Google Service Account credentials in environment variables');
+    throw new Error('Google Sheets credentials not configured');
+  }
+
   const auth = new google.auth.GoogleAuth({
     credentials: {
       client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
@@ -39,6 +44,10 @@ export interface LeadRow {
 export async function getLeads(): Promise<LeadRow[]> {
   try {
     const sheets = await getGoogleSheetsClient();
+
+    if (!SPREADSHEET_ID) {
+      throw new Error('GOOGLE_SPREADSHEET_ID is not defined in environment variables');
+    }
 
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,

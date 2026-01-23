@@ -15,10 +15,14 @@ export async function GET() {
             l.customerName && l.customerName.trim() !== ''
         );
         return NextResponse.json({ success: true, data: validLeads });
-    } catch (error) {
+    } catch (error: any) {
         console.error('API Error fetching leads:', error);
         return NextResponse.json(
-            { success: false, error: 'Failed to fetch leads from Google Sheets' },
+            {
+                success: false,
+                error: 'Failed to fetch leads from Google Sheets',
+                details: error.message || 'Unknown error'
+            },
             { status: 500 }
         );
     }
