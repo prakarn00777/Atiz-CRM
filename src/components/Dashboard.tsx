@@ -218,18 +218,8 @@ export default function Dashboard({ customers, installations, issues, activities
             });
         };
 
-        const deduplicate = (leads: GoogleSheetLead[]) => {
-            const seen = new Set();
-            return leads.filter(l => {
-                const key = `${l.customerName}-${l.phone || l.notes?.substring(0, 20)}`;
-                if (seen.has(key)) return false;
-                seen.add(key);
-                return true;
-            });
-        };
-
-        const finalCurrentLeads = deduplicate(filterLeadsByRange(currentWeek));
-        const finalPrevLeads = deduplicate(filterLeadsByRange(previousWeek));
+        const finalCurrentLeads = filterLeadsByRange(currentWeek);
+        const finalPrevLeads = filterLeadsByRange(previousWeek);
         const currentCount = finalCurrentLeads.length;
         const prevCount = finalPrevLeads.length;
 
