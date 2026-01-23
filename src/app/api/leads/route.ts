@@ -8,10 +8,6 @@ export async function GET() {
         // Filter out rows that are missing mandatory fields
         const validLeads = leads.filter(l =>
             l.date && l.date.trim() !== '' &&
-            l.leadNumber && l.leadNumber.trim() !== '' &&
-            l.leadIndex && l.leadIndex.trim() !== '' &&
-            l.product && l.product.trim() !== '' &&
-            l.leadType && l.leadType.trim() !== '' &&
             l.customerName && l.customerName.trim() !== ''
         );
         return NextResponse.json({ success: true, data: validLeads });

@@ -19,7 +19,7 @@ import NotificationBell from "@/components/NotificationBell";
 import LeadManager from "@/components/LeadManager";
 import GoogleSheetLeadManager from "@/components/GoogleSheetLeadManager";
 import CustomDatePicker from "@/components/CustomDatePicker";
-import { Customer, Branch, Installation, Issue, UsageStatus, Activity as CSActivity, ActivityType, SentimentType, Lead, GoogleSheetLead, BusinessMetrics } from "@/types";
+import { Customer, Branch, Installation, Issue, UsageStatus, Activity as CSActivity, ActivityType, SentimentType, Lead, GoogleSheetLead, MasterDemoLead, BusinessMetrics } from "@/types";
 import { useNotification } from "@/components/NotificationProvider";
 import { db } from "@/lib/db";
 import {
@@ -161,7 +161,9 @@ export default function CRMPage() {
     return cached ? JSON.parse(cached) : [];
   });
   const [googleSheetLeads, setGoogleSheetLeads] = useState<GoogleSheetLead[]>([]);
+  const [googleSheetDemos, setGoogleSheetDemos] = useState<MasterDemoLead[]>([]);
   const [isGoogleSheetLeadsLoading, setGoogleSheetLeadsLoading] = useState(true);
+  const [isGoogleSheetDemosLoading, setGoogleSheetDemosLoading] = useState(true);
   const [businessMetrics, setBusinessMetrics] = useState<BusinessMetrics | undefined>(undefined);
   const [isLeadModalOpen, setLeadModalOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
@@ -270,9 +272,25 @@ export default function CRMPage() {
     }
   }, [setToast]);
 
+  const fetchGoogleSheetDemos = useCallback(async () => {
+    try {
+      setGoogleSheetDemosLoading(true);
+      const response = await fetch('/api/demos');
+      const result = await response.json();
+      if (result.success) {
+        setGoogleSheetDemos(result.data);
+      }
+    } catch (error: any) {
+      console.error('Error fetching Google Sheet demos:', error);
+    } finally {
+      setGoogleSheetDemosLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchGoogleSheetLeads();
-  }, [fetchGoogleSheetLeads]);
+    fetchGoogleSheetDemos();
+  }, [fetchGoogleSheetLeads, fetchGoogleSheetDemos]);
 
   useEffect(() => {
     if (mounted) {
@@ -1016,15 +1034,15 @@ export default function CRMPage() {
           {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
         </div>
       ) : (
-        <div className="flex min-h-screen">
+        <div className="flex h-screen overflow-hidden">
           <Sidebar
             currentView={currentView}
             setView={setView}
             onLogout={() => { setUser(null); localStorage.removeItem("crm_user_v2"); }}
             userRole={{ ...roles.find(r => r.id === user?.role), role: user?.role }}
           />
-          <main className="flex-1 overflow-auto bg-gradient-to-br from-[#020617] via-[#0f172a] to-[#020617] relative animate-in fade-in duration-300">
-            <div className="p-4 lg:p-8 max-w-[1600px] mx-auto relative z-10">
+          <main className={`flex-1 relative bg-gradient-to-br from-[#020617] via-[#0f172a] to-[#020617] animate-in fade-in duration-300 ${currentView === 'dashboard' ? 'overflow-hidden' : 'overflow-auto'}`}>
+            <div className={`p-4 lg:p-8 max-w-[1600px] mx-auto relative z-10 ${currentView === 'dashboard' ? 'h-full flex flex-col' : ''}`}>
               <div className="absolute top-4 lg:top-8 right-4 lg:right-8 z-[100] flex items-center gap-3">
                 {notificationPermission !== "granted" && (
                   <button
@@ -1048,6 +1066,7 @@ export default function CRMPage() {
                   activities={activities}
                   leads={leads}
                   googleSheetLeads={googleSheetLeads}
+                  googleSheetDemos={googleSheetDemos}
                   businessMetrics={businessMetrics}
                   user={user}
                   onViewChange={setView}

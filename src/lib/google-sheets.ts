@@ -89,7 +89,7 @@ export async function getLeads(): Promise<LeadRow[]> {
 
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${targetSheet}!A:M`, // Use discovered or configured sheet name
+      range: `${targetSheet}!A:I`, // Adjusted for 9-column Master Sheet
     });
 
     const rows = response.data.values;
@@ -103,20 +103,20 @@ export async function getLeads(): Promise<LeadRow[]> {
     return dataRows
       .filter(row => row.some(cell => cell)) // Filter out completely empty rows
       .map((row, index) => ({
-        id: String(index + 2), // Row number (2-based since row 1 is header)
-        leadIndex: row[0] || '',      // ลีดที่
-        leadNumber: row[1] || '',     // เลขที่ลีด
-        date: row[2] || '',           // วันที่
-        product: row[3] || '',        // Product
-        source: row[4] || '',         // ลีด
-        leadType: row[5] || '',       // ประเภทลีด
-        salesName: row[6] || '',      // เซลล์
-        customerName: row[7] || '',   // ชื่อลูกค้า
-        phone: row[8] || '',          // เบอร์โทร
-        quotationStatus: row[9] || '',// สถานะใบเสนอราคา
-        quotation: row[10] || '',     // ใบเสนอราคา
-        clinicName: row[11] || '',    // ชื่อคลินิก/ธุรกิจ
-        notes: row[12] || '',         // Note
+        id: String(index + 2),
+        leadIndex: row[0] || '',      // ลีดที่ (Col A)
+        leadNumber: row[1] || '',     // เลขที่ลีด (Col B)
+        date: row[2] || '',           // วันที่ (Col C)
+        product: row[3] || '',        // Product (Col D)
+        source: '',                   // Simplified out in Master
+        leadType: '',                 // Simplified out in Master
+        salesName: row[4] || '',      // เซลล์ (Col E)
+        customerName: row[5] || '',   // ชื่อลูกค้า (Col F)
+        phone: row[6] || '',          // เบอร์โทร (Col G)
+        quotationStatus: row[7] || '',// สถานะ Demo/ใบเสนอราคา (Col H)
+        quotation: '',                // Simplified out
+        clinicName: row[8] || '',     // ชื่อคลินิก/ธุรกิจ (Col I)
+        notes: '',                    // Simplified out
       }));
   } catch (error) {
     console.error('Error fetching leads from Google Sheets:', error);

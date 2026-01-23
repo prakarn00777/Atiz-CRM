@@ -194,6 +194,23 @@ export interface GoogleSheetLead {
     notes: string;         // Note (Column M)
 }
 
+// Master Demo Lead from the 28-column Google Sheet
+export interface MasterDemoLead {
+    id: string;
+    leadNumber: string;
+    date: string;
+    product: string;
+    source: string;
+    leadType: string;
+    salesName: string;
+    salesperson: string;
+    customerName: string;
+    phone: string;
+    demoStatus: string;
+    clinicName: string;
+    notes: string;
+}
+
 // ============================================
 // User & Role Types
 // ============================================

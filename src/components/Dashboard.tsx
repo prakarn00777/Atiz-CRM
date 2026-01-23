@@ -89,7 +89,7 @@ import {
     XAxis, YAxis, CartesianGrid, Tooltip, Legend
 } from 'recharts';
 import ParticlesBackground from "./ParticlesBackground";
-import type { Customer, Installation, Issue, Lead, Activity as CSActivity, GoogleSheetLead, BusinessMetrics } from "@/types";
+import type { Customer, Installation, Issue, Lead, Activity as CSActivity, GoogleSheetLead, MasterDemoLead, BusinessMetrics } from "@/types";
 
 import SegmentedControl from "./SegmentedControl";
 import CustomSelect from "./CustomSelect";
@@ -102,6 +102,7 @@ interface DashboardProps {
     activities: CSActivity[];
     leads: Lead[];
     googleSheetLeads?: GoogleSheetLead[];
+    googleSheetDemos?: MasterDemoLead[];
     businessMetrics?: BusinessMetrics;
     user: any;
     onViewChange: (view: string) => void;
@@ -131,14 +132,14 @@ const parseLocalISO = (isoStr: string) => {
     return new Date(isoStr);
 };
 
-export default function Dashboard({ customers, installations, issues, activities, leads, googleSheetLeads = [], businessMetrics, user, onViewChange }: DashboardProps) {
+export default function Dashboard({ customers, installations, issues, activities, leads, googleSheetLeads = [], googleSheetDemos = [], businessMetrics, user, onViewChange }: DashboardProps) {
     const dashboardRef = useRef<HTMLDivElement>(null);
     const [activeTab, setActiveTab] = useState<'cs' | 'business'>('cs');
     const [timeRange, setTimeRange] = useState<'1w' | '1m' | '1y' | 'custom'>('1w');
     const [customStartDate, setCustomStartDate] = useState('');
     const [customEndDate, setCustomEndDate] = useState('');
-    const [dataType, setDataType] = useState<'all' | 'lead' | 'demo'>('all');
     const [productFilter, setProductFilter] = useState<'all' | 'Dr.Ease' | 'Ease POS'>('all');
+    const [salesFilter, setSalesFilter] = useState<'all' | 'Aoey' | 'Yo'>('all');
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [currentTime, setCurrentTime] = useState(new Date());
     const [isAutoCycle, setIsAutoCycle] = useState(false);
@@ -232,28 +233,76 @@ export default function Dashboard({ customers, installations, issues, activities
         const dreaseLeads = finalCurrentLeads.filter(l => l.product?.includes('Dr')).length;
         const easeLeads = finalCurrentLeads.filter(l => l.product?.includes('POS') || l.product === 'Ease').length;
 
+        const googleDemosThisWeek = googleSheetDemos.filter(d => {
+            if (!d.date) return false;
+            const rDate = parseSheetDate(d.date);
+            return rDate && rDate >= currentWeek.start && rDate <= currentWeek.end;
+        }).length;
+
         const currentDemos = activities.filter(a => {
             if (a.activityType !== "Demo" || !a.createdAt) return false;
             const aDate = new Date(a.createdAt);
             return aDate >= currentWeek.start && aDate <= currentWeek.end;
+        }).length + googleDemosThisWeek;
+
+        // Calculate Previous Demos for WoW
+        const googleDemosPrevWeek = googleSheetDemos.filter(d => {
+            if (!d.date) return false;
+            const rDate = parseSheetDate(d.date);
+            return rDate && rDate >= previousWeek.start && rDate <= previousWeek.end;
         }).length;
+
+        const prevDemos = activities.filter(a => {
+            if (a.activityType !== "Demo" || !a.createdAt) return false;
+            const aDate = new Date(a.createdAt);
+            return aDate >= previousWeek.start && aDate <= previousWeek.end;
+        }).length + googleDemosPrevWeek;
+
+        let demosWoWPercent = 0;
+        if (prevDemos > 0) demosWoWPercent = ((currentDemos - prevDemos) / prevDemos) * 100;
+        else if (currentDemos > 0) demosWoWPercent = 100;
 
         const wowColor = wowPercent >= 0 ? "text-emerald-400" : "text-rose-400";
         const WoWTag = (
-            <div className="flex items-center gap-1.5 group relative">
+            <div className="flex items-center gap-1.5 relative">
                 <span className={`${wowColor} flex items-center gap-0.5 whitespace-nowrap text-[14px] font-bold`}>
                     ({wowPercent >= 0 ? "+" : "-"}{Math.abs(wowPercent).toFixed(1)}%)
                 </span>
-                <div className="p-0.5 rounded-full bg-white/5 text-slate-400 hover:text-white transition-colors cursor-help">
-                    <Info className="w-3 h-3" />
-                </div>
+                <div className="relative group/tooltip">
+                    <div className="p-0.5 rounded-full bg-white/5 text-slate-400 hover:text-white transition-colors cursor-help">
+                        <Info className="w-3 h-3" />
+                    </div>
 
-                {/* Custom Tooltip */}
-                <div className="absolute bottom-full left-0 mb-2 w-64 p-3 bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[100] text-[11px] leading-relaxed text-slate-300 pointer-events-none">
-                    <p className="font-bold text-white mb-1">Growth Calculation (WoW)</p>
-                    <p>อัตราการเติบโตเมื่อเทียบกับสัปดาห์ก่อน:</p>
-                    <div className="mt-2 p-2 bg-black/30 rounded-lg font-mono text-indigo-300">
-                        ((จำนวนสัปดาห์นี้ - จำนวนสัปดาห์ก่อน) / จำนวนสัปดาห์ก่อน) x 100
+                    {/* Custom Tooltip */}
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 z-[100] text-[11px] leading-relaxed text-slate-300 pointer-events-none">
+                        <p className="font-bold text-white mb-1">Growth Calculation (WoW)</p>
+                        <p>อัตราการเติบโตเมื่อเทียบกับสัปดาห์ก่อน:</p>
+                        <div className="mt-2 p-2 bg-black/30 rounded-lg font-mono text-indigo-300">
+                            ((จำนวนสัปดาห์นี้ - จำนวนสัปดาห์ก่อน) / จำนวนสัปดาห์ก่อน) x 100
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+
+        const demosWoWColor = demosWoWPercent >= 0 ? "text-emerald-400" : "text-rose-400";
+        const DemosWoWTag = (
+            <div className="flex items-center gap-1.5 relative">
+                <span className={`${demosWoWColor} flex items-center gap-0.5 whitespace-nowrap text-[14px] font-bold`}>
+                    ({demosWoWPercent >= 0 ? "+" : "-"}{Math.abs(demosWoWPercent).toFixed(1)}%)
+                </span>
+                <div className="relative group/tooltip">
+                    <div className="p-0.5 rounded-full bg-white/5 text-slate-400 hover:text-white transition-colors cursor-help">
+                        <Info className="w-3 h-3" />
+                    </div>
+
+                    {/* Custom Tooltip */}
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 z-[100] text-[11px] leading-relaxed text-slate-300 pointer-events-none">
+                        <p className="font-bold text-white mb-1">Demos Growth (WoW)</p>
+                        <p>อัตราการเติบโตของ Demo เทียบกับสัปดาห์ก่อน:</p>
+                        <div className="mt-2 p-2 bg-black/30 rounded-lg font-mono text-indigo-300">
+                            ((Demo สัปดาห์นี้ - ก่อนหน้า) / ก่อนหน้า) x 100
+                        </div>
                     </div>
                 </div>
             </div>
@@ -265,15 +314,13 @@ export default function Dashboard({ customers, installations, issues, activities
 
         return [
             { id: 'leads', label: "Total Leads – This Week", subLabel: "ผู้สนใจรายสัปดาห์ (Mon-Sun)", numericValue: currentCount, prefix: "", suffix: "", sub: `Dr.Ease: ${dreaseLeads} | Ease: ${easeLeads}`, extraInfo: WoWTag, tooltip: "อัตราการเติบโตเมื่อเทียบกับสัปดาห์ก่อน (WoW): ((จำนวนสัปดาห์นี้-จำนวนสัปดาห์ก่อน) / จำนวนสัปดาห์ก่อน) x 100", icon: Briefcase, color: "text-amber-400", border: "border-amber-500/20", bg: "from-amber-500/10" },
-            { id: 'demos', label: "Weekly Demos", subLabel: "การทำ Demo รายสัปดาห์", numericValue: currentDemos, prefix: "", suffix: "", sub: `เข้าข่ายสัปดาห์ปัจจุบัน`, icon: Monitor, color: "text-blue-400", border: "border-blue-500/20", bg: "from-blue-500/10" },
+            { id: 'demos', label: "Weekly Demos", subLabel: "การทำ Demo รายสัปดาห์", numericValue: currentDemos, prefix: "", suffix: "", sub: `เข้าข่ายสัปดาห์ปัจจุบัน`, extraInfo: DemosWoWTag, icon: Monitor, color: "text-blue-400", border: "border-blue-500/20", bg: "from-blue-500/10" },
             { id: 'sales', label: "New Sales", subLabel: "ยอดเงินปิดใหม่", numericValue: newSales, prefix: "฿", suffix: "", sub: "Revenue สัปดาห์นี้", icon: DollarSign, color: "text-emerald-400", border: "border-emerald-500/20", bg: "from-emerald-500/10" },
             { id: 'renewals', label: "Renewal", subLabel: "ยอดเงินต่อสัญญา", numericValue: renewal, prefix: "฿", suffix: "", sub: "Revenue สัปดาห์นี้", icon: TrendingUp, color: "text-purple-400", border: "border-purple-500/20", bg: "from-purple-500/10" },
         ];
-    }, [googleSheetLeads, activities, businessMetrics]);
+    }, [googleSheetLeads, googleSheetDemos, activities, businessMetrics]);
 
-    const dynamicGraphData = useMemo(() => {
-        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const dateRange = useMemo(() => {
         let startDate: Date;
         let endDate = new Date();
         endDate.setHours(23, 59, 59, 999);
@@ -289,6 +336,25 @@ export default function Dashboard({ customers, installations, issues, activities
             const daysBack = timeRange === '1w' ? 7 : timeRange === '1m' ? 30 : 365;
             startDate.setDate(startDate.getDate() - daysBack + 1);
         }
+        return { startDate, endDate };
+    }, [timeRange, customStartDate, customEndDate]);
+
+    const filteredMasterDemos = useMemo(() => {
+        const { startDate, endDate } = dateRange;
+        return googleSheetDemos.filter(d => {
+            const dDate = parseSheetDate(d.date);
+            if (!dDate) return false;
+            // Check strictly for date range to match graph
+            const inDateRange = dDate >= startDate && dDate <= endDate;
+            const matchesSales = salesFilter === 'all' || d.salesperson?.includes(salesFilter);
+            return inDateRange && matchesSales;
+        });
+    }, [googleSheetDemos, dateRange, salesFilter]);
+
+    const dynamicGraphData = useMemo(() => {
+        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const { startDate, endDate } = dateRange;
 
         const daysDiff = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)));
         const groupBy = daysDiff > 400 ? 'month' : (daysDiff > 45 ? 'week' : 'day');
@@ -304,7 +370,7 @@ export default function Dashboard({ customers, installations, issues, activities
             const current = new Date(startDate);
             while (current <= endDate) {
                 const key = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`;
-                monthlyData[key] = { drease: 0, ease: 0, leads: 0, demos: 0 };
+                monthlyData[key] = { drease: 0, ease: 0, leads: 0, demos: 0, demosAoey: 0, demosYo: 0 };
                 current.setMonth(current.getMonth() + 1);
             }
             googleSheetLeads.forEach(l => {
@@ -315,6 +381,21 @@ export default function Dashboard({ customers, installations, issues, activities
                         if (l.product?.includes('Dr')) monthlyData[key].drease++;
                         else if (l.product?.includes('POS') || l.product === 'Ease') monthlyData[key].ease++;
                         monthlyData[key].leads++;
+                    }
+                }
+            });
+            googleSheetDemos.forEach(d => {
+                const dDate = parseSheetDate(d.date);
+                if (dDate && dDate >= startDate && dDate <= endDate) {
+                    const key = `${dDate.getFullYear()}-${String(dDate.getMonth() + 1).padStart(2, '0')}`;
+                    if (monthlyData[key]) {
+                        // Count by salesperson with filter
+                        const matchesSales = salesFilter === 'all' || d.salesperson?.includes(salesFilter);
+                        if (matchesSales) {
+                            monthlyData[key].demos++;
+                            if (d.salesperson?.includes('Aoey')) monthlyData[key].demosAoey++;
+                            else if (d.salesperson?.includes('Yo')) monthlyData[key].demosYo++;
+                        }
                     }
                 }
             });
@@ -338,22 +419,28 @@ export default function Dashboard({ customers, installations, issues, activities
                     (productFilter === 'Ease POS' && (l.product?.includes('POS') || l.product === 'Ease'));
                 return matchesProduct;
             });
+            const googleDemosOnDay = googleSheetDemos.filter(d => {
+                const sameDate = normalizeDate(d.date) === dateStr;
+                return sameDate;
+            });
             const demosOnDay = activities.filter(a => a.activityType === "Demo" && normalizeDate(a.createdAt) === dateStr);
+            const demosAoeyOnDay = (salesFilter === 'all' || salesFilter === 'Aoey') ? googleDemosOnDay.filter(d => d.salesperson?.includes('Aoey')).length : 0;
+            const demosYoOnDay = (salesFilter === 'all' || salesFilter === 'Yo') ? googleDemosOnDay.filter(d => d.salesperson?.includes('Yo')).length : 0;
 
             return {
                 name: `${date.getDate()} ${days[date.getDay()]}`,
                 fullDate: date.toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' }),
-                drease: (dataType === 'all' || dataType === 'lead')
-                    ? leadsOnDay.filter(l => l.product?.includes('Dr')).length : 0,
-                ease: (dataType === 'all' || dataType === 'lead')
-                    ? leadsOnDay.filter(l => l.product?.includes('POS') || l.product === 'Ease').length : 0,
+                drease: leadsOnDay.filter(l => l.product?.includes('Dr')).length,
+                ease: leadsOnDay.filter(l => l.product?.includes('POS') || l.product === 'Ease').length,
                 leads: leadsOnDay.length,
-                demos: (dataType === 'all' || dataType === 'demo') ? demosOnDay.length : 0,
+                demos: (salesFilter === 'all' ? (demosOnDay.length + googleDemosOnDay.length) : (demosAoeyOnDay + demosYoOnDay)),
+                demosAoey: demosAoeyOnDay,
+                demosYo: demosYoOnDay,
                 sales: Math.floor(Math.random() * 50000) + 10000, // Simulated trend data for sales
                 renewals: Math.floor(Math.random() * 30000) + 5000, // Simulated trend data for renewals
             };
         });
-    }, [timeRange, customStartDate, customEndDate, googleSheetLeads, activities, dataType, productFilter]);
+    }, [dateRange, googleSheetLeads, googleSheetDemos, activities, productFilter, salesFilter]);
 
     const graphTotals = useMemo(() => {
         return dynamicGraphData.reduce((acc, curr) => {
@@ -361,16 +448,18 @@ export default function Dashboard({ customers, installations, issues, activities
             acc.ease += (curr.ease || 0);
             acc.leads += (curr.leads || 0);
             acc.demos += (curr.demos || 0);
+            acc.demosAoey += (curr.demosAoey || 0);
+            acc.demosYo += (curr.demosYo || 0);
             acc.sales += (curr.sales || 0);
             acc.renewals += (curr.renewals || 0);
             return acc;
-        }, { drease: 0, ease: 0, leads: 0, demos: 0, sales: 0, renewals: 0 });
+        }, { drease: 0, ease: 0, leads: 0, demos: 0, demosAoey: 0, demosYo: 0, sales: 0, renewals: 0 });
     }, [dynamicGraphData]);
 
     const yAxisTicks = useMemo(() => {
         // Find max value across all data points
         const maxVal = Math.max(...dynamicGraphData.map(d =>
-            Math.max(d.drease || 0, d.ease || 0, d.leads || 0, d.demos || 0, d.sales || 0, d.renewals || 0)
+            Math.max(d.drease || 0, d.ease || 0, d.leads || 0, d.demos || 0, d.demosAoey || 0, d.demosYo || 0, d.sales || 0, d.renewals || 0)
         ));
         if (maxVal === 0) return [0, 5, 10]; // Minimum scale
 
@@ -505,16 +594,16 @@ export default function Dashboard({ customers, installations, issues, activities
                             <div
                                 key={i}
                                 onClick={() => setSelectedMetric(stat.id)}
-                                className={`group glass-card p-4 border transition-all duration-300 cursor-pointer overflow-hidden ${selectedMetric === stat.id
-                                    ? 'border-indigo-500 ring-2 ring-indigo-500/20 translate-y-[-4px] shadow-2xl shadow-indigo-500/10'
+                                className={`group/card glass-card p-4 border transition-all duration-300 cursor-pointer relative hover:z-50 ${selectedMetric === stat.id
+                                    ? 'border-indigo-500 ring-2 ring-indigo-500/20 translate-y-[-4px] shadow-2xl shadow-indigo-500/10 z-40'
                                     : 'border-white/5 hover:border-white/20 hover:-translate-y-1'
                                     }`}
                             >
-                                <div className={`absolute inset-0 bg-gradient-to-br ${stat.bg} to-transparent opacity-30 transition-opacity duration-300 ${selectedMetric === stat.id ? 'opacity-60' : 'group-hover:opacity-50'}`} />
+                                <div className={`absolute inset-0 bg-gradient-to-br ${stat.bg} to-transparent opacity-30 transition-opacity duration-300 ${selectedMetric === stat.id ? 'opacity-60' : 'group-hover/card:opacity-50'}`} />
                                 <div className="relative flex flex-col gap-2">
                                     <div className="flex items-center justify-between">
                                         <div
-                                            className={`p-1.5 w-fit rounded-lg bg-white/5 ${stat.color} transition-transform duration-300 ${selectedMetric === stat.id ? 'scale-110 shadow-[0_0_15px_currentColor]' : 'group-hover:scale-110'}`}
+                                            className={`p-1.5 w-fit rounded-lg bg-white/5 ${stat.color} transition-transform duration-300 ${selectedMetric === stat.id ? 'scale-110 shadow-[0_0_15px_currentColor]' : 'group-hover/card:scale-110'}`}
                                             style={{ animation: `iconFloat${i} 3s ease-in-out infinite, continuousFloat 6s ease-in-out infinite`, animationDelay: `${i * 0.5}s` }}
                                         >
                                             <stat.icon className="w-4 h-4" />
@@ -560,30 +649,31 @@ export default function Dashboard({ customers, installations, issues, activities
                                 </div>
                                 <div className="flex items-center gap-2 scale-90 origin-right">
                                     <div className="w-36 flex-shrink-0">
-                                        <CustomSelect
-                                            options={[
-                                                { value: 'all', label: 'All Data' },
-                                                { value: 'lead', label: 'Leads' },
-                                                { value: 'demo', label: 'Demos' }
-                                            ]}
-                                            value={dataType}
-                                            onChange={(val) => setDataType(val as 'all' | 'lead' | 'demo')}
-                                            className="h-9"
-                                            portalContainer={dashboardRef.current}
-                                        />
-                                    </div>
-                                    <div className="w-36 flex-shrink-0">
-                                        <CustomSelect
-                                            options={[
-                                                { value: 'all', label: 'All Products' },
-                                                { value: 'Dr.Ease', label: 'Dr.Ease' },
-                                                { value: 'Ease POS', label: 'Ease POS' }
-                                            ]}
-                                            value={productFilter}
-                                            onChange={(val) => setProductFilter(val as any)}
-                                            className="h-9"
-                                            portalContainer={dashboardRef.current}
-                                        />
+                                        {selectedMetric === 'demos' ? (
+                                            <CustomSelect
+                                                options={[
+                                                    { value: 'all', label: 'All Sales' },
+                                                    { value: 'Aoey', label: 'Aoey' },
+                                                    { value: 'Yo', label: 'Yo' }
+                                                ]}
+                                                value={salesFilter}
+                                                onChange={(val) => setSalesFilter(val as any)}
+                                                className="h-9"
+                                                portalContainer={dashboardRef.current}
+                                            />
+                                        ) : (
+                                            <CustomSelect
+                                                options={[
+                                                    { value: 'all', label: 'All Products' },
+                                                    { value: 'Dr.Ease', label: 'Dr.Ease' },
+                                                    { value: 'Ease POS', label: 'Ease POS' }
+                                                ]}
+                                                value={productFilter}
+                                                onChange={(val) => setProductFilter(val as any)}
+                                                className="h-9"
+                                                portalContainer={dashboardRef.current}
+                                            />
+                                        )}
                                     </div>
                                     <div className="w-28 flex-shrink-0">
                                         <CustomSelect
@@ -676,6 +766,60 @@ export default function Dashboard({ customers, installations, issues, activities
                                                     <p className="text-white text-2xl font-bold tracking-tighter tabular-nums leading-none">{graphTotals.ease.toLocaleString()}</p>
                                                 </div>
                                             </div>
+                                        ) : selectedMetric === 'demos' ? (
+                                            <div className="relative flex flex-col gap-3 ml-1.5 pl-5 border-l border-white/10">
+                                                {/* Demo by Salesperson */}
+                                                <div className="flex flex-col relative">
+                                                    <div className="absolute -left-5 top-2 w-4 h-px bg-white/10" />
+                                                    <div className="flex items-center gap-1.5 mb-1">
+                                                        <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_#22c55e]" />
+                                                        <span className="text-text-muted text-[10px] uppercase font-bold tracking-widest">Aoey</span>
+                                                    </div>
+                                                    <p className="text-white text-xl font-bold tracking-tighter tabular-nums leading-none">
+                                                        {graphTotals.demosAoey.toLocaleString()}
+                                                    </p>
+                                                </div>
+                                                <div className="flex flex-col relative">
+                                                    <div className="absolute -left-5 top-2 w-4 h-px bg-white/10" />
+                                                    <div className="flex items-center gap-1.5 mb-1">
+                                                        <div className="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_8px_#f59e0b]" />
+                                                        <span className="text-text-muted text-[10px] uppercase font-bold tracking-widest">Yo</span>
+                                                    </div>
+                                                    <p className="text-white text-xl font-bold tracking-tighter tabular-nums leading-none">
+                                                        {graphTotals.demosYo.toLocaleString()}
+                                                    </p>
+                                                </div>
+
+                                                {/* Demo Status Breakdown */}
+                                                <div className="h-px bg-white/5 w-full my-1" />
+                                                <p className="text-white text-sm uppercase font-bold tracking-widest mb-4">สถานะ Demo</p>
+                                                <div className="flex flex-col gap-4">
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-sm text-slate-300 font-medium">Demo แล้ว</span>
+                                                        <span className="text-lg text-emerald-400 font-bold">
+                                                            {filteredMasterDemos.filter(d => d.demoStatus?.includes('Demo แล้ว')).length}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-sm text-slate-300 font-medium">ยังไม่ได้ Demo</span>
+                                                        <span className="text-lg text-amber-400 font-bold">
+                                                            {filteredMasterDemos.filter(d => d.demoStatus?.includes('ยังไม่ได้')).length}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-sm text-slate-300 font-medium">ลูกค้าปฏิเสธ</span>
+                                                        <span className="text-lg text-rose-400 font-bold">
+                                                            {filteredMasterDemos.filter(d => d.demoStatus?.includes('ปฎิเสธ') || d.demoStatus?.includes('ปฏิเสธ')).length}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-sm text-slate-300 font-medium">ไม่ระบุ</span>
+                                                        <span className="text-lg text-slate-500 font-bold">
+                                                            {filteredMasterDemos.filter(d => !d.demoStatus || d.demoStatus.trim() === '').length}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         ) : (
                                             <div className="p-3 rounded-xl bg-white/5 border border-white/5 space-y-2">
                                                 <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest">Period Insights</p>
@@ -723,6 +867,14 @@ export default function Dashboard({ customers, installations, issues, activities
                                                     <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
                                                     <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                                                 </linearGradient>
+                                                <linearGradient id="colorAoey" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
+                                                    <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+                                                </linearGradient>
+                                                <linearGradient id="colorYo" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3} />
+                                                    <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
+                                                </linearGradient>
                                                 <filter id="glowDrease" x="-20%" y="-20%" width="140%" height="140%">
                                                     <feGaussianBlur stdDeviation="3" result="blur" />
                                                     <feComposite in="SourceGraphic" in2="blur" operator="over" />
@@ -740,6 +892,14 @@ export default function Dashboard({ customers, installations, issues, activities
                                                     <feComposite in="SourceGraphic" in2="blur" operator="over" />
                                                 </filter>
                                                 <filter id="glowDemos" x="-20%" y="-20%" width="140%" height="140%">
+                                                    <feGaussianBlur stdDeviation="3" result="blur" />
+                                                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                                                </filter>
+                                                <filter id="glowAoey" x="-20%" y="-20%" width="140%" height="140%">
+                                                    <feGaussianBlur stdDeviation="3" result="blur" />
+                                                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                                                </filter>
+                                                <filter id="glowYo" x="-20%" y="-20%" width="140%" height="140%">
                                                     <feGaussianBlur stdDeviation="3" result="blur" />
                                                     <feComposite in="SourceGraphic" in2="blur" operator="over" />
                                                 </filter>
@@ -790,7 +950,10 @@ export default function Dashboard({ customers, installations, issues, activities
                                                 </>
                                             )}
                                             {selectedMetric === 'demos' && (
-                                                <Area type="monotone" dataKey="demos" name="Demos" stroke="#3b82f6" fill="url(#colorDemos)" strokeWidth={3} filter="url(#glowDemos)" activeDot={{ r: 6, stroke: '#3b82f6', strokeWidth: 2, fill: '#fff' }} />
+                                                <>
+                                                    <Area type="monotone" dataKey="demosAoey" name="Aoey" stroke="#22c55e" fill="url(#colorAoey)" strokeWidth={3} filter="url(#glowAoey)" activeDot={{ r: 6, stroke: '#22c55e', strokeWidth: 2, fill: '#fff' }} />
+                                                    <Area type="monotone" dataKey="demosYo" name="Yo" stroke="#f59e0b" fill="url(#colorYo)" strokeWidth={3} filter="url(#glowYo)" activeDot={{ r: 6, stroke: '#f59e0b', strokeWidth: 2, fill: '#fff' }} />
+                                                </>
                                             )}
                                             {selectedMetric === 'sales' && (
                                                 <Area type="monotone" dataKey="sales" name="New Sales" stroke="#10b981" fill="url(#colorSales)" strokeWidth={3} filter="url(#glowSales)" activeDot={{ r: 6, stroke: '#10b981', strokeWidth: 2, fill: '#fff' }} />
