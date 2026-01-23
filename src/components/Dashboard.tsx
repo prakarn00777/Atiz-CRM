@@ -205,9 +205,8 @@ export default function Dashboard({ customers, installations, issues, activities
 
         const isValidLead = (l: GoogleSheetLead) => {
             const hasName = l.customerName && l.customerName.trim() !== '';
-            const hasContact = (l.phone && l.phone.trim() !== '') || (l.notes && l.notes.includes('@'));
             const isNotSpam = !l.leadType?.toLowerCase().includes('spam') && !l.customerName?.toLowerCase().includes('test');
-            return hasName && hasContact && isNotSpam;
+            return hasName && isNotSpam;
         };
 
         const filterLeadsByRange = (range: { start: Date, end: Date }) => {
