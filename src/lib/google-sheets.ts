@@ -33,8 +33,8 @@ const getGoogleSheetsClient = async () => {
   }
 };
 
-const SPREADSHEET_ID = process.env.GOOGLE_SPREADSHEET_ID;
-const SHEET_NAME = process.env.GOOGLE_SHEET_NAME || 'Sheet1';
+const SPREADSHEET_ID = process.env.GOOGLE_SPREADSHEET_ID?.trim();
+const SHEET_NAME = (process.env.GOOGLE_SHEET_NAME || 'Sheet1').trim();
 
 // Lead interface matching the actual Google Sheet structure
 export interface LeadRow {
@@ -63,6 +63,8 @@ export async function getLeads(): Promise<LeadRow[]> {
       console.error('GOOGLE_SPREADSHEET_ID is missing');
       throw new Error('GOOGLE_SPREADSHEET_ID is not defined in environment variables');
     }
+
+    console.log(`Attempting to fetch Google Sheet: ID=${SPREADSHEET_ID.substring(0, 5)}...${SPREADSHEET_ID.substring(SPREADSHEET_ID.length - 5)}, Name="${SHEET_NAME}"`);
 
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
