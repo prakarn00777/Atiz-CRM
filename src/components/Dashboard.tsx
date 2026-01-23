@@ -260,8 +260,8 @@ export default function Dashboard({ customers, installations, issues, activities
         return [
             { label: "Total Leads – This Week", subLabel: "ผู้สนใจรายสัปดาห์ (Mon-Sun)", numericValue: currentCount, prefix: "", suffix: "", sub: `Dr.Ease: ${dreaseLeads} | Ease: ${easeLeads}`, extraInfo: WoWTag, tooltip: "อัตราการเติบโตเมื่อเทียบกับสัปดาห์ก่อน (WoW): ((จำนวนสัปดาห์นี้-จำนวนสัปดาห์ก่อน) / จำนวนสัปดาห์ก่อน) x 100", icon: Briefcase, color: "text-amber-400", border: "border-amber-500/20", bg: "from-amber-500/10" },
             { label: "Weekly Demos", subLabel: "การทำ Demo รายสัปดาห์", numericValue: currentDemos, prefix: "", suffix: "", sub: `เข้าข่ายสัปดาห์ปัจจุบัน`, icon: Monitor, color: "text-blue-400", border: "border-blue-500/20", bg: "from-blue-500/10" },
-            { label: "New Sales", subLabel: "ยอดเงินปิดใหม่", numericValue: 408604, prefix: "฿", suffix: "", sub: "Revenue สัปดาห์นี้", icon: DollarSign, color: "text-emerald-400", border: "border-emerald-500/20", bg: "from-emerald-500/10" },
-            { label: "Renewal", subLabel: "ยอดเงินต่อสัญญา", numericValue: 882120, prefix: "฿", suffix: "", sub: "Revenue สัปดาห์นี้", icon: TrendingUp, color: "text-purple-400", border: "border-purple-500/20", bg: "from-purple-500/10" },
+            { label: "New Sales", subLabel: "ยอดเงินปิดใหม่", numericValue: 414504.57, prefix: "฿", suffix: "", sub: "Revenue สัปดาห์นี้", icon: DollarSign, color: "text-emerald-400", border: "border-emerald-500/20", bg: "from-emerald-500/10" },
+            { label: "Renewal", subLabel: "ยอดเงินต่อสัญญา", numericValue: 965629.05, prefix: "฿", suffix: "", sub: "Revenue สัปดาห์นี้", icon: TrendingUp, color: "text-purple-400", border: "border-purple-500/20", bg: "from-purple-500/10" },
         ];
     }, [googleSheetLeads, activities]);
 
