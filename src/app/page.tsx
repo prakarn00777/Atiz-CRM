@@ -253,13 +253,13 @@ export default function CRMPage() {
     const channels = [
       db.channel('public:issues')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'issues' }, (payload: any) => {
-          fetchDataDebounced();
-
           if (!user) return;
           const { eventType, new: newRecord, old: oldRecord } = payload;
           const actor = newRecord?.created_by || newRecord?.modified_by;
-          // Skip notifications if no valid actor is found (e.g., direct DB edit) or if it's the current user
+
           if (!actor || actor === "System" || actor === user.name) return;
+
+          fetchDataDebounced();
 
           if (eventType === 'INSERT') {
             pushNotification(
@@ -278,12 +278,12 @@ export default function CRMPage() {
         .subscribe(),
       db.channel('public:customers')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, (payload: any) => {
-          fetchDataDebounced();
-
           if (!user) return;
+          const actor = payload.new?.created_by || payload.new?.modified_by;
+          if (!actor || actor === "System" || actor === user.name) return;
+
+          fetchDataDebounced();
           if (payload.eventType === 'INSERT') {
-            const actor = payload.new.created_by;
-            if (!actor || actor === "System" || actor === user.name) return;
             pushNotification(
               "👥 มีลูกค้าใหม่",
               `เพิ่มลูกค้า: ${payload.new.name} โดย ${actor || 'System'}`,
@@ -294,12 +294,12 @@ export default function CRMPage() {
         .subscribe(),
       db.channel('public:installations')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'installations' }, (payload: any) => {
-          fetchDataDebounced();
-
           if (!user) return;
           const { eventType, new: newRecord, old: oldRecord } = payload;
           const actor = newRecord?.created_by || newRecord?.modified_by;
           if (!actor || actor === "System" || actor === user.name) return;
+
+          fetchDataDebounced();
 
           if (eventType === 'INSERT') {
             pushNotification(
@@ -418,6 +418,11 @@ export default function CRMPage() {
       setCustomers([data, ...customers]);
     }
 
+    // Immediate Cache Sync
+    localStorage.setItem("crm_customers_v2", JSON.stringify(editingCustomer
+      ? customers.map(c => c.id === data.id ? data : c)
+      : [data, ...customers]));
+
     setModalOpen(false);
     setEditingCustomer(null);
     setIsEditingName(false);
@@ -482,8 +487,9 @@ export default function CRMPage() {
     const optimisticLead = { ...data, id: data.id || Date.now() };
     const previousLeads = [...leads];
     setLeads(prev => {
-      if (editingLead) return prev.map(l => l.id === editingLead.id ? optimisticLead : l);
-      return [optimisticLead, ...prev];
+      const updated = editingLead ? prev.map(l => l.id === editingLead.id ? optimisticLead : l) : [optimisticLead, ...prev];
+      localStorage.setItem("crm_leads_v2", JSON.stringify(updated));
+      return updated;
     });
 
     setLeadModalOpen(false);
@@ -519,7 +525,9 @@ export default function CRMPage() {
 
   const handleDeleteLead = async (id: number) => {
     const previousLeads = [...leads];
-    setLeads(prev => prev.filter(l => l.id !== id));
+    const updatedLeads = leads.filter(l => l.id !== id);
+    setLeads(updatedLeads);
+    localStorage.setItem("crm_leads_v2", JSON.stringify(updatedLeads));
     setToast({ message: "ลบข้อมูลลีดเรียบร้อยแล้ว", type: "success" });
 
     const res = await deleteLead(id);
@@ -573,6 +581,10 @@ export default function CRMPage() {
     } else {
       setIssues([data, ...issues]);
     }
+
+    localStorage.setItem("crm_issues_v2", JSON.stringify(editingIssue
+      ? issues.map(i => i.id === data.id ? data : i)
+      : [data, ...issues]));
 
     setIssueModalOpen(false);
     setEditingIssue(null);
@@ -855,6 +867,7 @@ export default function CRMPage() {
       : [data, ...activities];
 
     setActivities(updatedActivities);
+    localStorage.setItem("crm_activities_v2", JSON.stringify(updatedActivities));
     setIsSavingActivity(true);
     setActivityModalOpen(false);
     setEditingActivity(null);
@@ -1524,7 +1537,9 @@ export default function CRMPage() {
                     if (deleteConfirm.type === 'activity' && deleteConfirm.id) {
                       if (isDeleting) return;
                       const prevActivities = [...activities];
-                      setActivities(prev => prev.filter(a => a.id !== deleteConfirm.id));
+                      const updatedActivities = activities.filter(a => a.id !== deleteConfirm.id);
+                      setActivities(updatedActivities);
+                      localStorage.setItem("crm_activities_v2", JSON.stringify(updatedActivities));
                       setToast({ message: "กำลังลบกิจกรรม...", type: "info" });
                       setIsDeleting(true);
                       const res = await deleteActivity(deleteConfirm.id);
