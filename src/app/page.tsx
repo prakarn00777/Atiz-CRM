@@ -883,8 +883,19 @@ export default function CRMPage() {
         <div className="min-h-screen flex items-center justify-center p-4 bg-[#0f172a]">
           <div className="glass-card w-full max-w-md p-8 border-indigo-500/20">
             <div className="flex flex-col items-center mb-8">
-              <div className="w-16 h-16 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/20 mb-4 animate-bounce">
-                <Layers className="w-8 h-8 text-white" />
+              <div className="mb-8 relative group animate-bounce">
+                {/* Animated Glow Effect */}
+                <div className="absolute inset-[-20px] bg-gradient-to-r from-indigo-500/40 via-purple-500/40 to-indigo-500/40 blur-2xl rounded-full animate-pulse" />
+                <div className="absolute inset-[-10px] bg-indigo-400/30 blur-xl rounded-full animate-[pulse_2s_ease-in-out_infinite]" />
+
+                {/* Logo Container */}
+                <div className="relative z-10 w-28 h-28 flex items-center justify-center group-hover:scale-110 transition-transform duration-500">
+                  <img
+                    src="/images/LOGO ATIZ-02.png"
+                    alt="ATIZ Logo"
+                    className="w-full h-full object-contain rounded-[32px] drop-shadow-[0_0_25px_rgba(99,102,241,0.5)]"
+                  />
+                </div>
               </div>
               <h1 className="text-3xl font-bold text-white tracking-tight">Atiz CRM</h1>
               <p className="text-slate-400 mt-2 text-sm italic">Advanced Management Console</p>

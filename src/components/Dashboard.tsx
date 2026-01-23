@@ -385,7 +385,7 @@ export default function Dashboard({ customers, installations, issues, activities
     }, [dynamicGraphData]);
 
     return (
-        <div ref={dashboardRef} className={`animate-in fade-in zoom-in-95 duration-500 relative custom-scrollbar flex flex-col pt-2 ${isFullscreen ? 'p-8 bg-slate-950 h-screen w-screen overflow-hidden gap-4' : 'space-y-4 pb-10 overflow-y-auto'}`}>
+        <div ref={dashboardRef} className={`animate-in fade-in zoom-in-95 duration-500 relative custom-scrollbar flex flex-col pt-2 ${isFullscreen ? 'p-8 bg-slate-950 h-screen w-screen overflow-hidden gap-4' : 'h-full overflow-hidden space-y-4'}`}>
             <ParticlesBackground className="absolute inset-0 z-0" />
             <style>{iconAnimationStyles}</style>
 
@@ -497,8 +497,8 @@ export default function Dashboard({ customers, installations, issues, activities
             )}
 
             {activeTab === 'business' && (
-                <div className="relative z-10 animate-in slide-in-from-right-4 duration-500 flex flex-col min-h-0 flex-1 space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 flex-shrink-0">
+                <div className="relative z-10 animate-in slide-in-from-right-4 duration-500 flex flex-col min-h-0 flex-1 gap-3 overflow-hidden">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 flex-shrink-0">
                         {businessStats.map((stat, i) => (
                             <div key={i} className={`glass-card p-4 border transition-all duration-300 hover:-translate-y-1 hover:z-20 ${stat.border}`}>
                                 <div className={`absolute inset-0 bg-gradient-to-br ${stat.bg} to-transparent opacity-30 transition-opacity duration-300 group-hover:opacity-50`} />
@@ -527,7 +527,7 @@ export default function Dashboard({ customers, installations, issues, activities
                         ))}
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-0">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 flex-1 min-h-0 overflow-hidden">
                         <div className="lg:col-span-2 glass-card p-6 border-white/5 flex flex-col min-h-0">
                             <div className="flex items-center justify-between mb-2">
                                 <div className="flex flex-col">
@@ -772,11 +772,6 @@ export default function Dashboard({ customers, installations, issues, activities
                                     </div>
                                 </div>
                             </div>
-                            {!isFullscreen && (
-                                <button onClick={() => onViewChange('customers')} className="w-full py-3 mt-6 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-bold tracking-widest uppercase transition-all shadow-lg active:scale-95 flex-shrink-0">
-                                    Analysis Report
-                                </button>
-                            )}
                         </div>
                     </div>
                 </div>
