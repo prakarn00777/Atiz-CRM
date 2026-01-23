@@ -29,10 +29,15 @@ export default function CustomDatePicker({
     // Initialize current viewing month from value or current date
     const [currentMonth, setCurrentMonth] = useState(() => value ? new Date(value) : new Date());
     const containerRef = useRef<HTMLDivElement>(null);
+    const portalRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
-            if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+            const target = event.target as Node;
+            const isOutsideContainer = containerRef.current && !containerRef.current.contains(target);
+            const isOutsidePortal = portalRef.current && !portalRef.current.contains(target);
+
+            if (isOutsideContainer && isOutsidePortal) {
                 setIsOpen(false);
             }
         }
@@ -130,6 +135,7 @@ export default function CustomDatePicker({
 
             {isOpen && createPortal(
                 <div
+                    ref={portalRef}
                     className={`fixed z-[9999] w-[280px] mt-1.5 p-4 bg-slate-900/95 border border-white/10 rounded-xl shadow-2xl transition-all duration-150 ease-out origin-top ${isOpen
                         ? "opacity-100 translate-y-0 visible"
                         : "opacity-0 -translate-y-2 invisible"

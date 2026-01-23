@@ -40,6 +40,7 @@ export default function CustomSelect({
     const [isOpen, setIsOpen] = useState(false);
     const [internalSelected, setInternalSelected] = useState(defaultValue || options[0]?.value || "");
     const containerRef = useRef<HTMLDivElement>(null);
+    const portalRef = useRef<HTMLDivElement>(null);
     const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
 
     const activeValue = value !== undefined ? value : internalSelected;
@@ -47,25 +48,17 @@ export default function CustomSelect({
 
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
-            // Logic adjusted for Portal: check if click is outside both container AND portal content (handled by keeping portal logic simple or checking e.target)
-            // Simple way: if click is not in containerRef, close. 
-            // BUT if click is inside the Portal, containerRef won't contain it.
-            // We can ignore this for now as selecting an option closes it, and clicking outside (on overlay/body) should close it.
-            // Actually, clicking inside the Portal (options) will bubble up? No, it's in body.
-            // We need to check if target is distinct.
-            if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-                // We also need to check if the click target is the dropdown menu itself (which is in the portal).
-                // Assign an ID or Data attribute to the portal dropdown?
-                const dropdown = document.getElementById(`dropdown-${name || 'select'}`);
-                if (dropdown && dropdown.contains(event.target as Node)) {
-                    return;
-                }
+            const target = event.target as Node;
+            const isOutsideContainer = containerRef.current && !containerRef.current.contains(target);
+            const isOutsidePortal = portalRef.current && !portalRef.current.contains(target);
+
+            if (isOutsideContainer && isOutsidePortal) {
                 setIsOpen(false);
             }
         }
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, [name]);
+    }, []);
 
     // Update coordinates when opening
     useEffect(() => {
@@ -139,7 +132,7 @@ export default function CustomSelect({
 
             {isOpen && createPortal(
                 <div
-                    id={`dropdown-${name || 'select'}`}
+                    ref={portalRef}
                     className="fixed z-[9999] py-1 bg-[#0f172a] border border-white/10 rounded-xl shadow-2xl overflow-hidden"
                     style={{
                         top: containerRef.current ? containerRef.current.getBoundingClientRect().bottom + 6 : 0,

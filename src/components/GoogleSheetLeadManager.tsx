@@ -3,7 +3,32 @@
 import { useState, useEffect, useMemo } from "react";
 import { Search, Filter, Phone, User, Tag, Briefcase, MessageSquare, FileText, Building2, Calendar, ExternalLink, Loader2, RefreshCw } from "lucide-react";
 import CustomSelect from "./CustomSelect";
+import CustomDatePicker from "./CustomDatePicker";
 import { GoogleSheetLead } from "@/types";
+
+export const parseSheetDate = (dateVal: string | undefined) => {
+    if (!dateVal) return null;
+    const parts = dateVal.split('/');
+    if (parts.length === 3) {
+        const d = parseInt(parts[0]);
+        const m = parseInt(parts[1]) - 1;
+        const y = parseInt(parts[2]);
+        if (!isNaN(d) && !isNaN(m) && !isNaN(y)) {
+            return new Date(y, m, d);
+        }
+    }
+    const d = new Date(dateVal);
+    return isNaN(d.getTime()) ? null : d;
+};
+
+const parseLocalISO = (isoStr: string) => {
+    if (!isoStr) return null;
+    const parts = isoStr.split('-');
+    if (parts.length === 3) {
+        return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+    }
+    return new Date(isoStr);
+};
 
 interface GoogleSheetLeadManagerProps {
     leads: GoogleSheetLead[];
@@ -18,6 +43,8 @@ export default function GoogleSheetLeadManager({ leads, isLoading, onRefresh }: 
     const [typeFilter, setTypeFilter] = useState("all");
     const [salesFilter, setSalesFilter] = useState("all");
     const [statusFilter, setStatusFilter] = useState("all");
+    const [startDate, setStartDate] = useState("");
+    const [endDate, setEndDate] = useState("");
 
     // Get unique values for filters
     const uniqueProducts = useMemo(() => [...new Set(leads.map(l => l.product).filter(Boolean))], [leads]);
@@ -39,8 +66,16 @@ export default function GoogleSheetLeadManager({ leads, isLoading, onRefresh }: 
         const matchesSales = salesFilter === "all" || l.salesName === salesFilter;
         const matchesStatus = statusFilter === "all" || l.quotationStatus === statusFilter;
 
-        return matchesSearch && matchesProduct && matchesSource && matchesType && matchesSales && matchesStatus;
-    }), [leads, searchTerm, productFilter, sourceFilter, typeFilter, salesFilter, statusFilter]);
+        const leadDate = parseSheetDate(l.date);
+        const sDate = parseLocalISO(startDate);
+        const eDate = parseLocalISO(endDate);
+        if (eDate) eDate.setHours(23, 59, 59, 999);
+
+        const matchesDateRange = (!sDate || (leadDate && leadDate >= sDate)) &&
+            (!eDate || (leadDate && leadDate <= eDate));
+
+        return matchesSearch && matchesProduct && matchesSource && matchesType && matchesSales && matchesStatus && matchesDateRange;
+    }), [leads, searchTerm, productFilter, sourceFilter, typeFilter, salesFilter, statusFilter, startDate, endDate]);
 
     // Sort by leadIndex descending (newest first)
     const sortedLeads = useMemo(() => [...filteredLeads].sort((a, b) =>
@@ -58,7 +93,7 @@ export default function GoogleSheetLeadManager({ leads, isLoading, onRefresh }: 
     // Reset page when filters change
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchTerm, productFilter, sourceFilter, typeFilter, salesFilter, statusFilter]);
+    }, [searchTerm, productFilter, sourceFilter, typeFilter, salesFilter, statusFilter, startDate, endDate]);
 
     const getStatusBadge = (status: string) => {
         if (!status) return null;
@@ -112,6 +147,21 @@ export default function GoogleSheetLeadManager({ leads, isLoading, onRefresh }: 
                     </div>
 
                     <div className="flex flex-wrap items-center gap-3 w-full">
+                        <div className="w-[160px]">
+                            <CustomDatePicker
+                                value={startDate}
+                                onChange={setStartDate}
+                                placeholder="วันที่เริ่มต้น"
+                            />
+                        </div>
+                        <div className="w-[160px]">
+                            <CustomDatePicker
+                                value={endDate}
+                                onChange={setEndDate}
+                                placeholder="วันที่สิ้นสุด"
+                            />
+                        </div>
+
                         <CustomSelect
                             options={[
                                 { value: "all", label: "ทุก Product" },
