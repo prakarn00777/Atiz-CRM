@@ -142,6 +142,7 @@ export default function CRMPage() {
   const [modalUsageStatus, setModalUsageStatus] = useState<UsageStatus>("Active");
   const [modalIssueStatus, setModalIssueStatus] = useState<"แจ้งเคส" | "กำลังดำเนินการ" | "เสร็จสิ้น">("แจ้งเคส");
   const [isSavingActivity, setIsSavingActivity] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const { pushNotification, requestPermission } = useNotification();
@@ -490,7 +491,10 @@ export default function CRMPage() {
     setToast({ message: "บันทึกข้อมูลลีดสำเร็จ", type: "success" });
 
     const res = await saveLead(data);
-    if (!res.success) {
+    if (res.success && res.data) {
+      // Sync official ID back to state
+      setLeads(prev => prev.map(l => l.leadNumber === data.leadNumber ? { ...res.data, id: res.data.id } : l));
+    } else if (!res.success) {
       setLeads(previousLeads);
       setToast({ message: "ผิดพลาด: " + res.error, type: "error" });
       fetchDataDebounced();
@@ -600,7 +604,10 @@ export default function CRMPage() {
       // Remove id for new issues to let database handle auto-increment
       const { id, ...rest } = data;
       const result = await saveIssue(editingIssue ? data : rest);
-      if (!result.success) {
+      if (result.success && result.data) {
+        // Sync server result (especially ID) back to state
+        setIssues(prev => prev.map(iss => iss.id === data.id ? { ...iss, ...result.data, id: result.data.id } : iss));
+      } else if (!result.success) {
         // Rollback on error
         setIssues(previousIssues);
         setToast({ message: "เกิดข้อผิดพลาดในการบันทึกเคส: " + result.error, type: "error" });
@@ -855,7 +862,10 @@ export default function CRMPage() {
 
     try {
       const result = await saveActivity(data);
-      if (!result.success) {
+      if (result.success && result.data) {
+        // Sync ID from server
+        setActivities(prev => prev.map(a => a.id === data.id ? (result.data as CSActivity) : a));
+      } else if (!result.success) {
         setActivities(prevActivities);
         setToast({ message: "เกิดข้อผิดพลาดในการบันทึกกิจกรรม: " + result.error, type: "error" });
       }
@@ -1512,10 +1522,13 @@ export default function CRMPage() {
                       setActiveBranchIndex(Math.max(0, (deleteConfirm.index || 0) - 1));
                     }
                     if (deleteConfirm.type === 'activity' && deleteConfirm.id) {
+                      if (isDeleting) return;
                       const prevActivities = [...activities];
                       setActivities(prev => prev.filter(a => a.id !== deleteConfirm.id));
                       setToast({ message: "กำลังลบกิจกรรม...", type: "info" });
+                      setIsDeleting(true);
                       const res = await deleteActivity(deleteConfirm.id);
+                      setIsDeleting(false);
                       if (!res.success) {
                         setActivities(prevActivities);
                         setToast({ message: "เกิดข้อผิดพลาด: " + res.error, type: "error" });
@@ -1524,8 +1537,10 @@ export default function CRMPage() {
                         setToast({ message: "ลบกิจกรรมเรียบร้อยแล้ว", type: "success" });
                       }
                     }
-                    setDeleteConfirm(null);
-                  }} className="btn bg-rose-500 hover:bg-rose-600 text-white flex-1">ลบรายการ</button>
+                    if (!isDeleting) setDeleteConfirm(null);
+                  }} disabled={isDeleting} className="btn bg-rose-500 hover:bg-rose-600 text-white flex-1 disabled:opacity-50">
+                    {isDeleting ? "กำลังลบ..." : "ลบรายการ"}
+                  </button>
                 </div>
               </div>
             </div>

@@ -200,7 +200,7 @@ export async function saveUser(userData: any) {
         };
 
         let result;
-        if (id && id > 1000000) { // New user (temporary ID from Date.now())
+        if (id && id > 1000000000000) { // New user (temporary ID from Date.now())
             const { data, error } = await db.from('users').insert(dbData).select();
             if (error) throw error;
             result = data?.[0];
@@ -358,7 +358,7 @@ export async function saveIssue(issueData: any) {
         };
 
         let result;
-        if (id && typeof id === 'number' && id < 1000000) { // Existing issue
+        if (id && typeof id === 'number' && id < 1000000000000) { // Existing issue
             console.log("Updating issue:", id, dbData);
             const { data, error } = await db.from('issues').update(dbData).eq('id', id).select();
             if (error) {
@@ -422,7 +422,7 @@ export async function saveCustomer(customerData: any) {
         };
 
         let result;
-        if (id && id < 1000000) {
+        if (id && id < 1000000000000) {
             const { data, error } = await db.from('customers').update(dbData).eq('id', id).select();
             if (error) throw error;
             result = data?.[0];
@@ -469,7 +469,7 @@ export async function saveInstallation(instData: any) {
         };
 
         let result;
-        if (id && typeof id === 'number' && id < 1000000) {
+        if (id && typeof id === 'number' && id < 1000000000000) {
             console.log("Updating installation:", id, dbData);
             const { data, error } = await db.from('installations').update(dbData).eq('id', id).select();
             if (error) {
@@ -556,7 +556,7 @@ export async function saveActivity(activityData: any) {
         };
 
         let result;
-        if (id && id < 1000000) {
+        if (id && id < 1000000000000) {
             const { data, error } = await db.from('activities').update(dbData).eq('id', id).select();
             if (error) throw error;
             result = data?.[0];
