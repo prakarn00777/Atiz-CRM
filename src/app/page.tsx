@@ -141,6 +141,7 @@ export default function CRMPage() {
   const [tempBranchAddress, setTempBranchAddress] = useState("");
   const [modalUsageStatus, setModalUsageStatus] = useState<UsageStatus>("Active");
   const [modalIssueStatus, setModalIssueStatus] = useState<"แจ้งเคส" | "กำลังดำเนินการ" | "เสร็จสิ้น">("แจ้งเคส");
+  const [isSavingActivity, setIsSavingActivity] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const { pushNotification, requestPermission } = useNotification();
@@ -821,6 +822,8 @@ export default function CRMPage() {
 
   const handleSaveActivity = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (isSavingActivity) return;
+
     const formData = new FormData(e.currentTarget);
     const data: CSActivity = {
       id: editingActivity ? editingActivity.id : Date.now(),
@@ -845,6 +848,7 @@ export default function CRMPage() {
       : [data, ...activities];
 
     setActivities(updatedActivities);
+    setIsSavingActivity(true);
     setActivityModalOpen(false);
     setEditingActivity(null);
     setToast({ message: "บันทึกข้อมูลกิจกรรมเรียบร้อยแล้ว", type: "success" });
@@ -859,6 +863,8 @@ export default function CRMPage() {
       console.error("Failed to save activity:", err);
       setActivities(prevActivities);
       setToast({ message: "เกิดข้อผิดพลาดในการเชื่อมต่อ", type: "error" });
+    } finally {
+      setIsSavingActivity(false);
     }
   };
 
@@ -1505,8 +1511,18 @@ export default function CRMPage() {
                       setBranchInputs(filtered);
                       setActiveBranchIndex(Math.max(0, (deleteConfirm.index || 0) - 1));
                     }
-                    if ((deleteConfirm.type as string) === 'activity' && deleteConfirm.id && currentView === 'leads') {
-                      await handleDeleteLead(deleteConfirm.id);
+                    if (deleteConfirm.type === 'activity' && deleteConfirm.id) {
+                      const prevActivities = [...activities];
+                      setActivities(prev => prev.filter(a => a.id !== deleteConfirm.id));
+                      setToast({ message: "กำลังลบกิจกรรม...", type: "info" });
+                      const res = await deleteActivity(deleteConfirm.id);
+                      if (!res.success) {
+                        setActivities(prevActivities);
+                        setToast({ message: "เกิดข้อผิดพลาด: " + res.error, type: "error" });
+                        fetchDataDebounced();
+                      } else {
+                        setToast({ message: "ลบกิจกรรมเรียบร้อยแล้ว", type: "success" });
+                      }
                     }
                     setDeleteConfirm(null);
                   }} className="btn bg-rose-500 hover:bg-rose-600 text-white flex-1">ลบรายการ</button>
@@ -1668,7 +1684,16 @@ export default function CRMPage() {
 
                 <div className="p-6 border-t border-white/5 flex gap-3 shrink-0">
                   <button type="button" onClick={() => setActivityModalOpen(false)} className="flex-1 btn btn-ghost py-3 rounded-xl font-bold text-slate-400 hover:bg-white/5">Cancel</button>
-                  <button form="task-form" type="submit" className="flex-1 btn btn-primary py-3 rounded-xl font-bold shadow-xl shadow-indigo-500/20 active:scale-95 transition-transform">Save Task</button>
+                  <button form="task-form" type="submit" disabled={isSavingActivity} className="flex-1 btn btn-primary py-3 rounded-xl font-bold shadow-xl shadow-indigo-500/20 active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed">
+                    {isSavingActivity ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Saving...
+                      </span>
+                    ) : (
+                      "Save Task"
+                    )}
+                  </button>
                 </div>
               </div>
             </div>
