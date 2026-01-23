@@ -113,3 +113,21 @@ export interface Lead {
     modifiedBy?: string;
     modifiedAt?: string;
 }
+
+// Lead from Google Sheets (read-only, different structure)
+export interface GoogleSheetLead {
+    id?: string;           // Row number
+    leadIndex: string;     // ลีดที่ (Column A)
+    leadNumber: string;    // เลขที่ลีด (Column B)
+    date: string;          // วันที่ (Column C)
+    product: string;       // Product (Column D)
+    source: string;        // ลีด (Column E)
+    leadType: string;      // ประเภทลีด (Column F)
+    salesName: string;     // เซลล์ (Column G)
+    customerName: string;  // ชื่อลูกค้า (Column H)
+    phone: string;         // เบอร์โทร (Column I)
+    quotationStatus: string; // สถานะใบเสนอราคา (Column J)
+    quotation: string;     // ใบเสนอราคา (Column K)
+    clinicName: string;    // ชื่อคลินิก/ธุรกิจ (Column L)
+    notes: string;         // Note (Column M)
+}

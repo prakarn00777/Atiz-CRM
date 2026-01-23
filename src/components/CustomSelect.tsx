@@ -19,6 +19,7 @@ interface CustomSelectProps {
     className?: string;
     icon?: React.ReactNode;
     disabled?: boolean;
+    portalContainer?: HTMLElement | null;
 }
 
 import { createPortal } from "react-dom";
@@ -33,7 +34,8 @@ export default function CustomSelect({
     placeholder = "เลือกรายการ",
     className,
     icon,
-    disabled = false
+    disabled = false,
+    portalContainer
 }: CustomSelectProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [internalSelected, setInternalSelected] = useState(defaultValue || options[0]?.value || "");
@@ -161,7 +163,7 @@ export default function CustomSelect({
                         </button>
                     ))}
                 </div>,
-                document.body
+                portalContainer || document.body
             )}
         </div>
     );

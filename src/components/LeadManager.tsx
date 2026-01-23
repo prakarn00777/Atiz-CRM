@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { Search, Edit2, Trash2, Filter, Clock, MoreVertical, Plus, User, Phone, Tag, Briefcase, MessageSquare } from "lucide-react";
 import CustomSelect from "./CustomSelect";
@@ -59,7 +59,7 @@ export default function LeadManager({ leads, onEdit, onDelete, onAdd }: LeadMana
         }
     };
 
-    const filteredLeads = leads.filter((l) => {
+    const filteredLeads = useMemo(() => leads.filter((l) => {
         const matchesSearch =
             (l.customerName || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
             (l.leadNumber || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -71,35 +71,24 @@ export default function LeadManager({ leads, onEdit, onDelete, onAdd }: LeadMana
         const matchesSales = salesFilter === "all" || l.salesName === salesFilter;
 
         return matchesSearch && matchesProduct && matchesSource && matchesType && matchesSales;
-    });
+    }), [leads, searchTerm, productFilter, sourceFilter, typeFilter, salesFilter]);
 
-    const sortedLeads = [...filteredLeads].sort((a, b) => b.id - a.id);
+    const sortedLeads = useMemo(() => [...filteredLeads].sort((a, b) => b.id - a.id), [filteredLeads]);
 
     const itemsPerPage = 10;
     const [currentPage, setCurrentPage] = useState(1);
-    const totalPages = Math.ceil(sortedLeads.length / itemsPerPage);
-    const paginatedLeads = sortedLeads.slice(
+    const totalPages = useMemo(() => Math.ceil(sortedLeads.length / itemsPerPage), [sortedLeads]);
+    const paginatedLeads = useMemo(() => sortedLeads.slice(
         (currentPage - 1) * itemsPerPage,
         currentPage * itemsPerPage
-    );
+    ), [sortedLeads, currentPage]);
 
     return (
         <div className="space-y-6">
-            <div className="flex flex-col gap-4">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-3xl font-bold tracking-tight mb-2">จัดการลีด (Leads)</h1>
-                        <p className="text-slate-400 text-sm">ติดตามความคืบหน้าและข้อมูลลีดในระบบ</p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <button
-                            onClick={onAdd}
-                            className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-bold transition-all shadow-lg shadow-indigo-500/20 active:scale-95"
-                        >
-                            <Plus className="w-4 h-4" />
-                            เพิ่มลีดใหม่
-                        </button>
-                    </div>
+            <div className="flex flex-col gap-6">
+                <div className="flex flex-col">
+                    <h1 className="text-3xl font-bold tracking-tight mb-2">จัดการลีด (Leads)</h1>
+                    <p className="text-slate-400 text-sm font-medium">ติดตามความคืบหน้าและข้อมูลลีดในระบบ</p>
                 </div>
 
                 <div className="flex flex-col xl:flex-row gap-4 items-start xl:items-center w-full">
@@ -180,6 +169,17 @@ export default function LeadManager({ leads, onEdit, onDelete, onAdd }: LeadMana
                                 placeholder="Sales"
                                 icon={<User className="w-3.5 h-3.5" />}
                             />
+                        </div>
+
+                        {/* Moved Add Lead Button */}
+                        <div className="xl:ml-auto">
+                            <button
+                                onClick={onAdd}
+                                className="flex items-center gap-2 px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-indigo-500/20 active:scale-95 whitespace-nowrap"
+                            >
+                                <Plus className="w-4 h-4" />
+                                เพิ่มลีดใหม่
+                            </button>
                         </div>
                     </div>
                 </div>

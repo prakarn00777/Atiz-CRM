@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
 
 interface CustomDatePickerProps {
@@ -10,6 +11,8 @@ interface CustomDatePickerProps {
     min?: string;
     max?: string;
     className?: string;
+    align?: 'left' | 'right';
+    portalContainer?: HTMLElement | null;
 }
 
 export default function CustomDatePicker({
@@ -18,7 +21,9 @@ export default function CustomDatePicker({
     placeholder = "Select date",
     min,
     max,
-    className
+    className,
+    align = 'left',
+    portalContainer
 }: CustomDatePickerProps) {
     const [isOpen, setIsOpen] = useState(false);
     // Initialize current viewing month from value or current date
@@ -123,77 +128,84 @@ export default function CustomDatePicker({
                 />
             </button>
 
-            <div
-                className={`absolute z-[110] w-[280px] mt-1.5 p-4 bg-slate-900/95 border border-white/10 rounded-xl shadow-2xl transition-all duration-150 ease-out origin-top ${isOpen
-                    ? "opacity-100 translate-y-0 visible"
-                    : "opacity-0 -translate-y-2 invisible"
-                    }`}
-                style={{
-                    willChange: "transform, opacity",
-                    transform: isOpen ? "translateY(0)" : "translateY(-4px)"
-                }}
-            >
-                {/* Header */}
-                <div className="flex items-center justify-between mb-4">
-                    <button
-                        onClick={(e) => { e.stopPropagation(); changeMonth(-1); }}
-                        className="p-1 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition-colors"
-                    >
-                        <ChevronLeft className="w-4 h-4" />
-                    </button>
-                    <span className="text-sm font-semibold text-white">
-                        {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear() + 543}
-                    </span>
-                    <button
-                        onClick={(e) => { e.stopPropagation(); changeMonth(1); }}
-                        className="p-1 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition-colors"
-                    >
-                        <ChevronRight className="w-4 h-4" />
-                    </button>
-                </div>
+            {isOpen && createPortal(
+                <div
+                    className={`fixed z-[9999] w-[280px] mt-1.5 p-4 bg-slate-900/95 border border-white/10 rounded-xl shadow-2xl transition-all duration-150 ease-out origin-top ${isOpen
+                        ? "opacity-100 translate-y-0 visible"
+                        : "opacity-0 -translate-y-2 invisible"
+                        }`}
+                    style={{
+                        top: containerRef.current ? containerRef.current.getBoundingClientRect().bottom + 6 : 0,
+                        left: align === 'right'
+                            ? (containerRef.current ? containerRef.current.getBoundingClientRect().right - 280 : 0)
+                            : (containerRef.current ? containerRef.current.getBoundingClientRect().left : 0),
+                        willChange: "transform, opacity",
+                        transform: isOpen ? "translateY(0)" : "translateY(-4px)"
+                    }}
+                >
+                    {/* Header */}
+                    <div className="flex items-center justify-between mb-4">
+                        <button
+                            onClick={(e) => { e.stopPropagation(); changeMonth(-1); }}
+                            className="p-1 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition-colors"
+                        >
+                            <ChevronLeft className="w-4 h-4" />
+                        </button>
+                        <span className="text-sm font-semibold text-white">
+                            {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear() + 543}
+                        </span>
+                        <button
+                            onClick={(e) => { e.stopPropagation(); changeMonth(1); }}
+                            className="p-1 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition-colors"
+                        >
+                            <ChevronRight className="w-4 h-4" />
+                        </button>
+                    </div>
 
-                {/* Weekdays */}
-                <div className="grid grid-cols-7 mb-2">
-                    {dayNames.map((day, i) => (
-                        <div key={i} className="text-center text-[10px] uppercase font-medium text-slate-500">
-                            {day}
-                        </div>
-                    ))}
-                </div>
+                    {/* Weekdays */}
+                    <div className="grid grid-cols-7 mb-2">
+                        {dayNames.map((day, i) => (
+                            <div key={i} className="text-center text-[10px] uppercase font-medium text-slate-500">
+                                {day}
+                            </div>
+                        ))}
+                    </div>
 
-                {/* Days */}
-                <div className="grid grid-cols-7 gap-1">
-                    {Array.from({ length: firstDay }).map((_, i) => (
-                        <div key={`empty-${i}`} />
-                    ))}
-                    {Array.from({ length: days }).map((_, i) => {
-                        const day = i + 1;
-                        const disabled = isDateDisabled(day);
-                        const selected = isSelected(day);
-                        const today = isToday(day);
+                    {/* Days */}
+                    <div className="grid grid-cols-7 gap-1">
+                        {Array.from({ length: firstDay }).map((_, i) => (
+                            <div key={`empty-${i}`} />
+                        ))}
+                        {Array.from({ length: days }).map((_, i) => {
+                            const day = i + 1;
+                            const disabled = isDateDisabled(day);
+                            const selected = isSelected(day);
+                            const today = isToday(day);
 
-                        return (
-                            <button
-                                key={day}
-                                onClick={(e) => { e.stopPropagation(); !disabled && handleDateClick(day); }}
-                                disabled={disabled}
-                                className={`
+                            return (
+                                <button
+                                    key={day}
+                                    onClick={(e) => { e.stopPropagation(); !disabled && handleDateClick(day); }}
+                                    disabled={disabled}
+                                    className={`
                                     h-8 w-8 rounded-lg flex items-center justify-center text-xs transition-all duration-150
                                     ${selected
-                                        ? "bg-indigo-500 text-white font-bold shadow-lg shadow-indigo-500/20"
-                                        : disabled
-                                            ? "text-slate-600 cursor-not-allowed opacity-50"
-                                            : "text-slate-300 hover:bg-white/10 hover:text-white"
-                                    }
+                                            ? "bg-indigo-500 text-white font-bold shadow-lg shadow-indigo-500/20"
+                                            : disabled
+                                                ? "text-slate-600 cursor-not-allowed opacity-50"
+                                                : "text-slate-300 hover:bg-white/10 hover:text-white"
+                                        }
                                     ${today && !selected ? "border border-indigo-500/50 text-indigo-400" : ""}
                                 `}
-                            >
-                                {day}
-                            </button>
-                        );
-                    })}
-                </div>
-            </div>
+                                >
+                                    {day}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>,
+                portalContainer || document.body
+            )}
         </div>
     );
 }

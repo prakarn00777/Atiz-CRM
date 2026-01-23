@@ -211,16 +211,15 @@ export default function IssueManager({ issues, customers: _customers, onAdd, onE
                     <table className="w-full text-left border-collapse relative">
                         <thead className="sticky top-0 z-10 bg-[#0f172a] shadow-sm">
                             <tr className="bg-white/5 text-slate-400 text-xs uppercase tracking-wider border-b border-white/5">
-                                <th className="px-4 py-3 font-semibold w-[5%] text-center">No.</th>
-                                <th className="px-4 py-3 font-semibold w-[8%] text-center">Case Id</th>
-                                <th className="px-4 py-3 font-semibold w-[12%] text-left">Case Name</th>
-                                <th className="px-4 py-3 font-semibold w-[12%] text-center">Customer</th>
-                                <th className="px-4 py-3 font-semibold w-[8%] text-center">Severity</th>
-                                <th className="px-4 py-3 font-semibold w-[8%] text-center">Status</th>
-                                <th className="px-4 py-3 font-semibold w-[8%] text-center">Type</th>
-                                <th className="px-4 py-3 font-semibold w-[12%] text-center">Reported By</th>
-                                <th className="px-4 py-3 font-semibold w-[12%] text-center">Modified By</th>
-                                <th className="px-4 py-3 font-semibold w-[8%] text-center">Actions</th>
+                                <th className="px-4 py-3 font-semibold w-[4%] text-center">No.</th>
+                                <th className="px-4 py-3 font-semibold w-[8%] text-center">Id</th>
+                                <th className="px-4 py-3 font-semibold w-[25%] text-center">Case Name</th>
+                                <th className="px-4 py-3 font-semibold w-[15%] text-center">Customer</th>
+                                <th className="px-4 py-3 font-semibold w-[9%] text-center">Severity</th>
+                                <th className="px-4 py-3 font-semibold w-[9%] text-center">Status</th>
+                                <th className="px-4 py-3 font-semibold w-[9%] text-center">Type</th>
+                                <th className="px-4 py-3 font-semibold w-[15%] text-center">Modified By</th>
+                                <th className="px-4 py-3 font-semibold w-[6%] text-center">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5">
@@ -235,9 +234,9 @@ export default function IssueManager({ issues, customers: _customers, onAdd, onE
                                                 {issue.caseNumber}
                                             </span>
                                         </td>
-                                        <td className="px-4 py-3 text-left">
-                                            <div className="flex items-center justify-start gap-2">
-                                                <div className="font-normal text-slate-200 text-xs truncate" title={issue.title}>
+                                        <td className="px-4 py-3 text-center">
+                                            <div className="flex items-center justify-center gap-2">
+                                                <div className="font-normal text-slate-200 text-xs truncate max-w-[200px]" title={issue.title}>
                                                     {issue.title}
                                                 </div>
                                                 {issue.attachments && (typeof issue.attachments === 'string' ? issue.attachments.length > 2 : issue.attachments.length > 0) && (
@@ -246,10 +245,10 @@ export default function IssueManager({ issues, customers: _customers, onAdd, onE
                                             </div>
                                         </td>
                                         <td className="px-4 py-3 text-center">
-                                            <div className="flex flex-col items-center">
-                                                <span className="text-xs text-slate-300 font-medium">{issue.customerName}</span>
+                                            <div className="flex flex-col items-center max-h-[2.5rem] overflow-hidden">
+                                                <span className="text-xs text-slate-300 font-medium line-clamp-1">{issue.customerName}</span>
                                                 {issue.branchName && (
-                                                    <span className="text-[10px] text-slate-500 italic">สาขา: {issue.branchName}</span>
+                                                    <span className="text-[10px] text-slate-500 italic line-clamp-1">สาขา: {issue.branchName}</span>
                                                 )}
                                             </div>
                                         </td>
@@ -267,23 +266,6 @@ export default function IssueManager({ issues, customers: _customers, onAdd, onE
                                         </td>
                                         <td className="px-4 py-3 text-center">
                                             <span className="text-xs text-slate-400 whitespace-nowrap">{issue.type}</span>
-                                        </td>
-                                        <td className="px-4 py-3 text-center">
-                                            {issue.createdBy ? (
-                                                <div className="flex flex-col items-center">
-                                                    <span className="text-xs font-medium text-slate-300">{issue.createdBy}</span>
-                                                    <span className="text-[10px] text-slate-500">
-                                                        {new Date(issue.createdAt!).toLocaleString('th-TH', {
-                                                            month: 'short',
-                                                            day: 'numeric',
-                                                            hour: '2-digit',
-                                                            minute: '2-digit'
-                                                        })}
-                                                    </span>
-                                                </div>
-                                            ) : (
-                                                <span className="text-xs text-slate-600">-</span>
-                                            )}
                                         </td>
                                         <td className="px-4 py-3 text-center">
                                             {issue.modifiedBy ? (
