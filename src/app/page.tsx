@@ -297,9 +297,10 @@ export default function CRMPage() {
           if (!user) return;
           const { eventType, new: newRecord, old: oldRecord } = payload;
           const actor = newRecord?.created_by || newRecord?.modified_by;
-          if (!actor || actor === "System" || actor === user.name) return;
 
-          fetchDataDebounced();
+          if (actor !== user.name) {
+            fetchDataDebounced();
+          }
 
           if (eventType === 'INSERT') {
             pushNotification(
