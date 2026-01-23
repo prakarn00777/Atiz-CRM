@@ -157,21 +157,20 @@ export default function InstallationManager({
                         </div>
 
                         <div className="flex flex-wrap items-center gap-3 w-full">
-                            <div className="flex items-center bg-black/20 border border-white/10 rounded-xl h-9 px-1">
+                            <div className="w-[160px]">
                                 <CustomDatePicker
-                                    placeholder="วันเริ่มต้น"
+                                    placeholder="วันที่เริ่มต้น"
                                     value={dateRange.start}
                                     max={dateRange.end}
                                     onChange={(val) => { setDateRange({ ...dateRange, start: val }); setCurrentPage(1); }}
-                                    className="w-[140px] !border-none !bg-transparent !h-full !py-0 text-xs shadow-none focus:ring-0"
                                 />
-                                <span className="text-slate-500 text-xs">-</span>
+                            </div>
+                            <div className="w-[160px]">
                                 <CustomDatePicker
-                                    placeholder="วันสิ้นสุด"
+                                    placeholder="วันที่สิ้นสุด"
                                     value={dateRange.end}
                                     min={dateRange.start}
                                     onChange={(val) => { setDateRange({ ...dateRange, end: val }); setCurrentPage(1); }}
-                                    className="w-[140px] !border-none !bg-transparent !h-full !py-0 text-xs shadow-none focus:ring-0"
                                 />
                             </div>
                             <div className="relative shrink-0">
@@ -210,7 +209,7 @@ export default function InstallationManager({
                                 <th className="px-4 py-3 font-semibold w-[4%] text-center">No.</th>
                                 <th className="px-4 py-3 font-semibold w-[15%]">Customer</th>
                                 <th className="px-4 py-3 font-semibold w-[10%] text-center">Type</th>
-                                <th className="px-4 py-3 font-semibold w-[10%]">System Link</th>
+                                <th className="px-4 py-3 font-semibold w-[18%]">Subdomain</th>
                                 <th className="px-4 py-3 font-semibold w-[9%] text-center">Status</th>
                                 <th className="px-4 py-3 font-semibold w-[13%]">Request By</th>
                                 <th className="px-4 py-3 font-semibold w-[13%]">Modified By</th>
@@ -245,9 +244,15 @@ export default function InstallationManager({
                                                 const cust = customers.find(c => c.id === inst.customerId);
                                                 const displayLink = cust?.subdomain || inst.customerLink;
                                                 return displayLink ? (
-                                                    <span className="text-xs text-indigo-400 truncate block max-w-[120px]" title={displayLink}>
+                                                    <a
+                                                        href={displayLink.startsWith('http') ? displayLink : `https://${displayLink}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="block text-xs text-indigo-400 hover:text-indigo-300 hover:underline transition-colors max-w-[200px] truncate"
+                                                        title={displayLink}
+                                                    >
                                                         {displayLink}
-                                                    </span>
+                                                    </a>
                                                 ) : (
                                                     <span className="text-xs text-slate-500 italic">-</span>
                                                 );

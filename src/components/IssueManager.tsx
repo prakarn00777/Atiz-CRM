@@ -177,21 +177,20 @@ export default function IssueManager({ issues, customers: _customers, onAdd, onE
                             className="w-[160px]"
                         />
 
-                        <div className="flex items-center bg-black/20 border border-white/10 rounded-xl h-10 px-1 shrink-0">
+                        <div className="w-[160px]">
                             <CustomDatePicker
-                                placeholder="วันเริ่มต้น"
+                                placeholder="วันที่เริ่มต้น"
                                 value={dateRange.start}
                                 max={dateRange.end}
                                 onChange={(val) => { setDateRange({ ...dateRange, start: val }); setCurrentPage(1); }}
-                                className="w-[140px] !border-none !bg-transparent !h-full !py-0 shadow-none focus:ring-0"
                             />
-                            <span className="text-slate-500 text-xs">-</span>
+                        </div>
+                        <div className="w-[160px]">
                             <CustomDatePicker
-                                placeholder="วันสิ้นสุด"
+                                placeholder="วันที่สิ้นสุด"
                                 value={dateRange.end}
                                 min={dateRange.start}
                                 onChange={(val) => { setDateRange({ ...dateRange, end: val }); setCurrentPage(1); }}
-                                className="w-[140px] !border-none !bg-transparent !h-full !py-0 shadow-none focus:ring-0"
                             />
                         </div>
                     </div>

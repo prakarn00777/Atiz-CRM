@@ -18,7 +18,8 @@ import InstallationManager from "@/components/InstallationManager";
 import NotificationBell from "@/components/NotificationBell";
 import LeadManager from "@/components/LeadManager";
 import GoogleSheetLeadManager from "@/components/GoogleSheetLeadManager";
-import { Customer, Branch, Installation, Issue, UsageStatus, Activity as CSActivity, ActivityType, SentimentType, Lead, GoogleSheetLead } from "@/types";
+import CustomDatePicker from "@/components/CustomDatePicker";
+import { Customer, Branch, Installation, Issue, UsageStatus, Activity as CSActivity, ActivityType, SentimentType, Lead, GoogleSheetLead, BusinessMetrics } from "@/types";
 import { useNotification } from "@/components/NotificationProvider";
 import { db } from "@/lib/db";
 import {
@@ -26,7 +27,7 @@ import {
   getUsers, saveUser, deleteUser, getRoles, saveRole, deleteRole, loginUser,
   saveIssue, deleteIssue, saveCustomer, deleteCustomer, saveInstallation, updateInstallationStatus,
   getActivities, saveActivity, deleteActivity,
-  getLeads, saveLead, deleteLead, importLeads
+  getLeads, saveLead, deleteLead, importLeads, getBusinessMetrics
 } from "./actions";
 
 function TableSummary({ customers }: { customers: Customer[] }) {
@@ -161,6 +162,7 @@ export default function CRMPage() {
   });
   const [googleSheetLeads, setGoogleSheetLeads] = useState<GoogleSheetLead[]>([]);
   const [isGoogleSheetLeadsLoading, setGoogleSheetLeadsLoading] = useState(true);
+  const [businessMetrics, setBusinessMetrics] = useState<BusinessMetrics | undefined>(undefined);
   const [isLeadModalOpen, setLeadModalOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
 
@@ -180,6 +182,15 @@ export default function CRMPage() {
   const [tempBranchAddress, setTempBranchAddress] = useState("");
   const [modalUsageStatus, setModalUsageStatus] = useState<UsageStatus>("Active");
   const [modalIssueStatus, setModalIssueStatus] = useState<"แจ้งเคส" | "กำลังดำเนินการ" | "เสร็จสิ้น">("แจ้งเคส");
+  const [modalLeadDate, setModalLeadDate] = useState("");
+
+  useEffect(() => {
+    if (isLeadModalOpen && editingLead) {
+      setModalLeadDate(editingLead.receivedDate || new Date().toISOString().split('T')[0]);
+    } else if (isLeadModalOpen) {
+      setModalLeadDate(new Date().toISOString().split('T')[0]);
+    }
+  }, [isLeadModalOpen, editingLead]);
   const [isSavingActivity, setIsSavingActivity] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
@@ -195,14 +206,15 @@ export default function CRMPage() {
 
   const fetchData = useCallback(async () => {
     try {
-      const [cData, iData, instData, userData, roleData, actData, lData] = await Promise.all([
+      const [cData, iData, instData, userData, roleData, actData, lData, metricsResult] = await Promise.all([
         getCustomers(),
         getIssues(),
         getInstallations(),
         getUsers(),
         getRoles(),
         getActivities(),
-        getLeads()
+        getLeads(),
+        getBusinessMetrics()
       ]);
 
       // Update states
@@ -213,6 +225,9 @@ export default function CRMPage() {
       setRoles(roleData);
       setActivities(actData as CSActivity[]);
       setLeads(lData);
+      if (metricsResult.success) {
+        setBusinessMetrics(metricsResult.data);
+      }
 
       // Update cache for next load
       localStorage.setItem("crm_customers_v2", JSON.stringify(cData));
@@ -1043,6 +1058,7 @@ export default function CRMPage() {
                   activities={activities}
                   leads={leads}
                   googleSheetLeads={googleSheetLeads}
+                  businessMetrics={businessMetrics}
                   user={user}
                   onViewChange={setView}
                 />
@@ -1891,13 +1907,13 @@ export default function CRMPage() {
 
                     <div className="space-y-1.5 col-span-2 md:col-span-1">
                       <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">วันที่รับลีด (Received Date)</label>
-                      <input
-                        type="date"
-                        name="receivedDate"
-                        defaultValue={editingLead?.receivedDate || new Date().toISOString().split('T')[0]}
-                        className="input-field text-sm"
-                        required
+                      <CustomDatePicker
+                        value={modalLeadDate}
+                        onChange={setModalLeadDate}
+                        placeholder="เลือกวันที่รับลีด"
+                        className="w-full"
                       />
+                      <input type="hidden" name="receivedDate" value={modalLeadDate} />
                     </div>
 
                     <div className="space-y-1.5 col-span-2 md:col-span-1">

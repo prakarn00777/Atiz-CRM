@@ -1,8 +1,73 @@
 "use server";
 
 import { db } from "@/lib/db";
-import { Customer, UsageStatus, ProductType, Lead } from "@/types";
+import {
+    Customer, UsageStatus, ProductType, Lead, User, Role,
+    ApiResponse, ApiErrorCode, PaginationParams, PaginationMeta,
+    Installation, Issue, Activity, BusinessMetrics, generateUUID
+} from "@/types";
 import bcrypt from "bcryptjs";
+
+// ============================================
+// Environment & Logging Utilities
+// ============================================
+const isDev = process.env.NODE_ENV === 'development';
+const log = {
+    debug: (...args: unknown[]) => isDev && console.log('[DEBUG]', ...args),
+    error: (...args: unknown[]) => console.error('[ERROR]', ...args),
+};
+
+// ============================================
+// Error Handling Utilities
+// ============================================
+function createError(message: string, code: ApiErrorCode = 'UNKNOWN_ERROR'): ApiResponse<never> {
+    return { success: false, error: message, code };
+}
+
+function createSuccess<T>(data: T, meta?: PaginationMeta): ApiResponse<T> {
+    return meta ? { success: true, data, meta } : { success: true, data };
+}
+
+function handleDbError(err: unknown, context: string): ApiResponse<never> {
+    const message = err instanceof Error ? err.message : 'Unknown database error';
+    log.error(`${context}:`, message);
+    return createError(message, 'DATABASE_ERROR');
+}
+
+// ============================================
+// Pagination Utilities
+// ============================================
+const DEFAULT_PAGE = 1;
+const DEFAULT_LIMIT = 50;
+const MAX_LIMIT = 500;
+
+function getPaginationParams(params?: PaginationParams): { page: number; limit: number; offset: number } {
+    const page = Math.max(1, params?.page || DEFAULT_PAGE);
+    const limit = Math.min(MAX_LIMIT, Math.max(1, params?.limit || DEFAULT_LIMIT));
+    const offset = (page - 1) * limit;
+    return { page, limit, offset };
+}
+
+function createPaginationMeta(page: number, limit: number, total: number): PaginationMeta {
+    const totalPages = Math.ceil(total / limit);
+    return {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+    };
+}
+
+// ============================================
+// ID Utilities
+// ============================================
+function isTemporaryId(id: number | string | undefined): boolean {
+    if (!id) return true;
+    const numId = typeof id === 'string' ? parseInt(id, 10) : id;
+    return numId > 1000000000000; // Temporary IDs from Date.now()
+}
 
 export async function importCustomersFromCSV(data: any[]) {
     const customers = data.map((row) => {
@@ -45,15 +110,20 @@ export async function importCustomersFromCSV(data: any[]) {
     return { success: true, count: customers.length };
 }
 
-export async function getCustomers(): Promise<Customer[]> {
+export async function getCustomers(params?: PaginationParams): Promise<Customer[]> {
     try {
+        const { limit, offset } = getPaginationParams(params);
+        const sortBy = params?.sortBy || 'id';
+        const sortOrder = params?.sortOrder === 'asc';
+
         const { data, error } = await db
             .from('customers')
-            .select('*')
-            .order('id', { ascending: false });
+            .select('id, name, client_code, subdomain, product_type, package, usage_status, business_type, contract_number, contract_start, contract_end, sales_name, contact_name, contact_phone, note, installation_status, branches, created_by, created_at, modified_by, modified_at')
+            .order(sortBy, { ascending: sortOrder })
+            .range(offset, offset + limit - 1);
 
         if (error) {
-            console.error("Error fetching customers:", error);
+            log.error("Error fetching customers:", error);
             return [];
         }
 
@@ -81,34 +151,37 @@ export async function getCustomers(): Promise<Customer[]> {
             modifiedAt: row.modified_at ? String(row.modified_at) : undefined
         })) as Customer[];
     } catch (err) {
-        console.error("Critical error in getCustomers:", err);
+        log.error("Critical error in getCustomers:", err);
         return [];
     }
 }
 
-export async function getIssues(): Promise<any[]> {
+export async function getIssues(params?: PaginationParams): Promise<Issue[]> {
     try {
+        const { limit, offset } = getPaginationParams(params);
+
         const { data, error } = await db
             .from('issues')
-            .select('*, customers(name)')
-            .order('id', { ascending: false });
+            .select('id, customer_id, branch_name, case_number, title, description, type, severity, status, created_by, created_at, modified_by, modified_at, attachments, customers(name)')
+            .order('id', { ascending: false })
+            .range(offset, offset + limit - 1);
 
         if (error) {
-            console.error("Error fetching issues:", error);
+            log.error("Error fetching issues:", error);
             return [];
         }
 
         return (data || []).map(row => ({
             id: Number(row.id),
-            customerId: row.customer_id ? Number(row.customer_id) : undefined,
-            customerName: (row.customers as any)?.name || "N/A",
+            customerId: row.customer_id ? Number(row.customer_id) : 0,
+            customerName: (row.customers as { name?: string })?.name || "N/A",
             branchName: row.branch_name ? String(row.branch_name) : undefined,
             caseNumber: String(row.case_number),
             title: String(row.title),
             description: row.description ? String(row.description) : undefined,
             type: String(row.type),
-            severity: String(row.severity),
-            status: String(row.status),
+            severity: String(row.severity) as Issue['severity'],
+            status: String(row.status) as Issue['status'],
             createdBy: row.created_by ? String(row.created_by) : undefined,
             createdAt: row.created_at ? String(row.created_at) : undefined,
             modifiedBy: row.modified_by ? String(row.modified_by) : undefined,
@@ -116,78 +189,81 @@ export async function getIssues(): Promise<any[]> {
             attachments: row.attachments ? (typeof row.attachments === 'string' ? row.attachments : JSON.stringify(row.attachments)) : "[]",
         }));
     } catch (err) {
-        console.error("Critical error in getIssues:", err);
+        log.error("Critical error in getIssues:", err);
         return [];
     }
 }
 
-export async function getInstallations(): Promise<any[]> {
+export async function getInstallations(params?: PaginationParams): Promise<Installation[]> {
     try {
+        const { limit, offset } = getPaginationParams(params);
+
         const { data, error } = await db
             .from('installations')
-            .select('*, customers(name)')
-            .order('id', { ascending: false });
+            .select('id, customer_id, branch_name, status, installation_type, notes, assigned_dev, completed_at, created_by, created_at, modified_by, modified_at, customers(name)')
+            .order('id', { ascending: false })
+            .range(offset, offset + limit - 1);
 
         if (error) {
-            console.error("Error fetching installations:", error);
+            log.error("Error fetching installations:", error);
             return [];
         }
 
         return (data || []).map(row => ({
             id: Number(row.id),
-            customerId: row.customer_id ? Number(row.customer_id) : undefined,
-            customerName: (row.customers as any)?.name || "N/A",
+            customerId: row.customer_id ? Number(row.customer_id) : 0,
+            customerName: (row.customers as { name?: string })?.name || "N/A",
             branchName: row.branch_name ? String(row.branch_name) : undefined,
-            status: String(row.status),
-            installationType: String(row.installation_type),
+            status: String(row.status) as Installation['status'],
+            installationType: String(row.installation_type) as Installation['installationType'],
             notes: row.notes ? String(row.notes) : undefined,
             assignedDev: row.assigned_dev ? String(row.assigned_dev) : undefined,
             completedAt: row.completed_at ? String(row.completed_at) : undefined,
-            createdBy: row.created_by ? String(row.created_by) : undefined,
-            createdAt: row.created_at ? String(row.created_at) : undefined,
+            requestedBy: row.created_by ? String(row.created_by) : '',
+            requestedAt: row.created_at ? String(row.created_at) : '',
             modifiedBy: row.modified_by ? String(row.modified_by) : undefined,
             modifiedAt: row.modified_at ? String(row.modified_at) : undefined,
         }));
     } catch (err) {
-        console.error("Critical error in getInstallations:", err);
+        log.error("Critical error in getInstallations:", err);
         return [];
     }
 }
 
-export async function getUsers(): Promise<any[]> {
+export async function getUsers(): Promise<User[]> {
     try {
         const { data, error } = await db
             .from('users')
-            .select('*')
+            .select('id, name, username, role_id, is_active, created_at, modified_at')
             .eq('is_active', true)
             .order('id', { ascending: true });
 
         if (error) {
-            console.error("Error fetching users:", error);
+            log.error("Error fetching users:", error);
             return [];
         }
 
-        return (data || []).map(u => {
-            const { password, ...userWithoutPassword } = u;
-            return {
-                ...userWithoutPassword,
-                role: u.role_id
-            };
-        });
+        return (data || []).map(u => ({
+            id: Number(u.id),
+            name: String(u.name),
+            username: String(u.username),
+            role: String(u.role_id),
+            isActive: Boolean(u.is_active),
+            createdAt: u.created_at ? String(u.created_at) : undefined,
+            modifiedAt: u.modified_at ? String(u.modified_at) : undefined,
+        }));
     } catch (err) {
-        console.error("Critical error in getUsers:", err);
+        log.error("Critical error in getUsers:", err);
         return [];
     }
 }
 
-export async function saveUser(userData: any) {
+export async function saveUser(userData: Partial<User> & { password?: string }): Promise<ApiResponse<User>> {
     try {
         const { id, ...rest } = userData;
 
         let hashedPassword = rest.password;
-        // Only hash if it's a new user or if password was explicitly updated
-        // In a real app, we might compare with old password hash, but for now we'll hash it
-        // if it looks like a plain text (short or provided in the form)
+        // Only hash if password is provided and not already hashed
         if (rest.password && (!rest.password.startsWith('$2a$') || rest.password.length < 30)) {
             hashedPassword = await bcrypt.hash(rest.password, 10);
         }
@@ -200,58 +276,66 @@ export async function saveUser(userData: any) {
         };
 
         let result;
-        if (id && id > 1000000000000) { // New user (temporary ID from Date.now())
-            const { data, error } = await db.from('users').insert(dbData).select();
+        if (isTemporaryId(id)) {
+            // New user - insert
+            const { data, error } = await db.from('users').insert(dbData).select('id, name, username, role_id, is_active, created_at');
             if (error) throw error;
             result = data?.[0];
-        } else if (id) { // Update existing
-            const { data, error } = await db.from('users').update(dbData).eq('id', id).select();
+        } else if (id) {
+            // Update existing
+            const { data, error } = await db.from('users').update(dbData).eq('id', id).select('id, name, username, role_id, is_active, created_at');
             if (error) throw error;
             result = data?.[0];
         } else {
-            const { data, error } = await db.from('users').insert(dbData).select();
+            const { data, error } = await db.from('users').insert(dbData).select('id, name, username, role_id, is_active, created_at');
             if (error) throw error;
             result = data?.[0];
         }
 
-        if (!result) throw new Error("No data returned from database");
+        if (!result) {
+            return createError("No data returned from database", 'DATABASE_ERROR');
+        }
 
-        const { password, ...userWithoutPassword } = result;
-        return { success: true, data: { ...userWithoutPassword, role: result.role_id } };
-    } catch (err: any) {
-        console.error("Error in saveUser:", err);
-        return { success: false, error: err.message || "Unknown database error" };
+        const user: User = {
+            id: Number(result.id),
+            name: String(result.name),
+            username: String(result.username),
+            role: String(result.role_id),
+            isActive: Boolean(result.is_active),
+            createdAt: result.created_at ? String(result.created_at) : undefined,
+        };
+
+        return createSuccess(user);
+    } catch (err) {
+        return handleDbError(err, "saveUser");
     }
 }
 
-export async function loginUser(username: string, password: string) {
-    console.log("Attempting login for:", username); // Debug
+export async function loginUser(username: string, password: string): Promise<ApiResponse<User & { permissions?: Record<string, unknown> }>> {
+    log.debug("Attempting login for:", username);
     try {
         if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-            console.error("Missing Supabase Env Vars:", {
-                url: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-                key: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-            });
-            return { success: false, error: "System Configuration Error: Missing Environment Variables" };
+            log.error("Missing Supabase Env Vars");
+            return createError("System Configuration Error: Missing Environment Variables", 'UNKNOWN_ERROR');
         }
 
         const { data, error } = await db
             .from('users')
-            .select('*, roles(name)')
+            .select('id, name, username, password, role_id, is_active, roles(name, permissions)')
             .eq('username', username)
             .eq('is_active', true)
             .maybeSingle();
 
-        console.log("Supabase login query result:", { data: data ? "Found" : "Not Found", error }); // Debug
+        log.debug("Login query result:", data ? "Found" : "Not Found");
 
         if (error) {
-            console.error("Database error during login:", error);
-            return { success: false, error: `Database Error: ${error.message}` };
+            log.error("Database error during login:", error);
+            return createError(`Database Error: ${error.message}`, 'DATABASE_ERROR');
         }
 
         if (!data) {
-            console.log("Login failed: User not found");
-            return { success: false, error: "ไม่พบชื่อผู้ใช้งานนี้ในระบบ" };
+            log.debug("Login failed: User not found");
+            return createError("ไม่พบชื่อผู้ใช้งานนี้ในระบบ", 'NOT_FOUND');
         }
 
         const isValid = await bcrypt.compare(password, data.password);
@@ -260,85 +344,109 @@ export async function loginUser(username: string, password: string) {
         let isMatch = isValid;
         if (!isMatch && username === 'admin' && password === data.password) {
             isMatch = true;
-            // Optionally auto-migrate to hashed password here
+            // Auto-migrate to hashed password
             const newHash = await bcrypt.hash(password, 10);
             await db.from('users').update({ password: newHash }).eq('id', data.id);
         }
 
         if (!isMatch) {
-            console.log("Login failed: Password mismatch");
-            return { success: false, error: "รหัสผ่านไม่ถูกต้อง" };
+            log.debug("Login failed: Password mismatch");
+            return createError("รหัสผ่านไม่ถูกต้อง", 'UNAUTHORIZED');
         }
 
-        const { password: _, ...userWithoutPassword } = data;
-        return {
-            success: true,
-            user: {
-                ...userWithoutPassword,
-                role: data.role_id
-            }
+        const user: User & { permissions?: Record<string, unknown> } = {
+            id: Number(data.id),
+            name: String(data.name),
+            username: String(data.username),
+            role: String(data.role_id),
+            isActive: Boolean(data.is_active),
+            permissions: (data.roles as { permissions?: Record<string, unknown> })?.permissions,
         };
-    } catch (err: any) {
-        console.error("Login error:", err);
-        return { success: false, error: `System Error: ${err.message}` };
+
+        return createSuccess(user);
+    } catch (err) {
+        return handleDbError(err, "loginUser");
     }
 }
 
-export async function deleteUser(id: number) {
+export async function deleteUser(id: number): Promise<ApiResponse<{ deleted: boolean }>> {
     try {
         const { error } = await db.from('users').update({ is_active: false }).eq('id', id);
         if (error) throw error;
-        return { success: true };
-    } catch (err: any) {
-        console.error("Error in deleteUser:", err);
-        return { success: false, error: err.message };
+        return createSuccess({ deleted: true });
+    } catch (err) {
+        return handleDbError(err, "deleteUser");
     }
 }
 
-export async function getRoles(): Promise<any[]> {
+export async function getRoles(): Promise<Role[]> {
     try {
         const { data, error } = await db
             .from('roles')
-            .select('*')
+            .select('id, name, description, permissions')
             .order('id', { ascending: true });
 
         if (error) {
-            console.error("Error fetching roles:", error);
+            log.error("Error fetching roles:", error);
             return [];
         }
 
-        return data || [];
+        return (data || []).map(r => ({
+            id: String(r.id),
+            name: String(r.name),
+            description: r.description ? String(r.description) : undefined,
+            permissions: r.permissions as Record<string, { create: boolean; read: boolean; update: boolean; delete: boolean }> || {},
+        }));
     } catch (err) {
-        console.error("Critical error in getRoles:", err);
+        log.error("Critical error in getRoles:", err);
         return [];
     }
 }
 
-export async function saveRole(roleData: any) {
+export async function saveRole(roleData: Partial<Role>): Promise<ApiResponse<Role>> {
     try {
         const { id, ...rest } = roleData;
-        const { data, error } = await db.from('roles').upsert({ id, ...rest }).select();
+
+        // Generate UUID for new roles if id looks temporary
+        const finalId = id && !id.startsWith('role_') ? id : `role_${generateUUID()}`;
+
+        const { data, error } = await db.from('roles').upsert({
+            id: id || finalId,
+            name: rest.name,
+            description: rest.description,
+            permissions: rest.permissions
+        }).select('id, name, description, permissions');
+
         if (error) throw error;
-        return { success: true, data: data?.[0] };
-    } catch (err: any) {
-        console.error("Error in saveRole:", err);
-        return { success: false, error: err.message };
+
+        const result = data?.[0];
+        if (!result) {
+            return createError("No data returned from database", 'DATABASE_ERROR');
+        }
+
+        return createSuccess({
+            id: String(result.id),
+            name: String(result.name),
+            description: result.description ? String(result.description) : undefined,
+            permissions: result.permissions as Record<string, { create: boolean; read: boolean; update: boolean; delete: boolean }> || {},
+        });
+    } catch (err) {
+        return handleDbError(err, "saveRole");
     }
 }
 
-export async function deleteRole(id: string) {
+export async function deleteRole(id: string): Promise<ApiResponse<{ deleted: boolean }>> {
     try {
         const { error } = await db.from('roles').delete().eq('id', id);
         if (error) throw error;
-        return { success: true };
-    } catch (err: any) {
-        console.error("Error in deleteRole:", err);
-        return { success: false, error: err.message };
+        return createSuccess({ deleted: true });
+    } catch (err) {
+        return handleDbError(err, "deleteRole");
     }
 }
 
 // Issue persistence
-export async function saveIssue(issueData: any) {
+export async function saveIssue(issueData: Partial<Issue>): Promise<ApiResponse<Issue>> {
     try {
         const { id, ...rest } = issueData;
         const dbData = {
@@ -358,44 +466,40 @@ export async function saveIssue(issueData: any) {
         };
 
         let result;
-        if (id && typeof id === 'number' && id < 1000000000000) { // Existing issue
-            console.log("Updating issue:", id, dbData);
+        if (!isTemporaryId(id)) {
+            log.debug("Updating issue:", id);
             const { data, error } = await db.from('issues').update(dbData).eq('id', id).select();
-            if (error) {
-                console.error("Update issue error:", error);
-                throw error;
-            }
+            if (error) throw error;
             result = data?.[0];
-        } else { // New issue
-            console.log("Inserting new issue:", dbData);
+        } else {
+            log.debug("Inserting new issue");
             const { data, error } = await db.from('issues').insert(dbData).select();
-            if (error) {
-                console.error("Insert issue error:", error);
-                throw error;
-            }
+            if (error) throw error;
             result = data?.[0];
         }
 
-        return { success: true, data: result };
-    } catch (err: any) {
-        console.error("Error in saveIssue:", err);
-        return { success: false, error: err.message };
+        if (!result) {
+            return createError("No data returned from database", 'DATABASE_ERROR');
+        }
+
+        return createSuccess(result as Issue);
+    } catch (err) {
+        return handleDbError(err, "saveIssue");
     }
 }
 
-export async function deleteIssue(id: number) {
+export async function deleteIssue(id: number): Promise<ApiResponse<{ deleted: boolean }>> {
     try {
         const { error } = await db.from('issues').delete().eq('id', id);
         if (error) throw error;
-        return { success: true };
-    } catch (err: any) {
-        console.error("Error in deleteIssue:", err);
-        return { success: false, error: err.message };
+        return createSuccess({ deleted: true });
+    } catch (err) {
+        return handleDbError(err, "deleteIssue");
     }
 }
 
 // Customer persistence
-export async function saveCustomer(customerData: any) {
+export async function saveCustomer(customerData: Partial<Customer>): Promise<ApiResponse<Customer>> {
     try {
         const { id, ...rest } = customerData;
         const dbData = {
@@ -422,7 +526,7 @@ export async function saveCustomer(customerData: any) {
         };
 
         let result;
-        if (id && id < 1000000000000) {
+        if (!isTemporaryId(id)) {
             const { data, error } = await db.from('customers').update(dbData).eq('id', id).select();
             if (error) throw error;
             result = data?.[0];
@@ -432,34 +536,36 @@ export async function saveCustomer(customerData: any) {
             result = data?.[0];
         }
 
-        return { success: true, data: result };
-    } catch (err: any) {
-        console.error("Error in saveCustomer:", err);
-        return { success: false, error: err.message };
+        if (!result) {
+            return createError("No data returned from database", 'DATABASE_ERROR');
+        }
+
+        return createSuccess(result as Customer);
+    } catch (err) {
+        return handleDbError(err, "saveCustomer");
     }
 }
 
-export async function deleteCustomer(id: number) {
+export async function deleteCustomer(id: number): Promise<ApiResponse<{ deleted: boolean }>> {
     try {
         const { error } = await db.from('customers').delete().eq('id', id);
         if (error) throw error;
-        return { success: true };
-    } catch (err: any) {
-        console.error("Error in deleteCustomer:", err);
-        return { success: false, error: err.message };
+        return createSuccess({ deleted: true });
+    } catch (err) {
+        return handleDbError(err, "deleteCustomer");
     }
 }
 
 // Installation persistence
-export async function saveInstallation(instData: any) {
+export async function saveInstallation(instData: Partial<Installation>): Promise<ApiResponse<Installation>> {
     try {
         const { id, ...rest } = instData;
         const dbData = {
             customer_id: rest.customerId && rest.customerId > 0 ? rest.customerId : null,
             branch_name: rest.branchName,
             status: rest.status,
-            created_by: rest.requestedBy || rest.createdBy,
-            created_at: rest.requestedAt || rest.createdAt,
+            created_by: rest.requestedBy,
+            created_at: rest.requestedAt,
             assigned_dev: rest.assignedDev,
             completed_at: rest.completedAt,
             notes: rest.notes,
@@ -469,32 +575,29 @@ export async function saveInstallation(instData: any) {
         };
 
         let result;
-        if (id && typeof id === 'number' && id < 1000000000000) {
-            console.log("Updating installation:", id, dbData);
+        if (!isTemporaryId(id)) {
+            log.debug("Updating installation:", id);
             const { data, error } = await db.from('installations').update(dbData).eq('id', id).select();
-            if (error) {
-                console.error("Update installation error:", error);
-                throw error;
-            }
+            if (error) throw error;
             result = data?.[0];
         } else {
-            console.log("Inserting new installation:", dbData);
+            log.debug("Inserting new installation");
             const { data, error } = await db.from('installations').insert(dbData).select();
-            if (error) {
-                console.error("Insert installation error:", error);
-                throw error;
-            }
+            if (error) throw error;
             result = data?.[0];
         }
 
-        return { success: true, data: result };
-    } catch (err: any) {
-        console.error("Error in saveInstallation:", err);
-        return { success: false, error: err.message };
+        if (!result) {
+            return createError("No data returned from database", 'DATABASE_ERROR');
+        }
+
+        return createSuccess(result as Installation);
+    } catch (err) {
+        return handleDbError(err, "saveInstallation");
     }
 }
 
-export async function updateInstallationStatus(id: number, status: string, modifiedBy?: string) {
+export async function updateInstallationStatus(id: number, status: string, modifiedBy?: string): Promise<ApiResponse<Installation | null>> {
     try {
         const { data, error } = await db.from('installations').update({
             status,
@@ -505,58 +608,65 @@ export async function updateInstallationStatus(id: number, status: string, modif
         if (error) throw error;
 
         const row = data?.[0];
-        if (!row) return { success: true, data: null };
+        if (!row) return createSuccess(null);
 
-        const mapped = {
+        const installation: Installation = {
             id: Number(row.id),
-            customerId: row.customer_id ? Number(row.customer_id) : undefined,
+            customerId: row.customer_id ? Number(row.customer_id) : 0,
+            customerName: '',
             branchName: row.branch_name ? String(row.branch_name) : undefined,
-            status: String(row.status),
-            installationType: String(row.installation_type),
+            status: String(row.status) as Installation['status'],
+            installationType: String(row.installation_type) as Installation['installationType'],
             notes: row.notes ? String(row.notes) : undefined,
             assignedDev: row.assigned_dev ? String(row.assigned_dev) : undefined,
             completedAt: row.completed_at ? String(row.completed_at) : undefined,
-            createdBy: row.created_by ? String(row.created_by) : undefined,
-            createdAt: row.created_at ? String(row.created_at) : undefined,
+            requestedBy: row.created_by ? String(row.created_by) : '',
+            requestedAt: row.created_at ? String(row.created_at) : '',
             modifiedBy: row.modified_by ? String(row.modified_by) : undefined,
             modifiedAt: row.modified_at ? String(row.modified_at) : undefined,
         };
 
-        return { success: true, data: mapped };
-    } catch (err: any) {
-        console.error("Error in updateInstallationStatus:", err);
-        return { success: false, error: err.message };
+        return createSuccess(installation);
+    } catch (err) {
+        return handleDbError(err, "updateInstallationStatus");
     }
 }
 
 
-export async function getActivities() {
+export async function getActivities(params?: PaginationParams): Promise<Activity[]> {
     try {
-        const { data, error } = await db.from('activities').select('*').order('created_at', { ascending: false });
+        const { limit, offset } = getPaginationParams(params);
+
+        const { data, error } = await db
+            .from('activities')
+            .select('id, customer_id, customer_name, title, activity_type, content, status, sentiment, follow_up_date, created_by, created_at, modified_by, modified_at')
+            .order('created_at', { ascending: false })
+            .range(offset, offset + limit - 1);
+
         if (error) throw error;
-        // Map snake_case to camelCase
-        return (data || []).map((item: any) => ({
-            id: item.id,
-            customerId: item.customer_id,
-            customerName: item.customer_name,
-            title: item.title,
-            activityType: item.activity_type,
-            content: item.content,
-            status: item.status,
-            sentiment: item.sentiment,
-            followUpDate: item.follow_up_date,
-            createdBy: item.created_by,
-            createdAt: item.created_at,
-            modifiedBy: item.modified_by,
-            modifiedAt: item.modified_at
+
+        return (data || []).map((item) => ({
+            id: Number(item.id),
+            customerId: Number(item.customer_id),
+            customerName: String(item.customer_name),
+            title: String(item.title),
+            activityType: item.activity_type as Activity['activityType'],
+            content: item.content ? String(item.content) : undefined,
+            status: String(item.status),
+            sentiment: item.sentiment as Activity['sentiment'],
+            followUpDate: item.follow_up_date ? String(item.follow_up_date) : undefined,
+            createdBy: item.created_by ? String(item.created_by) : undefined,
+            createdAt: item.created_at ? String(item.created_at) : undefined,
+            modifiedBy: item.modified_by ? String(item.modified_by) : undefined,
+            modifiedAt: item.modified_at ? String(item.modified_at) : undefined
         }));
     } catch (err) {
-        console.error("Error fetching activities:", err);
+        log.error("Error fetching activities:", err);
         return [];
     }
 }
 
-export async function saveActivity(activityData: any) {
+export async function saveActivity(activityData: Partial<Activity>): Promise<ApiResponse<Activity>> {
     try {
         const { id, ...rest } = activityData;
         const dbData = {
@@ -575,7 +685,7 @@ export async function saveActivity(activityData: any) {
         };
 
         let result;
-        if (id && id < 1000000000000) {
+        if (!isTemporaryId(id)) {
             const { data, error } = await db.from('activities').update(dbData).eq('id', id).select();
             if (error) throw error;
             result = data?.[0];
@@ -585,74 +695,78 @@ export async function saveActivity(activityData: any) {
             result = data?.[0];
         }
 
-        return {
-            success: true,
-            data: result ? {
-                id: result.id,
-                customerId: result.customer_id,
-                customerName: result.customer_name,
-                title: result.title,
-                activityType: result.activity_type,
-                content: result.content,
-                status: result.status,
-                sentiment: result.sentiment,
-                followUpDate: result.follow_up_date,
-                createdBy: result.created_by,
-                createdAt: result.created_at,
-                modified_by: result.modified_by,
-                modified_at: result.modified_at
-            } : null
+        if (!result) {
+            return createError("No data returned from database", 'DATABASE_ERROR');
+        }
+
+        const activity: Activity = {
+            id: Number(result.id),
+            customerId: Number(result.customer_id),
+            customerName: String(result.customer_name),
+            title: String(result.title),
+            activityType: result.activity_type as Activity['activityType'],
+            content: result.content ? String(result.content) : undefined,
+            status: String(result.status),
+            sentiment: result.sentiment as Activity['sentiment'],
+            followUpDate: result.follow_up_date ? String(result.follow_up_date) : undefined,
+            createdBy: result.created_by ? String(result.created_by) : undefined,
+            createdAt: result.created_at ? String(result.created_at) : undefined,
+            modifiedBy: result.modified_by ? String(result.modified_by) : undefined,
+            modifiedAt: result.modified_at ? String(result.modified_at) : undefined
         };
-    } catch (err: any) {
-        console.error("Error in saveActivity:", err);
-        return { success: false, error: err.message };
+
+        return createSuccess(activity);
+    } catch (err) {
+        return handleDbError(err, "saveActivity");
     }
 }
 
-export async function deleteActivity(id: number) {
+export async function deleteActivity(id: number): Promise<ApiResponse<{ deleted: boolean }>> {
     try {
         const { error } = await db.from('activities').delete().eq('id', id);
         if (error) throw error;
-        return { success: true };
-    } catch (err: any) {
-        console.error("Error in deleteActivity:", err);
-        return { success: false, error: err.message };
+        return createSuccess({ deleted: true });
+    } catch (err) {
+        return handleDbError(err, "deleteActivity");
     }
 }
 
 // Leads persistence
-export async function getLeads(): Promise<Lead[]> {
+export async function getLeads(params?: PaginationParams): Promise<Lead[]> {
     try {
+        const { limit, offset } = getPaginationParams(params);
+
         const { data, error } = await db
             .from('leads')
-            .select('*')
-            .order('created_at', { ascending: false });
+            .select('id, lead_number, product, source, lead_type, sales_name, customer_name, phone, received_date, notes, created_by, created_at, modified_by, modified_at')
+            .order('created_at', { ascending: false })
+            .range(offset, offset + limit - 1);
 
         if (error) throw error;
 
         return (data || []).map(row => ({
-            id: row.id,
-            leadNumber: row.lead_number,
-            product: row.product,
-            source: row.source,
-            leadType: row.lead_type,
-            salesName: row.sales_name,
-            customerName: row.customer_name,
-            phone: row.phone,
-            receivedDate: row.received_date,
-            notes: row.notes,
-            createdBy: row.created_by,
-            createdAt: row.created_at,
-            modifiedBy: row.modified_by,
-            modifiedAt: row.modified_at
+            id: Number(row.id),
+            leadNumber: String(row.lead_number),
+            product: String(row.product),
+            source: String(row.source),
+            leadType: String(row.lead_type),
+            salesName: String(row.sales_name),
+            customerName: String(row.customer_name),
+            phone: String(row.phone),
+            receivedDate: String(row.received_date),
+            notes: row.notes ? String(row.notes) : undefined,
+            createdBy: row.created_by ? String(row.created_by) : undefined,
+            createdAt: row.created_at ? String(row.created_at) : undefined,
+            modifiedBy: row.modified_by ? String(row.modified_by) : undefined,
+            modifiedAt: row.modified_at ? String(row.modified_at) : undefined
         }));
-    } catch (err: any) {
-        console.error("Error in getLeads:", err);
+    } catch (err) {
+        log.error("Error in getLeads:", err);
         return [];
     }
 }
 
-export async function saveLead(leadData: any) {
+export async function saveLead(leadData: Partial<Lead>): Promise<ApiResponse<Lead>> {
     try {
         const { id, ...rest } = leadData;
         const dbData = {
@@ -672,8 +786,7 @@ export async function saveLead(leadData: any) {
         };
 
         let result;
-        // Use a high threshold for local IDs vs DB IDs
-        if (id && id < 1000000000000) {
+        if (!isTemporaryId(id)) {
             const { data, error } = await db.from('leads').update(dbData).eq('id', id).select();
             if (error) throw error;
             result = data?.[0];
@@ -683,44 +796,136 @@ export async function saveLead(leadData: any) {
             result = data?.[0];
         }
 
-        return { success: true, data: result };
-    } catch (err: any) {
-        console.error("Error in saveLead:", err);
-        return { success: false, error: err.message };
+        if (!result) {
+            return createError("No data returned from database", 'DATABASE_ERROR');
+        }
+
+        const lead: Lead = {
+            id: Number(result.id),
+            leadNumber: String(result.lead_number),
+            product: String(result.product),
+            source: String(result.source),
+            leadType: String(result.lead_type),
+            salesName: String(result.sales_name),
+            customerName: String(result.customer_name),
+            phone: String(result.phone),
+            receivedDate: String(result.received_date),
+            notes: result.notes ? String(result.notes) : undefined,
+            createdBy: result.created_by ? String(result.created_by) : undefined,
+            createdAt: result.created_at ? String(result.created_at) : undefined,
+            modifiedBy: result.modified_by ? String(result.modified_by) : undefined,
+            modifiedAt: result.modified_at ? String(result.modified_at) : undefined
+        };
+
+        return createSuccess(lead);
+    } catch (err) {
+        return handleDbError(err, "saveLead");
     }
 }
 
-export async function deleteLead(id: number) {
+export async function deleteLead(id: number): Promise<ApiResponse<{ deleted: boolean }>> {
     try {
         const { error } = await db.from('leads').delete().eq('id', id);
         if (error) throw error;
-        return { success: true };
-    } catch (err: any) {
-        console.error("Error in deleteLead:", err);
-        return { success: false, error: err.message };
+        return createSuccess({ deleted: true });
+    } catch (err) {
+        return handleDbError(err, "deleteLead");
     }
 }
 
-export async function importLeads(data: any[]) {
+export async function importLeads(data: Partial<Lead>[]): Promise<ApiResponse<{ count: number }>> {
     try {
         const dbData = data.map(row => ({
-            lead_number: row.leadNumber || row.lead_number,
+            lead_number: row.leadNumber,
             product: row.product,
             source: row.source,
-            lead_type: row.leadType || row.lead_type,
-            sales_name: row.salesName || row.sales_name,
-            customer_name: row.customerName || row.customer_name,
+            lead_type: row.leadType,
+            sales_name: row.salesName,
+            customer_name: row.customerName,
             phone: row.phone,
-            received_date: row.receivedDate || row.received_date,
+            received_date: row.receivedDate,
             notes: row.notes,
             created_at: new Date().toISOString()
         }));
 
         const { error } = await db.from('leads').insert(dbData);
         if (error) throw error;
-        return { success: true, count: dbData.length };
-    } catch (err: any) {
-        console.error("Error in importLeads:", err);
-        return { success: false, error: err.message };
+        return createSuccess({ count: dbData.length });
+    } catch (err) {
+        return handleDbError(err, "importLeads");
+    }
+}
+
+// ============================================
+// Business Metrics
+// ============================================
+export async function getBusinessMetrics(): Promise<ApiResponse<BusinessMetrics>> {
+    try {
+        // In a real app, this would fetch from a metrics table or aggregate from multiple tables
+        // For now, return default values that can be updated via admin interface
+        const { data, error } = await db
+            .from('business_metrics')
+            .select('*')
+            .order('updated_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+        if (error && error.code !== 'PGRST116') { // PGRST116 = table doesn't exist
+            throw error;
+        }
+
+        // Default values if no data exists
+        const metrics: BusinessMetrics = data ? {
+            newSales: Number(data.new_sales) || 0,
+            renewal: Number(data.renewal) || 0,
+            renewalRate: Number(data.renewal_rate) || 50,
+            merchantOnboard: {
+                drease: Number(data.merchant_drease) || 420,
+                ease: Number(data.merchant_ease) || 141,
+                total: Number(data.merchant_total) || 561,
+            },
+            easePayUsage: Number(data.ease_pay_usage) || 850,
+            onlineBooking: {
+                pages: Number(data.booking_pages) || 320,
+                bookings: Number(data.bookings) || 1240,
+            },
+            updatedAt: data.updated_at || new Date().toISOString(),
+        } : {
+            newSales: 414504.57,
+            renewal: 965629.05,
+            renewalRate: 50,
+            merchantOnboard: { drease: 420, ease: 141, total: 561 },
+            easePayUsage: 850,
+            onlineBooking: { pages: 320, bookings: 1240 },
+            updatedAt: new Date().toISOString(),
+        };
+
+        return createSuccess(metrics);
+    } catch (err) {
+        return handleDbError(err, "getBusinessMetrics");
+    }
+}
+
+export async function saveBusinessMetrics(metrics: Partial<BusinessMetrics>): Promise<ApiResponse<BusinessMetrics>> {
+    try {
+        const dbData = {
+            new_sales: metrics.newSales,
+            renewal: metrics.renewal,
+            renewal_rate: metrics.renewalRate,
+            merchant_drease: metrics.merchantOnboard?.drease,
+            merchant_ease: metrics.merchantOnboard?.ease,
+            merchant_total: metrics.merchantOnboard?.total,
+            ease_pay_usage: metrics.easePayUsage,
+            booking_pages: metrics.onlineBooking?.pages,
+            bookings: metrics.onlineBooking?.bookings,
+            updated_at: new Date().toISOString(),
+        };
+
+        const { data, error } = await db.from('business_metrics').upsert(dbData).select();
+        if (error) throw error;
+
+        return createSuccess(metrics as BusinessMetrics);
+    } catch (err) {
+        return handleDbError(err, "saveBusinessMetrics");
     }
 }

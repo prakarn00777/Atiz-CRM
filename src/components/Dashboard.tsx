@@ -89,7 +89,7 @@ import {
     XAxis, YAxis, CartesianGrid, Tooltip, Legend
 } from 'recharts';
 import ParticlesBackground from "./ParticlesBackground";
-import type { Customer, Installation, Issue, Lead, Activity as CSActivity, GoogleSheetLead } from "@/types";
+import type { Customer, Installation, Issue, Lead, Activity as CSActivity, GoogleSheetLead, BusinessMetrics } from "@/types";
 
 import SegmentedControl from "./SegmentedControl";
 import CustomSelect from "./CustomSelect";
@@ -102,6 +102,7 @@ interface DashboardProps {
     activities: CSActivity[];
     leads: Lead[];
     googleSheetLeads?: GoogleSheetLead[];
+    businessMetrics?: BusinessMetrics;
     user: any;
     onViewChange: (view: string) => void;
 }
@@ -130,7 +131,7 @@ const parseLocalISO = (isoStr: string) => {
     return new Date(isoStr);
 };
 
-export default function Dashboard({ customers, installations, issues, activities, leads, googleSheetLeads = [], user, onViewChange }: DashboardProps) {
+export default function Dashboard({ customers, installations, issues, activities, leads, googleSheetLeads = [], businessMetrics, user, onViewChange }: DashboardProps) {
     const dashboardRef = useRef<HTMLDivElement>(null);
     const [activeTab, setActiveTab] = useState<'cs' | 'business'>('cs');
     const [timeRange, setTimeRange] = useState<'1w' | '1m' | '1y' | 'custom'>('1w');
@@ -257,13 +258,17 @@ export default function Dashboard({ customers, installations, issues, activities
             </div>
         );
 
+        // Use dynamic metrics from props or fallback to defaults
+        const newSales = businessMetrics?.newSales ?? 414504.57;
+        const renewal = businessMetrics?.renewal ?? 965629.05;
+
         return [
             { label: "Total Leads – This Week", subLabel: "ผู้สนใจรายสัปดาห์ (Mon-Sun)", numericValue: currentCount, prefix: "", suffix: "", sub: `Dr.Ease: ${dreaseLeads} | Ease: ${easeLeads}`, extraInfo: WoWTag, tooltip: "อัตราการเติบโตเมื่อเทียบกับสัปดาห์ก่อน (WoW): ((จำนวนสัปดาห์นี้-จำนวนสัปดาห์ก่อน) / จำนวนสัปดาห์ก่อน) x 100", icon: Briefcase, color: "text-amber-400", border: "border-amber-500/20", bg: "from-amber-500/10" },
             { label: "Weekly Demos", subLabel: "การทำ Demo รายสัปดาห์", numericValue: currentDemos, prefix: "", suffix: "", sub: `เข้าข่ายสัปดาห์ปัจจุบัน`, icon: Monitor, color: "text-blue-400", border: "border-blue-500/20", bg: "from-blue-500/10" },
-            { label: "New Sales", subLabel: "ยอดเงินปิดใหม่", numericValue: 414504.57, prefix: "฿", suffix: "", sub: "Revenue สัปดาห์นี้", icon: DollarSign, color: "text-emerald-400", border: "border-emerald-500/20", bg: "from-emerald-500/10" },
-            { label: "Renewal", subLabel: "ยอดเงินต่อสัญญา", numericValue: 965629.05, prefix: "฿", suffix: "", sub: "Revenue สัปดาห์นี้", icon: TrendingUp, color: "text-purple-400", border: "border-purple-500/20", bg: "from-purple-500/10" },
+            { label: "New Sales", subLabel: "ยอดเงินปิดใหม่", numericValue: newSales, prefix: "฿", suffix: "", sub: "Revenue สัปดาห์นี้", icon: DollarSign, color: "text-emerald-400", border: "border-emerald-500/20", bg: "from-emerald-500/10" },
+            { label: "Renewal", subLabel: "ยอดเงินต่อสัญญา", numericValue: renewal, prefix: "฿", suffix: "", sub: "Revenue สัปดาห์นี้", icon: TrendingUp, color: "text-purple-400", border: "border-purple-500/20", bg: "from-purple-500/10" },
         ];
-    }, [googleSheetLeads, activities]);
+    }, [googleSheetLeads, activities, businessMetrics]);
 
     const dynamicGraphData = useMemo(() => {
         const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -728,7 +733,7 @@ export default function Dashboard({ customers, installations, issues, activities
                                             <p className="text-text-muted text-[10px] uppercase font-bold tracking-widest">Renewal Rate</p>
                                             <p className="text-indigo-400/80 text-[9px] font-bold -mt-0.5 mb-1">% ต่อสัญญา</p>
                                         </div>
-                                        <span className={`text-indigo-400 font-bold tracking-tight ${isFullscreen ? 'text-xl' : 'text-sm'}`}>50%</span>
+                                        <span className={`text-indigo-400 font-bold tracking-tight ${isFullscreen ? 'text-xl' : 'text-sm'}`}>{businessMetrics?.renewalRate ?? 50}%</span>
                                     </div>
                                     <div className="grid grid-cols-2 gap-3 mt-0.5">
                                         <div><p className="text-[10px] text-slate-500 uppercase font-bold">Dr.Ease</p><p className="font-bold tracking-tight text-white">55.55%</p></div>
@@ -741,24 +746,24 @@ export default function Dashboard({ customers, installations, issues, activities
                                             <p className="text-text-muted text-[10px] uppercase font-bold tracking-widest">Merchant Onboard</p>
                                             <p className="text-indigo-400/80 text-[9px] font-bold -mt-0.5 mb-1">จำนวนการขึ้นระบบ</p>
                                         </div>
-                                        <span className={`text-emerald-400 font-bold tracking-tight ${isFullscreen ? 'text-xl' : 'text-sm'}`}>561</span>
+                                        <span className={`text-emerald-400 font-bold tracking-tight ${isFullscreen ? 'text-xl' : 'text-sm'}`}>{businessMetrics?.merchantOnboard?.total ?? 561}</span>
                                     </div>
                                     <div className="grid grid-cols-2 gap-3 mt-0.5">
-                                        <div><p className="text-[10px] text-slate-500 uppercase font-bold">Dr.Ease</p><p className="font-bold tracking-tight text-white">420</p></div>
-                                        <div><p className="text-[10px] text-slate-500 uppercase font-bold">Ease</p><p className="font-bold tracking-tight text-white">141</p></div>
+                                        <div><p className="text-[10px] text-slate-500 uppercase font-bold">Dr.Ease</p><p className="font-bold tracking-tight text-white">{businessMetrics?.merchantOnboard?.drease ?? 420}</p></div>
+                                        <div><p className="text-[10px] text-slate-500 uppercase font-bold">Ease</p><p className="font-bold tracking-tight text-white">{businessMetrics?.merchantOnboard?.ease ?? 141}</p></div>
                                     </div>
                                 </div>
                                 <div className="p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex flex-col justify-center">
                                     <p className="text-text-muted text-[10px] uppercase font-bold tracking-widest">Ease Pay Usage</p>
                                     <p className="text-indigo-400/80 text-[9px] font-bold -mt-0.5 mb-1">จำนวนลูกค้า Ease Pay</p>
-                                    <p className={`font-bold tracking-tight text-white ${isFullscreen ? 'text-xl' : 'text-2xl'}`}>850</p>
+                                    <p className={`font-bold tracking-tight text-white ${isFullscreen ? 'text-xl' : 'text-2xl'}`}>{businessMetrics?.easePayUsage ?? 850}</p>
                                 </div>
                                 <div className="p-2.5 rounded-xl bg-white/5 border border-white/5 flex flex-col justify-center">
                                     <p className="text-text-muted text-[10px] uppercase font-bold tracking-widest">Online Booking</p>
                                     <p className="text-indigo-400/80 text-[9px] font-bold -mt-0.5 mb-1">ระบบจองออนไลน์</p>
                                     <div className="grid grid-cols-2 gap-3 mt-1">
-                                        <div><p className="text-[9px] text-indigo-400 font-bold">Pages</p><p className="font-bold tracking-tight text-white text-lg">320</p></div>
-                                        <div><p className="text-[9px] text-emerald-400 font-bold">Bookings</p><p className="font-bold tracking-tight text-white text-lg">1,240</p></div>
+                                        <div><p className="text-[9px] text-indigo-400 font-bold">Pages</p><p className="font-bold tracking-tight text-white text-lg">{(businessMetrics?.onlineBooking?.pages ?? 320).toLocaleString()}</p></div>
+                                        <div><p className="text-[9px] text-emerald-400 font-bold">Bookings</p><p className="font-bold tracking-tight text-white text-lg">{(businessMetrics?.onlineBooking?.bookings ?? 1240).toLocaleString()}</p></div>
                                     </div>
                                 </div>
                             </div>

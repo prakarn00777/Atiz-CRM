@@ -1,3 +1,64 @@
+// ============================================
+// API Response Types (Type-Safe Error Handling)
+// ============================================
+export interface ApiSuccessResponse<T> {
+    success: true;
+    data: T;
+    meta?: PaginationMeta;
+}
+
+export interface ApiErrorResponse {
+    success: false;
+    error: string;
+    code?: ApiErrorCode;
+}
+
+export type ApiResponse<T> = ApiSuccessResponse<T> | ApiErrorResponse;
+
+export type ApiErrorCode =
+    | 'NOT_FOUND'
+    | 'VALIDATION_ERROR'
+    | 'UNAUTHORIZED'
+    | 'FORBIDDEN'
+    | 'DATABASE_ERROR'
+    | 'NETWORK_ERROR'
+    | 'UNKNOWN_ERROR';
+
+// ============================================
+// Pagination Types
+// ============================================
+export interface PaginationParams {
+    page?: number;
+    limit?: number;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+}
+
+export interface PaginationMeta {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+}
+
+// ============================================
+// Utility Types
+// ============================================
+export type UUID = string;
+
+export const generateUUID = (): UUID => {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+};
+
+// ============================================
+// Domain Types
+// ============================================
 export type UsageStatus = "Active" | "Pending" | "Training" | "Canceled";
 export type InstallationStatus = "Pending" | "Installing" | "Completed";
 export type ProductType = "Dr.Ease" | "EasePos";
@@ -130,4 +191,51 @@ export interface GoogleSheetLead {
     quotation: string;     // ใบเสนอราคา (Column K)
     clinicName: string;    // ชื่อคลินิก/ธุรกิจ (Column L)
     notes: string;         // Note (Column M)
+}
+
+// ============================================
+// User & Role Types
+// ============================================
+export interface User {
+    id: number;
+    name: string;
+    username: string;
+    role: string;
+    isActive?: boolean;
+    createdAt?: string;
+    modifiedAt?: string;
+}
+
+export interface Role {
+    id: string;
+    name: string;
+    description?: string;
+    permissions: Record<string, MenuPermission>;
+}
+
+export interface MenuPermission {
+    create: boolean;
+    read: boolean;
+    update: boolean;
+    delete: boolean;
+}
+
+// ============================================
+// Business Metrics Types
+// ============================================
+export interface BusinessMetrics {
+    newSales: number;
+    renewal: number;
+    renewalRate: number;
+    merchantOnboard: {
+        drease: number;
+        ease: number;
+        total: number;
+    };
+    easePayUsage: number;
+    onlineBooking: {
+        pages: number;
+        bookings: number;
+    };
+    updatedAt: string;
 }
