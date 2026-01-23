@@ -187,6 +187,30 @@ export default function CRMPage() {
     }, 500);
   }, [fetchData]);
 
+  // 3. Fetch leads from Google Sheets API
+  const fetchGoogleSheetLeads = useCallback(async () => {
+    try {
+      setGoogleSheetLeadsLoading(true);
+      const response = await fetch('/api/leads');
+      const result = await response.json();
+      if (result.success) {
+        setGoogleSheetLeads(result.data);
+      } else {
+        console.error('Failed to fetch Google Sheet leads:', result.error, result.details);
+        setToast({ message: `Google Sheet: ${result.details || result.error}`, type: "error" });
+      }
+    } catch (error: any) {
+      console.error('Error fetching Google Sheet leads:', error);
+      setToast({ message: "Error: " + (error.message || "Cannot connect to API"), type: "error" });
+    } finally {
+      setGoogleSheetLeadsLoading(false);
+    }
+  }, [setToast]);
+
+  useEffect(() => {
+    fetchGoogleSheetLeads();
+  }, [fetchGoogleSheetLeads]);
+
   useEffect(() => {
     setMounted(true);
     requestPermission();
@@ -222,24 +246,6 @@ export default function CRMPage() {
     // 2. Background Revalidation (Fetch from Supabase)
     fetchData();
 
-    // 3. Fetch leads from Google Sheets API
-    const fetchGoogleSheetLeads = async () => {
-      try {
-        setGoogleSheetLeadsLoading(true);
-        const response = await fetch('/api/leads');
-        const result = await response.json();
-        if (result.success) {
-          setGoogleSheetLeads(result.data);
-        } else {
-          console.error('Failed to fetch Google Sheet leads:', result.error);
-        }
-      } catch (error) {
-        console.error('Error fetching Google Sheet leads:', error);
-      } finally {
-        setGoogleSheetLeadsLoading(false);
-      }
-    };
-    fetchGoogleSheetLeads();
 
     // Real-time Subscriptions with Broadcast Notifications
     const channels = [
@@ -991,6 +997,7 @@ export default function CRMPage() {
                 <GoogleSheetLeadManager
                   leads={googleSheetLeads}
                   isLoading={isGoogleSheetLeadsLoading}
+                  onRefresh={fetchGoogleSheetLeads}
                 />
               ) : null}
             </div>

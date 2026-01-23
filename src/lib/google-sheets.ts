@@ -2,24 +2,35 @@ import { google } from 'googleapis';
 
 // Initialize Google Sheets API client
 const getGoogleSheetsClient = async () => {
-  if (!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY) {
-    console.error('Missing Google Service Account credentials in environment variables');
-    throw new Error('Google Sheets credentials not configured');
+  const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+  const key = process.env.GOOGLE_PRIVATE_KEY;
+
+  if (!email || !key) {
+    const missing = [];
+    if (!email) missing.push('GOOGLE_SERVICE_ACCOUNT_EMAIL');
+    if (!key) missing.push('GOOGLE_PRIVATE_KEY');
+    console.error(`Missing Google Service Account credentials: ${missing.join(', ')}`);
+    throw new Error(`Google Sheets credentials not configured. Missing: ${missing.join(', ')}`);
   }
 
-  const auth = new google.auth.GoogleAuth({
-    credentials: {
-      client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-      private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    },
-    scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
-  });
+  try {
+    const auth = new google.auth.GoogleAuth({
+      credentials: {
+        client_email: email,
+        private_key: key.replace(/\\n/g, '\n'),
+      },
+      scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
+    });
 
-  const sheets = google.sheets({ version: 'v4', auth });
-  return sheets;
+    const sheets = google.sheets({ version: 'v4', auth });
+    return sheets;
+  } catch (error: any) {
+    console.error('Error initializing Google Sheets client:', error.message);
+    throw new Error(`Google Auth initialization failed: ${error.message}`);
+  }
 };
 
-const SPREADSHEET_ID = process.env.GOOGLE_SPREADSHEET_ID!;
+const SPREADSHEET_ID = process.env.GOOGLE_SPREADSHEET_ID;
 const SHEET_NAME = process.env.GOOGLE_SHEET_NAME || 'Sheet1';
 
 // Lead interface matching the actual Google Sheet structure
@@ -46,6 +57,7 @@ export async function getLeads(): Promise<LeadRow[]> {
     const sheets = await getGoogleSheetsClient();
 
     if (!SPREADSHEET_ID) {
+      console.error('GOOGLE_SPREADSHEET_ID is missing');
       throw new Error('GOOGLE_SPREADSHEET_ID is not defined in environment variables');
     }
 

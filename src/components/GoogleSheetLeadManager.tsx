@@ -1,16 +1,17 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Search, Filter, Phone, User, Tag, Briefcase, MessageSquare, FileText, Building2, Calendar, ExternalLink, Loader2 } from "lucide-react";
+import { Search, Filter, Phone, User, Tag, Briefcase, MessageSquare, FileText, Building2, Calendar, ExternalLink, Loader2, RefreshCw } from "lucide-react";
 import CustomSelect from "./CustomSelect";
 import { GoogleSheetLead } from "@/types";
 
 interface GoogleSheetLeadManagerProps {
     leads: GoogleSheetLead[];
     isLoading?: boolean;
+    onRefresh?: () => void;
 }
 
-export default function GoogleSheetLeadManager({ leads, isLoading }: GoogleSheetLeadManagerProps) {
+export default function GoogleSheetLeadManager({ leads, isLoading, onRefresh }: GoogleSheetLeadManagerProps) {
     const [searchTerm, setSearchTerm] = useState("");
     const [productFilter, setProductFilter] = useState("all");
     const [sourceFilter, setSourceFilter] = useState("all");
@@ -84,6 +85,14 @@ export default function GoogleSheetLeadManager({ leads, isLoading }: GoogleSheet
                             <ExternalLink className="w-3 h-3" />
                             Google Sheets
                         </span>
+                        <button
+                            onClick={onRefresh}
+                            disabled={isLoading}
+                            className={`p-2 rounded-lg bg-white/5 text-slate-400 hover:text-white hover:bg-white/10 transition-all ${isLoading ? 'animate-spin opacity-50' : ''}`}
+                            title="รีเฟรชข้อมูล"
+                        >
+                            <RefreshCw className="w-4 h-4" />
+                        </button>
                     </div>
                     <p className="text-slate-400 text-sm font-medium">
                         ดึงข้อมูลจาก Google Sheets อัตโนมัติ ({leads.length.toLocaleString()} รายการ)
