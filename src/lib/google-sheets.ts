@@ -64,11 +64,32 @@ export async function getLeads(): Promise<LeadRow[]> {
       throw new Error('GOOGLE_SPREADSHEET_ID is not defined in environment variables');
     }
 
-    console.log(`Attempting to fetch Google Sheet: ID=${SPREADSHEET_ID.substring(0, 5)}...${SPREADSHEET_ID.substring(SPREADSHEET_ID.length - 5)}, Name="${SHEET_NAME}"`);
+    // Diagnostic: Fetch spreadsheet metadata to see what's actually there
+    let targetSheet = SHEET_NAME;
+    try {
+      const metadata = await sheets.spreadsheets.get({
+        spreadsheetId: SPREADSHEET_ID,
+      });
+
+      const availableSheets = metadata.data.sheets?.map(s => s.properties?.title) || [];
+      console.log(`Successfully connected! Spreadsheet Title: "${metadata.data.properties?.title}", Available Sheets: ${availableSheets.map(s => `"${s}"`).join(', ')}`);
+
+      // If the configured sheet name isn't in the list, use the first available sheet as fallback
+      if (!availableSheets.includes(SHEET_NAME)) {
+        console.warn(`Sheet "${SHEET_NAME}" not found. Falling back to the first sheet: "${availableSheets[0]}"`);
+        targetSheet = availableSheets[0] || 'Sheet1';
+      }
+    } catch (metaError: any) {
+      console.error('Metadata Fetch Failed:', metaError.message);
+      if (metaError.message.includes('not found')) {
+        throw new Error(`Spreadsheet ID "${SPREADSHEET_ID.substring(0, 5)}..." not found. Please double check your GOOGLE_SPREADSHEET_ID.`);
+      }
+      throw metaError;
+    }
 
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${SHEET_NAME}!A:M`, // Columns A to M (13 columns)
+      range: `${targetSheet}!A:M`, // Use discovered or configured sheet name
     });
 
     const rows = response.data.values;
