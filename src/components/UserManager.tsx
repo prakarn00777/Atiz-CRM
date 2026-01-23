@@ -126,10 +126,10 @@ export default function UserManager({ users, roles, onSave, onDelete }: UserMana
             {/* Header with Search and Filters */}
             <div className="flex flex-col gap-4">
                 <div className="flex justify-between items-center">
-                    <h1 className="text-3xl font-bold tracking-tight">จัดการผู้ใช้งาน</h1>
+                    <h1 className="text-3xl font-bold tracking-tight">User Management</h1>
                     <button onClick={() => handleOpenModal()} className="btn btn-primary px-6">
                         <Plus className="w-5 h-5" />
-                        <span>เพิ่มผู้ใช้งาน</span>
+                        <span>Add User</span>
                     </button>
                 </div>
 

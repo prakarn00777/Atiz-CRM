@@ -87,8 +87,8 @@ export default function LeadManager({ leads, onEdit, onDelete, onAdd }: LeadMana
         <div className="space-y-6">
             <div className="flex flex-col gap-6">
                 <div className="flex flex-col">
-                    <h1 className="text-3xl font-bold tracking-tight mb-2">จัดการลีด (Leads)</h1>
-                    <p className="text-slate-400 text-sm font-medium">ติดตามความคืบหน้าและข้อมูลลีดในระบบ</p>
+                    <h1 className="text-3xl font-bold tracking-tight mb-2">Leads</h1>
+                    <p className="text-slate-400 text-sm font-medium">Track lead progress and data in the system</p>
                 </div>
 
                 <div className="flex flex-col xl:flex-row gap-4 items-start xl:items-center w-full">

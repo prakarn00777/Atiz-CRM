@@ -24,14 +24,14 @@ interface RoleManagerProps {
 }
 
 const AVAILABLE_MENUS = [
-    { id: "dashboard", label: "Dashboard", icon: "📊" },
-    { id: "customers", label: "จัดการลูกค้า", icon: "👥" },
-    { id: "installations", label: "งานติดตั้ง", icon: "🔧" },
-    { id: "issues", label: "แจ้งปัญหา", icon: "📝" },
-    { id: "leads", label: "ลีด (Leads)", icon: "📢" },
-    { id: "user_management", label: "จัดการผู้ใช้งาน", icon: "👤" },
-    { id: "cs_activity", label: "CS Task", icon: "📋" },
-    { id: "role_management", label: "จัดการบทบาท", icon: "🛡️" },
+    { id: "dashboard", label: "Dashboard", icon: "📊", group: null },
+    { id: "customers", label: "Customers", icon: "👥", group: "CS & DEV Team" },
+    { id: "installations", label: "Installations", icon: "🔧", group: "CS & DEV Team" },
+    { id: "issues", label: "Issues", icon: "📝", group: "CS & DEV Team" },
+    { id: "cs_activity", label: "CS Task", icon: "📋", group: "CS & DEV Team" },
+    { id: "leads", label: "Leads", icon: "📢", group: "Marketing Team" },
+    { id: "user_management", label: "User Management", icon: "👤", group: "Settings" },
+    { id: "role_management", label: "Role Management", icon: "🛡️", group: "Settings" },
 ];
 
 const DEFAULT_PERMISSION: MenuPermission = { create: false, read: false, update: false, delete: false };
@@ -108,7 +108,7 @@ export default function RoleManager({ roles, onSave, onDelete }: RoleManagerProp
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
-                <h1 className="text-3xl font-bold tracking-tight">จัดการบทบาท</h1>
+                <h1 className="text-3xl font-bold tracking-tight">Role Management</h1>
                 <button onClick={() => handleOpenModal()} className="btn btn-primary px-6">
                     <Plus className="w-5 h-5" />
                     <span>เพิ่มบทบาท</span>

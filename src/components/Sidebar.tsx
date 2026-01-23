@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useState } from "react";
-import { LayoutDashboard, Users, LogOut, Layers, Settings, ChevronRight, UserCog, ShieldCheck, AlertCircle, History as HistoryIcon } from "lucide-react";
+import { LayoutDashboard, Users, LogOut, Layers, Settings, ChevronRight, UserCog, ShieldCheck, AlertCircle, History as HistoryIcon, Wrench, Megaphone } from "lucide-react";
 
 interface SidebarProps {
     currentView: string;
@@ -15,24 +15,31 @@ interface SidebarProps {
 
 const mainMenus = [
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { id: "cs_activity", label: "CS Task", icon: HistoryIcon },
-    { id: "leads", label: "ลีด (Leads)", icon: Users },
     {
-        id: "customer_group",
-        label: "ลูกค้า",
-        icon: Users,
+        id: "cs_dev_group",
+        label: "CS & DEV Team",
+        icon: Wrench,
         children: [
-            { id: "customers", label: "จัดการลูกค้า" },
-            { id: "installations", label: "งานติดตั้ง" },
+            { id: "customers", label: "Customers" },
+            { id: "installations", label: "Installations" },
+            { id: "issues", label: "Issues" },
+            { id: "cs_activity", label: "CS Task" },
         ]
     },
-    { id: "issues", label: "แจ้งปัญหา", icon: AlertCircle },
+    {
+        id: "marketing_group",
+        label: "Marketing Team",
+        icon: Megaphone,
+        children: [
+            { id: "leads", label: "Leads" },
+        ]
+    },
 ];
 
 const Sidebar = memo(function Sidebar({ currentView, setView, onLogout, userRole }: SidebarProps) {
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isCollapsed, setIsCollapsed] = useState(false);
-    const [expandedMenus, setExpandedMenus] = useState<string[]>(["customer_group"]);
+    const [expandedMenus, setExpandedMenus] = useState<string[]>(["cs_dev_group", "marketing_group"]);
 
     const toggleMenu = (menuId: string) => {
         setExpandedMenus(prev =>
@@ -177,13 +184,13 @@ const Sidebar = memo(function Sidebar({ currentView, setView, onLogout, userRole
                         onClick={() => !isCollapsed && setIsSettingsOpen(!isSettingsOpen)}
                         className={`btn btn-ghost w-full text-slate-400 text-sm transition-all duration-200 ${isCollapsed ? "justify-center p-2" : "justify-start"
                             }`}
-                        title={isCollapsed ? "ตั้งค่า" : ""}
+                        title={isCollapsed ? "Settings" : ""}
                     >
                         <div className={`flex items-center ${isCollapsed ? "justify-center" : "gap-3"}`}>
                             <Settings className="w-4 h-4 flex-shrink-0" />
                             {!isCollapsed && (
                                 <div className="flex-1 flex items-center justify-between">
-                                    <span className="font-medium">ตั้งค่า</span>
+                                    <span className="font-medium">Settings</span>
                                     <ChevronRight className={`w-3 h-3 transition-transform ${isSettingsOpen ? "rotate-90" : ""}`} />
                                 </div>
                             )}
@@ -203,7 +210,7 @@ const Sidebar = memo(function Sidebar({ currentView, setView, onLogout, userRole
                                         className={`btn w-full justify-start text-sm font-medium ${currentView === "user_management" ? "text-indigo-400 bg-indigo-500/10" : "btn-ghost"}`}
                                     >
                                         <UserCog className="w-3.5 h-3.5" />
-                                        <span>จัดการผู้ใช้งาน</span>
+                                        <span>User Management</span>
                                     </button>
                                 )}
                                 {(userRole?.permissions?.['role_management']?.read || userRole?.role?.toLowerCase() === 'admin') && (
@@ -212,7 +219,7 @@ const Sidebar = memo(function Sidebar({ currentView, setView, onLogout, userRole
                                         className={`btn w-full justify-start text-sm font-medium ${currentView === "role_management" ? "text-indigo-400 bg-indigo-500/10" : "btn-ghost"}`}
                                     >
                                         <ShieldCheck className="w-3.5 h-3.5" />
-                                        <span>จัดการบทบาท</span>
+                                        <span>Role Management</span>
                                     </button>
                                 )}
                             </div>
@@ -227,7 +234,7 @@ const Sidebar = memo(function Sidebar({ currentView, setView, onLogout, userRole
                                     className={`btn w-full justify-start text-sm h-9 font-medium ${currentView === "user_management" ? "text-indigo-400 bg-indigo-500/10" : "text-slate-400 hover:text-white hover:bg-white/5"}`}
                                 >
                                     <UserCog className="w-3.5 h-3.5 mr-2" />
-                                    <span>จัดการผู้ใช้งาน</span>
+                                    <span>User Management</span>
                                 </button>
                             )}
                             {(userRole?.permissions?.['role_management']?.read || userRole?.role?.toLowerCase() === 'admin') && (
@@ -236,7 +243,7 @@ const Sidebar = memo(function Sidebar({ currentView, setView, onLogout, userRole
                                     className={`btn w-full justify-start text-sm h-9 font-medium ${currentView === "role_management" ? "text-indigo-400 bg-indigo-500/10" : "text-slate-400 hover:text-white hover:bg-white/5"}`}
                                 >
                                     <ShieldCheck className="w-3.5 h-3.5 mr-2" />
-                                    <span>จัดการบทบาท</span>
+                                    <span>Role Management</span>
                                 </button>
                             )}
                         </div>
@@ -248,12 +255,12 @@ const Sidebar = memo(function Sidebar({ currentView, setView, onLogout, userRole
                 onClick={onLogout}
                 className={`btn btn-ghost w-full text-rose-400 hover:text-rose-300 hover:bg-rose-500/5 pt-3 border-t border-white/5 transition-all duration-200 ${isCollapsed ? "justify-center p-2" : "justify-start"
                     }`}
-                title={isCollapsed ? "ออกจากระบบ" : ""}
+                title={isCollapsed ? "Logout" : ""}
             >
                 <div className={`flex items-center ${isCollapsed ? "justify-center" : "gap-3"}`}>
                     <LogOut className="w-4 h-4 flex-shrink-0" />
                     {!isCollapsed && (
-                        <span className="animate-in fade-in duration-300 font-medium">ออกจากระบบ</span>
+                        <span className="animate-in fade-in duration-300 font-medium">Logout</span>
                     )}
                 </div>
             </button>

@@ -115,7 +115,7 @@ export default function GoogleSheetLeadManager({ leads, isLoading, onRefresh }: 
             <div className="flex flex-col gap-6">
                 <div className="flex flex-col">
                     <div className="flex items-center gap-3 mb-2">
-                        <h1 className="text-3xl font-bold tracking-tight">จัดการลีด (Leads)</h1>
+                        <h1 className="text-3xl font-bold tracking-tight">Leads</h1>
                         <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5">
                             <ExternalLink className="w-3 h-3" />
                             Google Sheets
