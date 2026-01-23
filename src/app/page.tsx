@@ -146,6 +146,7 @@ export default function CRMPage() {
   const [showConfetti, setShowConfetti] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const { pushNotification, requestPermission } = useNotification();
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>("default");
   const debounceTimer = useRef<any>(null);
 
   const fetchData = useCallback(async () => {
@@ -216,6 +217,9 @@ export default function CRMPage() {
   useEffect(() => {
     setMounted(true);
     requestPermission();
+    if ("Notification" in window) {
+      setNotificationPermission(Notification.permission);
+    }
 
     // 1. Immediate Load from Cache (Stale-While-Revalidate)
     const savedUser = localStorage.getItem("crm_user_v2");
@@ -966,7 +970,19 @@ export default function CRMPage() {
           />
           <main className="flex-1 overflow-auto bg-gradient-to-br from-[#020617] via-[#0f172a] to-[#020617] relative animate-in fade-in duration-1000">
             <div className="p-4 lg:p-8 max-w-[1600px] mx-auto relative z-10">
-              <div className="absolute top-4 lg:top-8 right-4 lg:right-8 z-[100]">
+              <div className="absolute top-4 lg:top-8 right-4 lg:right-8 z-[100] flex items-center gap-3">
+                {notificationPermission !== "granted" && (
+                  <button
+                    onClick={async () => {
+                      const granted = await requestPermission();
+                      if (granted) setNotificationPermission("granted");
+                    }}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 rounded-lg text-amber-500 text-[10px] font-bold transition-all animate-pulse"
+                  >
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                    ENABLE NOTIFICATIONS
+                  </button>
+                )}
                 <NotificationBell />
               </div>
               {currentView === "dashboard" ? (
