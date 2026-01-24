@@ -61,7 +61,6 @@ export async function getMasterDemos(): Promise<MasterDemoRow[]> {
         const [, ...dataRows] = rows;
 
         return dataRows
-            .filter(row => row[0] || row[1] || row[5]) // Filter for non-empty rows
             .map((row, index) => ({
                 id: `master-${index + 2}`,
                 leadNumber: String(row[1] || ''),    // Col B

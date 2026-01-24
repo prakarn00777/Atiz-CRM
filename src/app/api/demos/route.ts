@@ -5,11 +5,7 @@ export async function GET() {
     try {
         const demos = await getMasterDemos();
 
-        // You can add additional filtering here if needed, 
-        // e.g., only return rows where demoStatus is not empty
-        const validDemos = demos.filter(d => d.date && d.leadNumber);
-
-        return NextResponse.json({ success: true, data: validDemos });
+        return NextResponse.json({ success: true, data: demos });
     } catch (error: any) {
         console.error('API Error fetching master demos:', error);
         return NextResponse.json(

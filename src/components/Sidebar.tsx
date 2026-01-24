@@ -33,6 +33,7 @@ const mainMenus = [
         icon: Megaphone,
         children: [
             { id: "leads", label: "Leads" },
+            { id: "demos", label: "Demos" },
         ]
     },
 ];
@@ -123,7 +124,9 @@ const Sidebar = memo(function Sidebar({ currentView, setView, onLogout, userRole
                                                 onClick={() => setView(child.id)}
                                                 className={`btn w-full justify-start text-sm h-9 font-medium relative overflow-hidden ${currentView === child.id
                                                     ? "bg-indigo-500/10 text-white border-indigo-500/20"
-                                                    : "text-slate-400 hover:text-white hover:bg-white/5"
+                                                    : child.id === "cs_activity"
+                                                        ? "text-slate-400"
+                                                        : "text-slate-400 hover:text-white hover:bg-white/5"
                                                     }`}
                                             >
                                                 {currentView === child.id && <ActiveItemEffect />}
@@ -146,7 +149,7 @@ const Sidebar = memo(function Sidebar({ currentView, setView, onLogout, userRole
                                                 <button
                                                     key={child.id}
                                                     onClick={() => setView(child.id)}
-                                                    className={`btn w-full justify-start text-sm font-medium relative overflow-hidden ${currentView === child.id ? "text-white bg-indigo-500/10" : "btn-ghost"}`}
+                                                    className={`btn w-full justify-start text-sm font-medium relative overflow-hidden ${currentView === child.id ? "text-white bg-indigo-500/10" : child.id === "cs_activity" ? "text-slate-400" : "btn-ghost"}`}
                                                 >
                                                     {currentView === child.id && <ActiveItemEffect />}
                                                     <span className={`truncate relative z-10 ${currentView === child.id ? "text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.7)]" : ""}`}>

@@ -238,8 +238,7 @@ export async function getUsers(): Promise<User[]> {
     try {
         const { data, error } = await db
             .from('users')
-            .select('id, name, username, role_id, is_active, created_at, modified_at')
-            .eq('is_active', true)
+            .select('id, name, username, role_id, created_at')
             .order('id', { ascending: true });
 
         if (error) {
@@ -252,9 +251,8 @@ export async function getUsers(): Promise<User[]> {
             name: String(u.name),
             username: String(u.username),
             role: String(u.role_id),
-            isActive: Boolean(u.is_active),
+            isActive: true,
             createdAt: u.created_at ? String(u.created_at) : undefined,
-            modifiedAt: u.modified_at ? String(u.modified_at) : undefined,
         }));
     } catch (err) {
         log.error("Critical error in getUsers:", err);
@@ -324,9 +322,8 @@ export async function loginUser(username: string, password: string): Promise<Api
 
         const { data, error } = await db
             .from('users')
-            .select('id, name, username, password, role_id, is_active, roles(name, permissions)')
+            .select('id, name, username, password, role_id, roles(name, permissions)')
             .eq('username', username)
-            .eq('is_active', true)
             .maybeSingle();
 
         if (error) {
@@ -357,7 +354,7 @@ export async function loginUser(username: string, password: string): Promise<Api
             name: String(data.name),
             username: String(data.username),
             role: String(data.role_id),
-            isActive: Boolean(data.is_active),
+            isActive: true,
             permissions: (data.roles as { permissions?: Record<string, unknown> })?.permissions,
         };
 

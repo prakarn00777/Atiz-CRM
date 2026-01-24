@@ -30,6 +30,7 @@ const AVAILABLE_MENUS = [
     { id: "issues", label: "Issues", icon: "📝", group: "CS & DEV Team" },
     { id: "cs_activity", label: "CS Task", icon: "📋", group: "CS & DEV Team" },
     { id: "leads", label: "Leads", icon: "📢", group: "Marketing Team" },
+    { id: "demos", label: "Demos", icon: "🎬", group: "Marketing Team" },
     { id: "user_management", label: "User Management", icon: "👤", group: "Settings" },
     { id: "role_management", label: "Role Management", icon: "🛡️", group: "Settings" },
 ];

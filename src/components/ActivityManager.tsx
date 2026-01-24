@@ -147,26 +147,28 @@ export default function ActivityManager({ activities, customers, onAdd, onEdit, 
 
             <div className="glass-card overflow-hidden border-indigo-500/5 flex flex-col h-[calc(100vh-175px)]">
                 <div className="overflow-auto custom-scrollbar flex-1">
-                    <table className="w-full text-left border-collapse relative">
-                        <thead className="sticky top-0 z-10 bg-[#0f172a] shadow-sm">
-                            <tr className="bg-white/5 text-slate-400 text-xs uppercase tracking-wider border-b border-white/5">
-                                <th className="px-4 py-3 font-semibold w-[5%] text-center">No.</th>
-                                <th className="px-4 py-3 font-semibold w-[20%] text-left">Activity Info</th>
-                                <th className="px-4 py-3 font-semibold w-[15%] text-center">Customer</th>
-                                <th className="px-4 py-3 font-semibold w-[10%] text-center">Type</th>
-                                <th className="px-4 py-3 font-semibold w-[10%] text-center">Status</th>
-                                <th className="px-4 py-3 font-semibold w-[20%] text-center">Created By</th>
-                                <th className="px-4 py-3 font-semibold w-[10%] text-center">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-white/5">
+                    <div className="overflow-auto custom-scrollbar flex-1 px-2">
+                        {/* Header */}
+                        <div className="sticky top-0 z-10 bg-[#0f172a] shadow-sm mb-2">
+                            <div className="flex bg-white/5 text-slate-400 text-xs uppercase tracking-wider rounded-lg">
+                                <div className="px-4 py-3 font-semibold w-[5%] text-center">No.</div>
+                                <div className="px-4 py-3 font-semibold w-[20%] text-left">Activity Info</div>
+                                <div className="px-4 py-3 font-semibold w-[15%] text-center">Customer</div>
+                                <div className="px-4 py-3 font-semibold w-[10%] text-center">Type</div>
+                                <div className="px-4 py-3 font-semibold w-[10%] text-center">Status</div>
+                                <div className="px-4 py-3 font-semibold w-[20%] text-center">Created By</div>
+                                <div className="px-4 py-3 font-semibold w-[10%] text-center">Actions</div>
+                            </div>
+                        </div>
+
+                        <div className="space-y-1">
                             {paginatedActivities.length > 0 ? (
                                 paginatedActivities.map((activity, index) => (
-                                    <tr key={activity.id} className="group hover:bg-white/[0.02] transition-colors h-14">
-                                        <td className="px-4 py-3 text-center">
+                                    <div key={activity.id} className="group relative flex items-center bg-white/[0.01] hover:bg-white/[0.02] transition-all rounded-lg min-h-[56px] overflow-hidden">
+                                        <div className="px-4 py-3 text-center w-[5%] relative z-10">
                                             <span className="text-xs text-slate-500">{(currentPage - 1) * itemsPerPage + index + 1}</span>
-                                        </td>
-                                        <td className="px-4 py-3 text-left">
+                                        </div>
+                                        <div className="px-4 py-3 text-left w-[20%] relative z-10">
                                             <div className="flex flex-col gap-0.5 max-w-[300px]">
                                                 <div className="font-semibold text-slate-200 text-xs truncate" title={activity.title}>
                                                     {activity.title || "Untitled Task"}
@@ -175,24 +177,24 @@ export default function ActivityManager({ activities, customers, onAdd, onEdit, 
                                                     {activity.content || "-"}
                                                 </div>
                                             </div>
-                                        </td>
-                                        <td className="px-4 py-3 text-center">
+                                        </div>
+                                        <div className="px-4 py-3 text-center w-[15%] relative z-10">
                                             <div className="flex flex-col items-center">
                                                 <span className="text-xs text-slate-300 font-medium">{activity.customerName}</span>
                                             </div>
-                                        </td>
-                                        <td className="px-4 py-3 text-center">
+                                        </div>
+                                        <div className="px-4 py-3 text-center w-[10%] relative z-10">
                                             <span className="px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-slate-300 text-[10px] font-medium whitespace-nowrap">
                                                 {activity.activityType}
                                             </span>
-                                        </td>
-                                        <td className="px-4 py-3 text-center">
+                                        </div>
+                                        <div className="px-4 py-3 text-center w-[10%] relative z-10">
                                             <div className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-bold whitespace-nowrap ${getStatusColor(activity.status || "Open")}`}>
                                                 {getStatusIcon(activity.status || "Open")}
                                                 {activity.status || "Open"}
                                             </div>
-                                        </td>
-                                        <td className="px-4 py-3 text-center">
+                                        </div>
+                                        <div className="px-4 py-3 text-center w-[20%] relative z-10">
                                             <div className="flex flex-col items-center">
                                                 <span className="text-xs font-medium text-slate-300">{activity.createdBy || "Admin"}</span>
                                                 <span className="text-[10px] text-slate-500">
@@ -205,8 +207,8 @@ export default function ActivityManager({ activities, customers, onAdd, onEdit, 
                                                     })}
                                                 </span>
                                             </div>
-                                        </td>
-                                        <td className="px-4 py-3 text-center">
+                                        </div>
+                                        <div className="px-4 py-3 text-center w-[10%] relative z-10">
                                             <div className="flex justify-center">
                                                 <button
                                                     onClick={(e) => handleMenuToggle(e, activity.id!)}
@@ -244,21 +246,19 @@ export default function ActivityManager({ activities, customers, onAdd, onEdit, 
                                                     document.body
                                                 )}
                                             </div>
-                                        </td>
-                                    </tr>
+                                        </div>
+                                    </div>
                                 ))
                             ) : (
-                                <tr>
-                                    <td colSpan={7} className="px-4 py-12 text-center">
-                                        <div className="flex flex-col items-center gap-2">
-                                            <LayoutList className="w-12 h-12 text-slate-600" />
-                                            <p className="text-sm text-slate-500">ไม่พบข้อมูลกิจกรรม</p>
-                                        </div>
-                                    </td>
-                                </tr>
+                                <div className="px-4 py-12 text-center">
+                                    <div className="flex flex-col items-center gap-2">
+                                        <LayoutList className="w-12 h-12 text-slate-600" />
+                                        <p className="text-sm text-slate-500">ไม่พบข้อมูลกิจกรรม</p>
+                                    </div>
+                                </div>
                             )}
-                        </tbody>
-                    </table>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Pagination Controls */}

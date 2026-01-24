@@ -18,6 +18,7 @@ import InstallationManager from "@/components/InstallationManager";
 import NotificationBell from "@/components/NotificationBell";
 import LeadManager from "@/components/LeadManager";
 import GoogleSheetLeadManager from "@/components/GoogleSheetLeadManager";
+import DemoManager from "@/components/DemoManager";
 import CustomDatePicker from "@/components/CustomDatePicker";
 import { Customer, Branch, Installation, Issue, UsageStatus, Activity as CSActivity, ActivityType, SentimentType, Lead, GoogleSheetLead, MasterDemoLead, BusinessMetrics } from "@/types";
 import { useNotification } from "@/components/NotificationProvider";
@@ -1131,6 +1132,12 @@ export default function CRMPage() {
                   leads={googleSheetLeads}
                   isLoading={isGoogleSheetLeadsLoading}
                   onRefresh={fetchGoogleSheetLeads}
+                />
+              ) : currentView === "demos" ? (
+                <DemoManager
+                  demos={googleSheetDemos}
+                  isLoading={isGoogleSheetDemosLoading}
+                  onRefresh={fetchGoogleSheetDemos}
                 />
               ) : null}
             </div>
