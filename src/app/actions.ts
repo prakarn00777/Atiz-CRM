@@ -601,7 +601,24 @@ export async function saveInstallation(instData: Partial<Installation>): Promise
             return createError("No data returned from database", 'DATABASE_ERROR');
         }
 
-        return createSuccess(result as Installation);
+        // Map snake_case to camelCase
+        const installation: Installation = {
+            id: Number(result.id),
+            customerId: result.customer_id ? Number(result.customer_id) : 0,
+            customerName: '',
+            branchName: result.branch_name ? String(result.branch_name) : undefined,
+            status: String(result.status) as Installation['status'],
+            installationType: String(result.installation_type) as Installation['installationType'],
+            notes: result.notes ? String(result.notes) : undefined,
+            assignedDev: result.assigned_dev ? String(result.assigned_dev) : undefined,
+            completedAt: result.completed_at ? String(result.completed_at) : undefined,
+            requestedBy: result.created_by ? String(result.created_by) : '',
+            requestedAt: result.created_at ? String(result.created_at) : '',
+            modifiedBy: result.modified_by ? String(result.modified_by) : undefined,
+            modifiedAt: result.modified_at ? String(result.modified_at) : undefined,
+        };
+
+        return createSuccess(installation);
     } catch (err) {
         return handleDbError(err, "saveInstallation");
     }
@@ -647,7 +664,7 @@ export async function getActivities(params?: PaginationParams): Promise<Activity
     try {
         let query = db
             .from('activities')
-            .select('id, customer_id, customer_name, title, activity_type, content, status, sentiment, follow_up_date, created_by, created_at, modified_by, modified_at')
+            .select('id, customer_id, customer_name, title, activity_type, content, assignee, status, sentiment, follow_up_date, created_by, created_at, modified_by, modified_at')
             .order('created_at', { ascending: false });
 
         if (params?.limit) {
@@ -666,6 +683,7 @@ export async function getActivities(params?: PaginationParams): Promise<Activity
             title: String(item.title),
             activityType: item.activity_type as Activity['activityType'],
             content: item.content ? String(item.content) : undefined,
+            assignee: item.assignee ? String(item.assignee) : undefined,
             status: String(item.status),
             sentiment: item.sentiment as Activity['sentiment'],
             followUpDate: item.follow_up_date ? String(item.follow_up_date) : undefined,
@@ -689,6 +707,7 @@ export async function saveActivity(activityData: Partial<Activity>): Promise<Api
             title: rest.title,
             activity_type: rest.activityType,
             content: rest.content,
+            assignee: rest.assignee,
             status: rest.status,
             sentiment: rest.sentiment,
             follow_up_date: rest.followUpDate,
@@ -720,6 +739,7 @@ export async function saveActivity(activityData: Partial<Activity>): Promise<Api
             title: String(result.title),
             activityType: result.activity_type as Activity['activityType'],
             content: result.content ? String(result.content) : undefined,
+            assignee: result.assignee ? String(result.assignee) : undefined,
             status: String(result.status),
             sentiment: result.sentiment as Activity['sentiment'],
             followUpDate: result.follow_up_date ? String(result.follow_up_date) : undefined,

@@ -1,20 +1,22 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
-import { Search, Plus, Edit2, Trash2, MoreVertical, LayoutList, History, ShieldCheck, Users, CheckCircle2, Play, Clock, AlertCircle } from "lucide-react";
+import { Search, Plus, Edit2, Trash2, MoreVertical, LayoutList, History, ShieldCheck, Users, CheckCircle2, Play, Clock, AlertCircle, User } from "lucide-react";
 import CustomSelect from "./CustomSelect";
-import { Customer, Activity } from "@/types";
+import { Customer, Activity, User as UserType } from "@/types";
 
 interface ActivityManagerProps {
     activities: Activity[];
     customers: Customer[];
+    users?: UserType[];
     onAdd: () => void;
     onEdit: (activity: Activity) => void;
     onDelete: (id: number) => void;
 }
 
-export default function ActivityManager({ activities, customers, onAdd, onEdit, onDelete }: ActivityManagerProps) {
+export default function ActivityManager({ activities, customers, users = [], onAdd, onEdit, onDelete }: ActivityManagerProps) {
     const [searchTerm, setSearchTerm] = useState("");
     const [typeFilter, setTypeFilter] = useState("all");
+    const [assigneeFilter, setAssigneeFilter] = useState("all");
     const [currentPage, setCurrentPage] = useState(1);
     const [activeMenu, setActiveMenu] = useState<number | null>(null);
     const [menuPosition, setMenuPosition] = useState<{ top: number, left: number } | null>(null);
@@ -53,14 +55,25 @@ export default function ActivityManager({ activities, customers, onAdd, onEdit, 
         }
     };
 
+    // Get unique assignees from activities for filter options
+    const assigneeOptions = useMemo(() => {
+        const assignees = new Set<string>();
+        activities.forEach(a => {
+            if (a.assignee) assignees.add(a.assignee);
+        });
+        return Array.from(assignees).sort();
+    }, [activities]);
+
     const filteredActivities = activities.filter(activity => {
         const matchesSearch =
             (activity.customerName || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
             (activity.title || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (activity.content || "").toLowerCase().includes(searchTerm.toLowerCase());
+            (activity.content || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (activity.assignee || "").toLowerCase().includes(searchTerm.toLowerCase());
         const matchesType = typeFilter === "all" || activity.activityType === typeFilter;
+        const matchesAssignee = assigneeFilter === "all" || activity.assignee === assigneeFilter;
 
-        return matchesSearch && matchesType;
+        return matchesSearch && matchesType && matchesAssignee;
     });
 
     // Sort by createdAt descending (newest first)
@@ -133,6 +146,17 @@ export default function ActivityManager({ activities, customers, onAdd, onEdit, 
                             onChange={(val) => { setTypeFilter(val); setCurrentPage(1); }}
                             className="w-[160px]"
                         />
+                        <CustomSelect
+                            icon={<User className="w-3.5 h-3.5" />}
+                            options={[
+                                { value: "all", label: "ผู้รับผิดชอบทั้งหมด" },
+                                ...assigneeOptions.map(a => ({ value: a, label: a }))
+                            ]}
+                            value={assigneeFilter}
+                            onChange={(val) => { setAssigneeFilter(val); setCurrentPage(1); }}
+                            className="w-[180px]"
+                            placeholder="ผู้รับผิดชอบ"
+                        />
                     </div>
                 </div>
 
@@ -152,12 +176,13 @@ export default function ActivityManager({ activities, customers, onAdd, onEdit, 
                         <div className="sticky top-0 z-10 bg-[#0f172a] shadow-sm mb-2">
                             <div className="flex bg-white/5 text-slate-400 text-xs uppercase tracking-wider rounded-lg">
                                 <div className="px-4 py-3 font-semibold w-[5%] text-center">No.</div>
-                                <div className="px-4 py-3 font-semibold w-[20%] text-left">Activity Info</div>
-                                <div className="px-4 py-3 font-semibold w-[15%] text-center">Customer</div>
+                                <div className="px-4 py-3 font-semibold w-[18%] text-left">Activity Info</div>
+                                <div className="px-4 py-3 font-semibold w-[13%] text-center">Customer</div>
                                 <div className="px-4 py-3 font-semibold w-[10%] text-center">Type</div>
                                 <div className="px-4 py-3 font-semibold w-[10%] text-center">Status</div>
-                                <div className="px-4 py-3 font-semibold w-[20%] text-center">Created By</div>
-                                <div className="px-4 py-3 font-semibold w-[10%] text-center">Actions</div>
+                                <div className="px-4 py-3 font-semibold w-[12%] text-center">Assignee</div>
+                                <div className="px-4 py-3 font-semibold w-[18%] text-center">Created By</div>
+                                <div className="px-4 py-3 font-semibold w-[8%] text-center">Actions</div>
                             </div>
                         </div>
 
@@ -168,8 +193,8 @@ export default function ActivityManager({ activities, customers, onAdd, onEdit, 
                                         <div className="px-4 py-3 text-center w-[5%] relative z-10">
                                             <span className="text-xs text-slate-500">{(currentPage - 1) * itemsPerPage + index + 1}</span>
                                         </div>
-                                        <div className="px-4 py-3 text-left w-[20%] relative z-10">
-                                            <div className="flex flex-col gap-0.5 max-w-[300px]">
+                                        <div className="px-4 py-3 text-left w-[18%] relative z-10">
+                                            <div className="flex flex-col gap-0.5 max-w-[280px]">
                                                 <div className="font-semibold text-slate-200 text-xs truncate" title={activity.title}>
                                                     {activity.title || "Untitled Task"}
                                                 </div>
@@ -178,9 +203,9 @@ export default function ActivityManager({ activities, customers, onAdd, onEdit, 
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className="px-4 py-3 text-center w-[15%] relative z-10">
+                                        <div className="px-4 py-3 text-center w-[13%] relative z-10">
                                             <div className="flex flex-col items-center">
-                                                <span className="text-xs text-slate-300 font-medium">{activity.customerName}</span>
+                                                <span className="text-xs text-slate-300 font-medium truncate max-w-full">{activity.customerName}</span>
                                             </div>
                                         </div>
                                         <div className="px-4 py-3 text-center w-[10%] relative z-10">
@@ -194,7 +219,12 @@ export default function ActivityManager({ activities, customers, onAdd, onEdit, 
                                                 {activity.status || "Open"}
                                             </div>
                                         </div>
-                                        <div className="px-4 py-3 text-center w-[20%] relative z-10">
+                                        <div className="px-4 py-3 text-center w-[12%] relative z-10">
+                                            <span className="text-xs text-indigo-400 font-medium">
+                                                {activity.assignee || "-"}
+                                            </span>
+                                        </div>
+                                        <div className="px-4 py-3 text-center w-[18%] relative z-10">
                                             <div className="flex flex-col items-center">
                                                 <span className="text-xs font-medium text-slate-300">{activity.createdBy || "Admin"}</span>
                                                 <span className="text-[10px] text-slate-500">
@@ -208,7 +238,7 @@ export default function ActivityManager({ activities, customers, onAdd, onEdit, 
                                                 </span>
                                             </div>
                                         </div>
-                                        <div className="px-4 py-3 text-center w-[10%] relative z-10">
+                                        <div className="px-4 py-3 text-center w-[8%] relative z-10">
                                             <div className="flex justify-center">
                                                 <button
                                                     onClick={(e) => handleMenuToggle(e, activity.id!)}

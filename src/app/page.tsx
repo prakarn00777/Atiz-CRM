@@ -828,14 +828,15 @@ export default function CRMPage() {
         setCustomers(previousCustomers);
         setToast({ message: "เกิดข้อผิดพลาด: " + (result as any).error, type: "error" });
       } else if (result.data) {
-        // Replace optimism with reality (Sync ID)
+        // Replace optimism with reality (Sync ID and customerId)
         setInstallations(prev => {
-          const syncData = {
-            ...data,
-            id: result.data.id,
-            customerId: finalCustomerId // Ensure it's the latest ID
+          const syncData: Installation = {
+            ...result.data,
+            customerId: result.data.customerId || finalCustomerId, // Use server response or fallback
+            customerName: data.customerName // Preserve original customer name
           };
-          return prev.map(inst => inst === data ? syncData : inst);
+          // Find the optimistic entry by checking for undefined/0 id or matching temp data
+          return prev.map(inst => (!inst.id || inst.id === data.id) && inst.customerName === data.customerName ? syncData : inst);
         });
       }
     } catch (err: any) {
@@ -859,7 +860,7 @@ export default function CRMPage() {
         const inst = result.data;
 
         // If installation completed, also update customer/branch status
-        if (status === "Completed" || status === "Installing") {
+        if (status === "Completed") {
           const targetCust = customers.find(c => c.id === inst.customerId);
           if (targetCust) {
             const updatedBranches = (targetCust.branches || []).map(b => {
@@ -1171,6 +1172,7 @@ export default function CRMPage() {
                 <ActivityManager
                   activities={activities}
                   customers={customers}
+                  users={users}
                   onAdd={() => {
                     setEditingActivity(null);
                     setSelectedCustomerId(null);
@@ -1364,8 +1366,7 @@ export default function CRMPage() {
                               </div>
 
                               {/* Status Indicator Dot */}
-                              <div className={`absolute right-3 top-3 w-1.5 h-1.5 rounded-full ${branch.status === "Completed" ? "bg-emerald-500" :
-                                branch.status === "Installing" ? "bg-blue-500" : "bg-slate-600"
+                              <div className={`absolute right-3 top-3 w-1.5 h-1.5 rounded-full ${branch.status === "Completed" ? "bg-emerald-500" : "bg-slate-600"
                                 }`} />
                             </button>
                           ))}
@@ -1430,7 +1431,6 @@ export default function CRMPage() {
                                       const getStatusIcon = (status: string) => {
                                         switch (status) {
                                           case "Pending": return <Clock className="w-3.5 h-3.5 text-amber-400" />;
-                                          case "Installing": return <Play className="w-3.5 h-3.5 text-indigo-400 animate-pulse" />;
                                           case "Completed": return <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />;
                                           default: return <AlertCircle className="w-3.5 h-3.5 text-slate-400" />;
                                         }
@@ -1439,7 +1439,6 @@ export default function CRMPage() {
                                       const getStatusStyle = (status: string) => {
                                         switch (status) {
                                           case "Pending": return "bg-amber-500/15 text-amber-400 border-amber-500/20";
-                                          case "Installing": return "bg-indigo-500/15 text-indigo-400 border-indigo-500/20";
                                           case "Completed": return "bg-emerald-500/15 text-emerald-400 border-emerald-500/20";
                                           default: return "bg-slate-500/15 text-slate-400 border-slate-500/20";
                                         }
@@ -1458,7 +1457,6 @@ export default function CRMPage() {
                                     // Fallback to internal branch status
                                     return (
                                       <span className={`inline-flex px-2.5 py-1 rounded-full text-[10px] font-bold whitespace-nowrap shadow-sm ${activeBranch.status === "Completed" ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20" :
-                                        activeBranch.status === "Installing" ? "bg-blue-500/15 text-blue-400 border border-blue-500/20" :
                                           "bg-slate-500/15 text-slate-400 border border-slate-500/20"
                                         }`}>
                                         {activeBranch.status || "Pending"}
@@ -1530,7 +1528,6 @@ export default function CRMPage() {
                                   }}
                                   options={[
                                     { value: 'Pending', label: 'Pending' },
-                                    { value: 'Installing', label: 'Installing' },
                                     { value: 'Completed', label: 'Completed' }
                                   ]}
                                   className="!w-auto !min-w-[110px]"

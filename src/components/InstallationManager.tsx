@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Search, Filter, Clock, CheckCircle2, Play, User, MessageSquare, AlertCircle, X, Edit2, ExternalLink, MoreVertical } from "lucide-react";
+import { Plus, Search, Filter, Clock, CheckCircle2, User, MessageSquare, AlertCircle, X, Edit2, ExternalLink, MoreVertical } from "lucide-react";
 import { createPortal } from "react-dom";
 import SearchableCustomerSelect from "./SearchableCustomerSelect";
 import CustomSelect from "./CustomSelect";
@@ -118,7 +118,6 @@ export default function InstallationManager({
     const getStatusIcon = (status: string) => {
         switch (status) {
             case "Pending": return <Clock className="w-4 h-4 text-amber-400" />;
-            case "Installing": return <Play className="w-4 h-4 text-indigo-400 animate-pulse" />;
             case "Completed": return <CheckCircle2 className="w-4 h-4 text-emerald-400" />;
             default: return <AlertCircle className="w-4 h-4 text-slate-400" />;
         }
@@ -127,7 +126,6 @@ export default function InstallationManager({
     const getStatusStyle = (status: string) => {
         switch (status) {
             case "Pending": return "bg-amber-500/10 text-amber-400 border-amber-500/20";
-            case "Installing": return "bg-indigo-500/10 text-indigo-400 border-indigo-500/20";
             case "Completed": return "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
             default: return "bg-slate-500/10 text-slate-400 border-slate-500/20";
         }
@@ -177,7 +175,6 @@ export default function InstallationManager({
                                     options={[
                                         { value: "all", label: "All Status" },
                                         { value: "Pending", label: "Pending" },
-                                        { value: "Installing", label: "Installing" },
                                         { value: "Completed", label: "Completed" },
                                     ]}
                                     value={statusFilter}

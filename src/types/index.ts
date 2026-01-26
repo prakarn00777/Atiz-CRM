@@ -60,7 +60,7 @@ export const generateUUID = (): UUID => {
 // Domain Types
 // ============================================
 export type UsageStatus = "Active" | "Pending" | "Training" | "Canceled";
-export type InstallationStatus = "Pending" | "Installing" | "Completed";
+export type InstallationStatus = "Pending" | "Completed";
 export type ProductType = "Dr.Ease" | "EasePos";
 
 export interface Branch {
@@ -68,7 +68,7 @@ export interface Branch {
     name: string;
     isMain: boolean;
     address?: string;
-    status?: "Pending" | "Installing" | "Completed";
+    status?: "Pending" | "Completed";
 }
 
 export interface Customer {
@@ -101,7 +101,7 @@ export interface Installation {
     customerName: string;
     customerLink?: string;
     branchName?: string;
-    status: "Pending" | "Installing" | "Completed";
+    status: "Pending" | "Completed";
     assignedDev?: string;
     completedAt?: string;
     notes?: string;

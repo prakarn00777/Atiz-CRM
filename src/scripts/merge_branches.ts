@@ -24,7 +24,7 @@ interface Branch {
     name: string;
     isMain: boolean;
     address?: string;
-    status?: "Pending" | "Installing" | "Completed";
+    status?: "Pending" | "Completed";
 }
 
 interface DuplicateGroup {

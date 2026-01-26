@@ -158,7 +158,6 @@ export default function CustomerTable({ customers, onEdit, onDelete, onImport }:
                                 options={[
                                     { value: "all", label: "สถานะติดตั้งทั้งหมด" },
                                     { value: "Pending", label: "Pending" },
-                                    { value: "Installing", label: "Installing" },
                                     { value: "Completed", label: "Completed" },
                                 ]}
                                 value={installationStatusFilter}
@@ -260,7 +259,6 @@ export default function CustomerTable({ customers, onEdit, onDelete, onImport }:
                                                 </span>
                                                 {/* Installation Status */}
                                                 <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium whitespace-nowrap ${c.installationStatus === "Completed" ? "bg-blue-500/10 text-blue-400" :
-                                                    c.installationStatus === "Installing" ? "bg-cyan-500/10 text-cyan-400" :
                                                         "bg-purple-500/10 text-purple-400"
                                                     }`}>
                                                     {c.installationStatus}
