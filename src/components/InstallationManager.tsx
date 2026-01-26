@@ -139,8 +139,7 @@ export default function InstallationManager({
         <div className="space-y-6">
             <div className="flex flex-col gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight mb-2">Installations</h1>
-                    <p className="text-slate-400 text-sm">Track and manage the installation process for new customers</p>
+                    <h1 className="text-3xl font-bold tracking-tight">Installations</h1>
                 </div>
 
                 <div className="flex flex-col xl:flex-row gap-4 items-start xl:items-center justify-between">

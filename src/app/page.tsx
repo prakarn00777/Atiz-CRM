@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import Sidebar from "@/components/Sidebar";
-import LoginTransition from "@/components/LoginTransition";
 import CustomerTable from "@/components/CustomerTable";
 import { Layers, X, ChevronDown, Plus, Edit2, Trash2, Users, Activity as ActivityIcon, Award, TrendingUp, Clock, AlertTriangle, MapPin, Play, CheckCircle2, AlertCircle, Paperclip, History as HistoryIcon, Download } from "lucide-react";
 import CustomSelect from "@/components/CustomSelect";
@@ -15,6 +14,7 @@ import SearchableCustomerSelect from "@/components/SearchableCustomerSelect";
 import SegmentedControl from "@/components/SegmentedControl";
 import Dashboard from "@/components/Dashboard";
 import InstallationManager from "@/components/InstallationManager";
+import InstallationRequestModal from "@/components/InstallationRequestModal";
 import NotificationBell from "@/components/NotificationBell";
 import LeadManager from "@/components/LeadManager";
 import GoogleSheetLeadManager from "@/components/GoogleSheetLeadManager";
@@ -101,7 +101,6 @@ export default function CRMPage() {
     if (typeof window === 'undefined') return "dashboard";
     return localStorage.getItem("crm_last_view_v2") || "dashboard";
   });
-  const [showLoginTransition, setShowLoginTransition] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isModalOpen, setModalOpen] = useState(false);
   const [isIssueModalOpen, setIssueModalOpen] = useState(false);
@@ -175,7 +174,10 @@ export default function CRMPage() {
   const [selectedBranchName, setSelectedBranchName] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<{ name: string, type: string, size: number, data: string }[]>([]);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
-  const [isEditingName, setIsEditingName] = useState(false);
+
+  const [showInstallationModal, setShowInstallationModal] = useState(false);
+  const [activeCustomerTab, setActiveCustomerTab] = useState<'general' | 'branches' | 'installations'>('general');
+
 
   // Branch states
   const [branchInputs, setBranchInputs] = useState<Branch[]>([]);
@@ -186,6 +188,7 @@ export default function CRMPage() {
   const [modalUsageStatus, setModalUsageStatus] = useState<UsageStatus>("Active");
 
   const [modalIssueStatus, setModalIssueStatus] = useState<"แจ้งเคส" | "กำลังดำเนินการ" | "เสร็จสิ้น">("แจ้งเคส");
+  const [pendingInstallationChanges, setPendingInstallationChanges] = useState<Record<number, string>>({});
   const [modalLeadDate, setModalLeadDate] = useState("");
 
   useEffect(() => {
@@ -203,6 +206,10 @@ export default function CRMPage() {
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>("default");
   const debounceTimer = useRef<any>(null);
   const customersRef = useRef<Customer[]>(customers);
+
+  /* Login Input State for Particle Effect */
+  const [usernameInput, setUsernameInput] = useState("");
+  const [passwordInput, setPasswordInput] = useState("");
 
   useEffect(() => {
     customersRef.current = customers;
@@ -427,7 +434,6 @@ export default function CRMPage() {
       const result = await loginUser(u_str, p_str);
 
       if (result.success) {
-        setShowLoginTransition(true);
         const userToLogin = result.data;
 
         setUser(userToLogin);
@@ -447,6 +453,7 @@ export default function CRMPage() {
 
   const handleSaveCustomer = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setToast({ message: "กำลังบันทึกข้อมูล...", type: "info" });
     const formData = new FormData(e.currentTarget);
 
     const data: Customer = {
@@ -457,7 +464,7 @@ export default function CRMPage() {
       package: formData.get("package") as string,
       usageStatus: modalUsageStatus,
       installationStatus: editingCustomer ? editingCustomer.installationStatus : "Pending",
-      clientCode: editingCustomer ? editingCustomer.clientCode : undefined,
+      clientCode: formData.get("clientCode") as string || (editingCustomer ? editingCustomer.clientCode : undefined),
       branches: branchInputs,
       modifiedBy: user?.name,
       modifiedAt: new Date().toISOString()
@@ -478,8 +485,6 @@ export default function CRMPage() {
 
     setModalOpen(false);
     setEditingCustomer(null);
-    setIsEditingName(false);
-    setToast({ message: "บันทึกข้อมูลลูกค้าสำเร็จ", type: "success" });
 
     try {
       const result = await saveCustomer(data);
@@ -487,8 +492,44 @@ export default function CRMPage() {
         // Rollback on error
         setCustomers(previousCustomers);
         setToast({ message: "เกิดข้อผิดพลาดในการบันทึก: " + result.error, type: "error" });
+        return;
       }
-      // Note: Real-time subscription will update state with official DB ID if it was a new record
+
+      // Save pending installation status changes
+      const installationUpdates = Object.entries(pendingInstallationChanges);
+      let lastSuccessStatus = '';
+      if (installationUpdates.length > 0) {
+        for (const [instId, newStatus] of installationUpdates) {
+          const instResult = await updateInstallationStatus(Number(instId), newStatus, user?.fullName);
+          if (instResult.success) {
+            setInstallations(prev => prev.map(i =>
+              i.id === Number(instId)
+                ? { ...i, status: newStatus as Installation['status'], modifiedBy: user?.fullName, modifiedAt: new Date().toISOString() }
+                : i
+            ));
+            lastSuccessStatus = newStatus;
+          }
+        }
+        // Update customer's installationStatus in the table
+        if (lastSuccessStatus) {
+          setCustomers(prev => prev.map(c =>
+            c.id === data.id
+              ? { ...c, installationStatus: lastSuccessStatus as Customer['installationStatus'] }
+              : c
+          ));
+          // Send single desktop notification after all updates
+          pushNotification(
+            'อัปเดตสถานะติดตั้ง',
+            `งานแจ้งติดตั้งลูกค้าใหม่ ${data.name} ถูกเปลี่ยนสถานะเป็น ${lastSuccessStatus}`
+          );
+        }
+      }
+
+      // Clear pending changes
+      setPendingInstallationChanges({});
+
+      setToast({ message: "บันทึกข้อมูลสำเร็จ", type: "success" });
+
     } catch (err) {
       console.error("Failed to save customer:", err);
       setCustomers(previousCustomers);
@@ -978,19 +1019,28 @@ export default function CRMPage() {
     });
   };
 
+  const handleQuickAction = (action: string) => {
+    if (action === 'new_install') {
+      setShowInstallationModal(true);
+    } else if (action === 'new_issue') {
+      setEditingIssue(null);
+      setSelectedCustomerId(null);
+      setSelectedCustomerName("");
+      setSelectedBranchName("");
+      setSelectedFiles([]);
+      setModalMode('create');
+      setModalIssueStatus("แจ้งเคส");
+      setIssueModalOpen(true);
+    }
+  };
+
   if (!mounted) return null;
 
   return (
     <div className="min-h-screen bg-[#020617] text-slate-300 font-sans selection:bg-indigo-500/30">
-      {showLoginTransition && (
-        <LoginTransition
-          onComplete={() => setShowLoginTransition(false)}
-        />
-      )}
-
       {!user ? (
-        <div className="min-h-screen flex items-center justify-center p-4 bg-[#0f172a]">
-          <div className="glass-card w-full max-w-md p-8 border-indigo-500/20">
+        <div className="min-h-screen flex items-center justify-center p-4 bg-[#0f172a] relative overflow-hidden">
+          <div className="glass-card w-full max-w-md p-8 border-indigo-500/20 relative z-10 backdrop-blur-md">
             <div className="flex flex-col items-center mb-8">
               <div className="mb-8 relative group animate-bounce">
                 {/* Animated Glow Effect */}
@@ -1012,11 +1062,28 @@ export default function CRMPage() {
             <form className="space-y-6" onSubmit={handleLogin}>
               <div>
                 <label className="block text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">Username</label>
-                <input name="username" className="input-field py-3 text-sm h-12" placeholder="Enter username" required disabled={isLoading} />
+                <input
+                  name="username"
+                  className="input-field py-3 text-sm h-12"
+                  placeholder="Enter username"
+                  required
+                  disabled={isLoading}
+                  value={usernameInput}
+                  onChange={(e) => setUsernameInput(e.target.value)}
+                />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">Password</label>
-                <input name="password" type="password" className="input-field py-3 text-sm h-12" placeholder="••••••••" required disabled={isLoading} />
+                <input
+                  name="password"
+                  type="password"
+                  className="input-field py-3 text-sm h-12"
+                  placeholder="••••••••"
+                  required
+                  disabled={isLoading}
+                  value={passwordInput}
+                  onChange={(e) => setPasswordInput(e.target.value)}
+                />
               </div>
               <button
                 type="submit"
@@ -1041,6 +1108,7 @@ export default function CRMPage() {
             setView={setView}
             onLogout={() => { setUser(null); localStorage.removeItem("crm_user_v2"); }}
             userRole={{ ...roles.find(r => r.id === user?.role), role: user?.role }}
+            onQuickAction={handleQuickAction}
           />
           <main className={`flex-1 relative bg-gradient-to-br from-[#020617] via-[#0f172a] to-[#020617] animate-in fade-in duration-300 ${currentView === 'dashboard' ? 'overflow-hidden' : 'overflow-auto'}`}>
             <div className={`p-4 lg:p-8 max-w-[1600px] mx-auto relative z-10 ${currentView === 'dashboard' ? 'h-full flex flex-col' : ''}`}>
@@ -1083,6 +1151,8 @@ export default function CRMPage() {
                     setBranchInputs(branches);
                     setModalUsageStatus(c.usageStatus || "Active");
                     setActiveBranchIndex(0);
+                    setActiveCustomerTab('general');
+                    setPendingInstallationChanges({});
                     setModalOpen(true);
                   }}
                   onDelete={(id) => {
@@ -1143,77 +1213,83 @@ export default function CRMPage() {
             </div>
           </main>
 
+          <InstallationRequestModal
+            isOpen={showInstallationModal}
+            onClose={() => setShowInstallationModal(false)}
+            customers={customers}
+            onSave={handleAddInstallation}
+          />
+
           {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
           {/* Simplified Customer Modal for types fix - in a real app would have full fields */}
-          <ModalWrapper isOpen={isModalOpen} onClose={() => { setModalOpen(false); setIsEditingName(false); }} maxWidth="max-w-4xl">
+          <ModalWrapper isOpen={isModalOpen} onClose={() => { setModalOpen(false); setActiveCustomerTab('general'); setPendingInstallationChanges({}); }} maxWidth="max-w-4xl">
             <div className="p-6 border-b border-white/5 flex items-center justify-between shrink-0">
               <h2 className="text-xl font-bold">{editingCustomer ? "แก้ไขข้อมูลลูกค้า" : "เพิ่มข้อมูลลูกค้า"}</h2>
-              <button onClick={() => { setModalOpen(false); setIsEditingName(false); }} className="text-slate-400 hover:text-white transition-colors p-1 hover:bg-white/5 rounded-lg"><X /></button>
+              <button onClick={() => { setModalOpen(false); setPendingInstallationChanges({}); }} className="text-slate-400 hover:text-white transition-colors p-1 hover:bg-white/5 rounded-lg"><X /></button>
             </div>
-            <div className="overflow-y-auto p-6 custom-scrollbar flex-1">
-              <form onSubmit={handleSaveCustomer}>
+
+            {/* Tab Navigation */}
+            <div className="flex items-center px-6 border-b border-white/5">
+              <button
+                type="button"
+                onClick={() => setActiveCustomerTab('general')}
+                className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${activeCustomerTab === 'general' ? 'border-indigo-500 text-white' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
+              >
+                ข้อมูลทั่วไป
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveCustomerTab('branches')}
+                className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${activeCustomerTab === 'branches' ? 'border-indigo-500 text-white' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
+              >
+                จัดการสาขา
+              </button>
+              {editingCustomer && (
+                <button
+                  type="button"
+                  onClick={() => setActiveCustomerTab('installations')}
+                  className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${activeCustomerTab === 'installations' ? 'border-indigo-500 text-white' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
+                >
+                  งานติดตั้ง
+                </button>
+              )}
+            </div>
+
+            <div className="overflow-y-auto p-6 custom-scrollbar flex-1 min-h-[500px]">
+              <form id="save-customer-form" onSubmit={handleSaveCustomer}>
                 <div className="space-y-6">
-                  {/* Basic Information */}
-                  <div>
+                  {/* Basic Information Section */}
+                  <div className={activeCustomerTab === 'general' ? 'block' : 'hidden'}>
                     <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
                       <div className="w-1 h-4 bg-indigo-500 rounded-full"></div>
                       ข้อมูลพื้นฐาน
                     </h3>
                     <div className="grid grid-cols-2 gap-4">
                       {editingCustomer && (
-                        <div className="col-span-2 flex items-center gap-6">
-                          {/* Customer ID Badge */}
-                          <div className="space-y-1.5">
-                            <label className="text-[10px] uppercase tracking-wider font-bold text-slate-500">Customer ID</label>
-                            <div className="flex items-center">
-                              <div className="bg-indigo-500/10 border border-indigo-500/20 backdrop-blur-md rounded-md px-2.5 py-1 flex items-center gap-2 group hover:border-indigo-500/40 transition-all duration-300">
-                                <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></div>
-                                <span className="text-xs font-mono font-black text-indigo-400 tracking-tight leading-none">
-                                  {editingCustomer.clientCode || `DE${editingCustomer.id.toString().padStart(4, "0")}`}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium text-slate-400">Customer ID</label>
+                          <input
+                            type="text"
+                            name="clientCode"
+                            defaultValue={editingCustomer.clientCode || `DE${editingCustomer.id.toString().padStart(4, "0")}`}
+                            className="input-field"
+                            placeholder="DE0000"
+                          />
                         </div>
                       )}
 
                       <div className="space-y-1 col-span-2">
                         <label className="text-xs font-medium text-slate-400">ชื่อคลินิก/ร้าน</label>
-                        {isEditingName || !editingCustomer ? (
-                          <div className="relative group">
-                            <input
-                              name="name"
-                              defaultValue={editingCustomer?.name}
-                              className="input-field pr-10"
-                              placeholder="กรอกชื่อคลินิกหรือร้าน..."
-                              autoFocus={isEditingName}
-                              required
-                            />
-                            {isEditingName && (
-                              <button
-                                type="button"
-                                onClick={() => setIsEditingName(false)}
-                                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-white transition-colors"
-                              >
-                                <X className="w-4 h-4" />
-                              </button>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="flex items-center justify-between bg-white/[0.03] border border-white/5 rounded-lg px-3 py-2 group hover:border-indigo-500/30 transition-all duration-200">
-                            <span className="text-sm font-semibold text-slate-200">{editingCustomer?.name}</span>
-                            <input type="hidden" name="name" value={editingCustomer?.name || ""} />
-                            <button
-                              type="button"
-                              onClick={() => setIsEditingName(true)}
-                              className="p-1 px-2 rounded bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 transition-all flex items-center gap-1.5 text-[10px] font-bold"
-                            >
-                              <Edit2 className="w-3 h-3" />
-                              แก้ไขชื่อ
-                            </button>
-                          </div>
-                        )}
+                        <div className="relative group">
+                          <input
+                            name="name"
+                            defaultValue={editingCustomer?.name}
+                            className="input-field"
+                            placeholder="กรอกชื่อคลินิกหรือร้าน..."
+                            required
+                          />
+                        </div>
                       </div>
                       <div className="space-y-1">
                         <label className="text-xs font-medium text-slate-400">Subdomain / Link</label>
@@ -1247,7 +1323,7 @@ export default function CRMPage() {
                   </div>
 
                   {/* Branch Management - Master Detail Layout */}
-                  <div className="border-t border-white/10 pt-6">
+                  <div className={`border-t border-white/10 pt-6 ${activeCustomerTab === 'branches' ? 'block' : 'hidden'}`}>
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-sm font-bold text-white flex items-center gap-2">
                         <div className="w-1 h-4 bg-emerald-500 rounded-full"></div>
@@ -1404,11 +1480,84 @@ export default function CRMPage() {
                   </div>
                 </div>
 
-                <div className="flex gap-3 pt-6 mt-6 border-t border-white/10">
-                  <button type="button" onClick={() => setModalOpen(false)} className="btn btn-ghost flex-1">ยกเลิก</button>
-                  <button type="submit" className="btn btn-primary flex-1">บันทึก</button>
-                </div>
+                {/* Installations Tab */}
+                {editingCustomer && (
+                  <div className={`border-t border-white/10 pt-6 ${activeCustomerTab === 'installations' ? 'block' : 'hidden'}`}>
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                        <div className="w-1 h-4 bg-indigo-500 rounded-full"></div>
+                        งานติดตั้ง
+                      </h3>
+                    </div>
+
+                    {(() => {
+                      const customerInstallations = installations.filter(i => i.customerId === editingCustomer.id);
+
+                      if (customerInstallations.length === 0) {
+                        return (
+                          <div className="text-center py-8 text-slate-500">
+                            <Layers className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                            <p className="text-xs">ไม่มีงานติดตั้ง</p>
+                          </div>
+                        );
+                      }
+
+                      const formatDateTime = (dateStr?: string) => {
+                        if (!dateStr) return '-';
+                        const d = new Date(dateStr);
+                        return `${d.toLocaleDateString('th-TH')} ${d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}`;
+                      };
+
+                      return (
+                        <div className="space-y-2">
+                          {customerInstallations.map((inst) => (
+                            <div key={inst.id} className="bg-white/5 rounded-xl p-3 border border-white/5 hover:border-white/10 transition-colors">
+                              {/* Header Row */}
+                              <div className="flex items-center justify-between gap-3 mb-2">
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                  <span className={`shrink-0 px-2 py-0.5 rounded-md text-[10px] font-bold ${inst.installationType === 'new' ? 'bg-blue-500/15 text-blue-400' : 'bg-purple-500/15 text-purple-400'}`}>
+                                    {inst.installationType === 'new' ? 'NEW' : 'BRANCH'}
+                                  </span>
+                                  <span className="text-xs text-white font-medium truncate">
+                                    {inst.installationType === 'new' ? inst.customerName : inst.branchName || '-'}
+                                  </span>
+                                </div>
+                                <CustomSelect
+                                  name={`inst-status-${inst.id}`}
+                                  value={pendingInstallationChanges[inst.id] || inst.status}
+                                  onChange={(newStatus) => {
+                                    setPendingInstallationChanges(prev => ({ ...prev, [inst.id]: newStatus }));
+                                  }}
+                                  options={[
+                                    { value: 'Pending', label: 'Pending' },
+                                    { value: 'Installing', label: 'Installing' },
+                                    { value: 'Completed', label: 'Completed' }
+                                  ]}
+                                  className="!w-auto !min-w-[110px]"
+                                />
+                              </div>
+                              {/* Details Row */}
+                              <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-slate-500">
+                                <span>แจ้งโดย: <span className="text-slate-400">{inst.requestedBy || '-'}</span> • {formatDateTime(inst.requestedAt)}</span>
+                                {inst.modifiedBy && (
+                                  <span>แก้ไขโดย: <span className="text-slate-400">{inst.modifiedBy}</span> • {formatDateTime(inst.modifiedAt)}</span>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
+
               </form>
+            </div>
+            <div className="p-6 border-t border-white/5 bg-[#1e293b]/50 backdrop-blur-sm shrink-0">
+              <div className="flex gap-3">
+                <button type="button" onClick={() => { setModalOpen(false); setPendingInstallationChanges({}); }} className="btn btn-ghost flex-1">ยกเลิก</button>
+                <button type="submit" form="save-customer-form" className="btn btn-primary flex-1">บันทึก</button>
+              </div>
             </div>
           </ModalWrapper>
 

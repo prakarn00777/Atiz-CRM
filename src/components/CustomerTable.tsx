@@ -105,8 +105,7 @@ export default function CustomerTable({ customers, onEdit, onDelete, onImport }:
         <div className="space-y-6">
             <div className="flex flex-col gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight mb-2">Customers</h1>
-                    <p className="text-slate-400 text-sm">Manage customer data in the Dr.Ease and EasePos systems</p>
+                    <h1 className="text-3xl font-bold tracking-tight">Customers</h1>
                 </div>
 
                 <div className="flex flex-col xl:flex-row gap-4 items-start xl:items-center w-full">

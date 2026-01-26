@@ -132,9 +132,6 @@ export default function DemoManager({ demos, isLoading, onRefresh }: DemoManager
                             <RefreshCw className="w-4 h-4" />
                         </button>
                     </div>
-                    <p className="text-slate-400 text-sm font-medium">
-                        ข้อมูล Demo จาก Google Sheets ({demos.length.toLocaleString()} รายการ)
-                    </p>
                 </div>
 
                 <div className="flex flex-col xl:flex-row gap-4 items-start xl:items-center w-full">

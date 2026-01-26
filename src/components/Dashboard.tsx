@@ -236,7 +236,9 @@ export default function Dashboard({ customers, installations, issues, activities
         const googleDemosThisWeek = googleSheetDemos.filter(d => {
             if (!d.date) return false;
             const rDate = parseSheetDate(d.date);
-            return rDate && rDate >= currentWeek.start && rDate <= currentWeek.end;
+            // Only count demos with "Demo แล้ว" status
+            const isDemoCompleted = d.demoStatus?.includes('Demo แล้ว');
+            return rDate && rDate >= currentWeek.start && rDate <= currentWeek.end && isDemoCompleted;
         }).length;
 
         const currentDemos = activities.filter(a => {
@@ -249,7 +251,9 @@ export default function Dashboard({ customers, installations, issues, activities
         const googleDemosPrevWeek = googleSheetDemos.filter(d => {
             if (!d.date) return false;
             const rDate = parseSheetDate(d.date);
-            return rDate && rDate >= previousWeek.start && rDate <= previousWeek.end;
+            // Only count demos with "Demo แล้ว" status
+            const isDemoCompleted = d.demoStatus?.includes('Demo แล้ว');
+            return rDate && rDate >= previousWeek.start && rDate <= previousWeek.end && isDemoCompleted;
         }).length;
 
         const prevDemos = activities.filter(a => {
@@ -314,7 +318,7 @@ export default function Dashboard({ customers, installations, issues, activities
 
         return [
             { id: 'leads', label: "Total Leads – This Week", subLabel: "ผู้สนใจรายสัปดาห์ (Mon-Sun)", numericValue: currentCount, prefix: "", suffix: "", sub: `Dr.Ease: ${dreaseLeads} | Ease: ${easeLeads}`, extraInfo: WoWTag, tooltip: "อัตราการเติบโตเมื่อเทียบกับสัปดาห์ก่อน (WoW): ((จำนวนสัปดาห์นี้-จำนวนสัปดาห์ก่อน) / จำนวนสัปดาห์ก่อน) x 100", icon: Briefcase, color: "text-amber-400", border: "border-amber-500/20", bg: "from-amber-500/10" },
-            { id: 'demos', label: "Weekly Demos", subLabel: "การทำ Demo รายสัปดาห์", numericValue: currentDemos, prefix: "", suffix: "", sub: `เข้าข่ายสัปดาห์ปัจจุบัน`, extraInfo: DemosWoWTag, icon: Monitor, color: "text-blue-400", border: "border-blue-500/20", bg: "from-blue-500/10" },
+            { id: 'demos', label: "Weekly Demos", subLabel: "การทำ Demo รายสัปดาห์ (Mon-Sun)", numericValue: currentDemos, prefix: "", suffix: "", sub: `เข้าข่ายสัปดาห์ปัจจุบัน`, extraInfo: DemosWoWTag, icon: Monitor, color: "text-blue-400", border: "border-blue-500/20", bg: "from-blue-500/10" },
             { id: 'sales', label: "New Sales", subLabel: "ยอดเงินปิดใหม่", numericValue: newSales, prefix: "฿", suffix: "", sub: "Revenue สัปดาห์นี้", icon: DollarSign, color: "text-emerald-400", border: "border-emerald-500/20", bg: "from-emerald-500/10" },
             { id: 'renewals', label: "Renewal", subLabel: "ยอดเงินต่อสัญญา", numericValue: renewal, prefix: "฿", suffix: "", sub: "Revenue สัปดาห์นี้", icon: TrendingUp, color: "text-purple-400", border: "border-purple-500/20", bg: "from-purple-500/10" },
         ];
@@ -386,7 +390,9 @@ export default function Dashboard({ customers, installations, issues, activities
             });
             googleSheetDemos.forEach(d => {
                 const dDate = parseSheetDate(d.date);
-                if (dDate && dDate >= startDate && dDate <= endDate) {
+                // Only count demos with "Demo แล้ว" status
+                const isDemoCompleted = d.demoStatus?.includes('Demo แล้ว');
+                if (dDate && dDate >= startDate && dDate <= endDate && isDemoCompleted) {
                     const key = `${dDate.getFullYear()}-${String(dDate.getMonth() + 1).padStart(2, '0')}`;
                     if (monthlyData[key]) {
                         // Count by salesperson with filter
@@ -421,7 +427,9 @@ export default function Dashboard({ customers, installations, issues, activities
             });
             const googleDemosOnDay = googleSheetDemos.filter(d => {
                 const sameDate = normalizeDate(d.date) === dateStr;
-                return sameDate;
+                // Only count demos with "Demo แล้ว" status
+                const isDemoCompleted = d.demoStatus?.includes('Demo แล้ว');
+                return sameDate && isDemoCompleted;
             });
             const demosOnDay = activities.filter(a => a.activityType === "Demo" && normalizeDate(a.createdAt) === dateStr);
             const demosAoeyOnDay = (salesFilter === 'all' || salesFilter === 'Aoey') ? googleDemosOnDay.filter(d => d.salesperson?.includes('Aoey')).length : 0;
@@ -733,14 +741,14 @@ export default function Dashboard({ customers, installations, issues, activities
                                         <div className="flex items-center gap-1.5 mb-2">
                                             <div className={`w-3 h-3 rounded-full ${selectedMetric === 'leads' ? 'bg-indigo-400 shadow-[0_0_10px_#818cf8]' : selectedMetric === 'demos' ? 'bg-blue-400 shadow-[0_0_10px_#3b82f6]' : selectedMetric === 'sales' ? 'bg-emerald-400 shadow-[0_0_10px_#10b981]' : 'bg-purple-400 shadow-[0_0_10px_#c084fc]'}`} />
                                             <span className="text-white text-xs uppercase font-black tracking-widest">
-                                                {selectedMetric === 'leads' ? 'Total Leads' : selectedMetric === 'demos' ? 'Total Demos' : selectedMetric === 'sales' ? 'Total Sales' : 'Renewal Total'}
+                                                {selectedMetric === 'leads' ? 'Total Leads' : selectedMetric === 'demos' ? 'Total' : selectedMetric === 'sales' ? 'Total Sales' : 'Renewal Total'}
                                             </span>
                                         </div>
                                         <p className="text-white text-4xl font-bold tracking-tighter tabular-nums leading-none mb-4">
                                             {selectedMetric === 'leads'
                                                 ? (graphTotals.drease + graphTotals.ease).toLocaleString()
                                                 : selectedMetric === 'demos'
-                                                    ? graphTotals.demos.toLocaleString()
+                                                    ? filteredMasterDemos.length.toLocaleString()
                                                     : selectedMetric === 'sales'
                                                         ? `฿${graphTotals.sales.toLocaleString()}`
                                                         : `฿${graphTotals.renewals.toLocaleString()}`
@@ -775,9 +783,14 @@ export default function Dashboard({ customers, installations, issues, activities
                                                         <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_#22c55e]" />
                                                         <span className="text-text-muted text-[10px] uppercase font-bold tracking-widest">Aoey</span>
                                                     </div>
-                                                    <p className="text-white text-xl font-bold tracking-tighter tabular-nums leading-none">
-                                                        {graphTotals.demosAoey.toLocaleString()}
-                                                    </p>
+                                                    <div className="flex items-baseline gap-2">
+                                                        <p className="text-white text-xl font-bold tracking-tighter tabular-nums leading-none">
+                                                            {filteredMasterDemos.filter(d => d.salesperson?.includes('Aoey') && d.demoStatus?.includes('Demo แล้ว')).length.toLocaleString()}
+                                                        </p>
+                                                        <span className="text-slate-500 text-xs font-bold">
+                                                            / {filteredMasterDemos.filter(d => d.salesperson?.includes('Aoey')).length}
+                                                        </span>
+                                                    </div>
                                                 </div>
                                                 <div className="flex flex-col relative">
                                                     <div className="absolute -left-5 top-2 w-4 h-px bg-white/10" />
@@ -785,9 +798,14 @@ export default function Dashboard({ customers, installations, issues, activities
                                                         <div className="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_8px_#f59e0b]" />
                                                         <span className="text-text-muted text-[10px] uppercase font-bold tracking-widest">Yo</span>
                                                     </div>
-                                                    <p className="text-white text-xl font-bold tracking-tighter tabular-nums leading-none">
-                                                        {graphTotals.demosYo.toLocaleString()}
-                                                    </p>
+                                                    <div className="flex items-baseline gap-2">
+                                                        <p className="text-white text-xl font-bold tracking-tighter tabular-nums leading-none">
+                                                            {filteredMasterDemos.filter(d => d.salesperson?.includes('Yo') && d.demoStatus?.includes('Demo แล้ว')).length.toLocaleString()}
+                                                        </p>
+                                                        <span className="text-slate-500 text-xs font-bold">
+                                                            / {filteredMasterDemos.filter(d => d.salesperson?.includes('Yo')).length}
+                                                        </span>
+                                                    </div>
                                                 </div>
 
                                                 {/* Demo Status Breakdown */}

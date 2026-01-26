@@ -12,6 +12,7 @@ interface SidebarProps {
         role?: string;
         permissions?: Record<string, { read?: boolean; write?: boolean }>;
     } | null;
+    onQuickAction?: (action: string) => void;
 }
 
 const mainMenus = [
@@ -22,7 +23,6 @@ const mainMenus = [
         icon: Wrench,
         children: [
             { id: "customers", label: "Customers" },
-            { id: "installations", label: "Installations" },
             { id: "issues", label: "Issues" },
             { id: "cs_activity", label: "CS Task" },
         ]
@@ -38,7 +38,7 @@ const mainMenus = [
     },
 ];
 
-const Sidebar = memo(function Sidebar({ currentView, setView, onLogout, userRole }: SidebarProps) {
+const Sidebar = memo(function Sidebar({ currentView, setView, onLogout, userRole, onQuickAction }: SidebarProps) {
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [expandedMenus, setExpandedMenus] = useState<string[]>(["cs_dev_group", "marketing_group"]);
@@ -72,6 +72,37 @@ const Sidebar = memo(function Sidebar({ currentView, setView, onLogout, userRole
                     <h2 className="text-base font-bold tracking-tight truncate animate-in fade-in duration-300">CRM Admin</h2>
                 )}
             </div>
+
+            {/* Quick Actions */}
+            {onQuickAction && (
+                <div className={`mb-4 pb-4 border-b border-white/5 space-y-2 ${isCollapsed ? "px-0" : "px-0"}`}>
+                    {!isCollapsed && (
+                        <h3 className="px-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Quick Actions</h3>
+                    )}
+                    <button
+                        onClick={() => onQuickAction('new_install')}
+                        className={`btn w-full text-xs font-bold transition-all duration-200 ${isCollapsed
+                            ? "h-10 w-10 p-0 rounded-xl bg-indigo-500 text-white shadow-lg mx-auto flex items-center justify-center"
+                            : "bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/20 justify-start px-3 py-2.5"
+                            }`}
+                        title="แจ้งติดตั้งใหม่"
+                    >
+                        <Wrench className={`w-4 h-4 ${isCollapsed ? "" : "mr-2"}`} />
+                        {!isCollapsed && "แจ้งติดตั้งใหม่"}
+                    </button>
+                    <button
+                        onClick={() => onQuickAction('new_issue')}
+                        className={`btn w-full text-xs font-bold transition-all duration-200 ${isCollapsed
+                            ? "h-10 w-10 p-0 rounded-xl bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 mx-auto flex items-center justify-center mt-2"
+                            : "bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 justify-start px-3 py-2.5"
+                            }`}
+                        title="แจ้งเคส/ปัญหา"
+                    >
+                        <AlertCircle className={`w-4 h-4 ${isCollapsed ? "" : "mr-2"}`} />
+                        {!isCollapsed && "แจ้งเคส/ปัญหา"}
+                    </button>
+                </div>
+            )}
 
             <nav className={`flex-1 space-y-1 pr-1 no-scrollbar ${isCollapsed ? "overflow-visible" : "overflow-y-auto"}`}>
                 {mainMenus.map((item) => {

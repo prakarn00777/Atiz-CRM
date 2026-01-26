@@ -129,9 +129,6 @@ export default function GoogleSheetLeadManager({ leads, isLoading, onRefresh }: 
                             <RefreshCw className="w-4 h-4" />
                         </button>
                     </div>
-                    <p className="text-slate-400 text-sm font-medium">
-                        ดึงข้อมูลจาก Google Sheets อัตโนมัติ ({leads.length.toLocaleString()} รายการ)
-                    </p>
                 </div>
 
                 <div className="flex flex-col xl:flex-row gap-4 items-start xl:items-center w-full">
