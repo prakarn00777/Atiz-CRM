@@ -218,13 +218,13 @@ export default function CRMPage() {
   const fetchData = useCallback(async () => {
     try {
       const [cData, iData, instData, userData, roleData, actData, lData, metricsResult] = await Promise.all([
-        getCustomers({ limit: 500 }),
-        getIssues({ limit: 500 }),
-        getInstallations({ limit: 500 }),
+        getCustomers(),
+        getIssues(),
+        getInstallations(),
         getUsers(),
         getRoles(),
-        getActivities({ limit: 500 }),
-        getLeads({ limit: 500 }),
+        getActivities(),
+        getLeads(),
         getBusinessMetrics()
       ]);
 

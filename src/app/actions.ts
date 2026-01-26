@@ -116,15 +116,22 @@ export async function importCustomersFromCSV(data: any[]): Promise<ApiResponse<{
 
 export async function getCustomers(params?: PaginationParams): Promise<Customer[]> {
     try {
-        const { limit, offset } = getPaginationParams(params);
         const sortBy = params?.sortBy || 'id';
         const sortOrder = params?.sortOrder === 'asc';
 
-        const { data, error } = await db
+        // Build query - fetch all if no limit specified, otherwise use pagination
+        let query = db
             .from('customers')
             .select('id, name, client_code, subdomain, product_type, package, usage_status, business_type, contract_number, contract_start, contract_end, sales_name, contact_name, contact_phone, note, installation_status, branches, created_by, created_at, modified_by, modified_at')
-            .order(sortBy, { ascending: sortOrder })
-            .range(offset, offset + limit - 1);
+            .order(sortBy, { ascending: sortOrder });
+
+        // Only apply range if limit is explicitly specified
+        if (params?.limit) {
+            const { limit, offset } = getPaginationParams(params);
+            query = query.range(offset, offset + limit - 1);
+        }
+
+        const { data, error } = await query;
 
         if (error) {
             log.error("Error fetching customers:", error);
@@ -162,13 +169,17 @@ export async function getCustomers(params?: PaginationParams): Promise<Customer[
 
 export async function getIssues(params?: PaginationParams): Promise<Issue[]> {
     try {
-        const { limit, offset } = getPaginationParams(params);
-
-        const { data, error } = await db
+        let query = db
             .from('issues')
             .select('id, customer_id, branch_name, case_number, title, description, type, severity, status, created_by, created_at, modified_by, modified_at, attachments, customers(name)')
-            .order('id', { ascending: false })
-            .range(offset, offset + limit - 1);
+            .order('id', { ascending: false });
+
+        if (params?.limit) {
+            const { limit, offset } = getPaginationParams(params);
+            query = query.range(offset, offset + limit - 1);
+        }
+
+        const { data, error } = await query;
 
         if (error) {
             log.error("Error fetching issues:", error);
@@ -200,13 +211,17 @@ export async function getIssues(params?: PaginationParams): Promise<Issue[]> {
 
 export async function getInstallations(params?: PaginationParams): Promise<Installation[]> {
     try {
-        const { limit, offset } = getPaginationParams(params);
-
-        const { data, error } = await db
+        let query = db
             .from('installations')
             .select('id, customer_id, branch_name, status, installation_type, notes, assigned_dev, completed_at, created_by, created_at, modified_by, modified_at, customers(name)')
-            .order('id', { ascending: false })
-            .range(offset, offset + limit - 1);
+            .order('id', { ascending: false });
+
+        if (params?.limit) {
+            const { limit, offset } = getPaginationParams(params);
+            query = query.range(offset, offset + limit - 1);
+        }
+
+        const { data, error } = await query;
 
         if (error) {
             log.error("Error fetching installations:", error);
@@ -630,13 +645,17 @@ export async function updateInstallationStatus(id: number, status: string, modif
 
 export async function getActivities(params?: PaginationParams): Promise<Activity[]> {
     try {
-        const { limit, offset } = getPaginationParams(params);
-
-        const { data, error } = await db
+        let query = db
             .from('activities')
             .select('id, customer_id, customer_name, title, activity_type, content, status, sentiment, follow_up_date, created_by, created_at, modified_by, modified_at')
-            .order('created_at', { ascending: false })
-            .range(offset, offset + limit - 1);
+            .order('created_at', { ascending: false });
+
+        if (params?.limit) {
+            const { limit, offset } = getPaginationParams(params);
+            query = query.range(offset, offset + limit - 1);
+        }
+
+        const { data, error } = await query;
 
         if (error) throw error;
 
@@ -729,13 +748,17 @@ export async function deleteActivity(id: number): Promise<ApiResponse<{ deleted:
 // Leads persistence
 export async function getLeads(params?: PaginationParams): Promise<Lead[]> {
     try {
-        const { limit, offset } = getPaginationParams(params);
-
-        const { data, error } = await db
+        let query = db
             .from('leads')
             .select('id, lead_number, product, source, lead_type, sales_name, customer_name, phone, received_date, notes, created_by, created_at, modified_by, modified_at')
-            .order('created_at', { ascending: false })
-            .range(offset, offset + limit - 1);
+            .order('created_at', { ascending: false });
+
+        if (params?.limit) {
+            const { limit, offset } = getPaginationParams(params);
+            query = query.range(offset, offset + limit - 1);
+        }
+
+        const { data, error } = await query;
 
         if (error) throw error;
 
