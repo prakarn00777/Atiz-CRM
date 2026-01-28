@@ -211,6 +211,16 @@ export interface MasterDemoLead {
     notes: string;
 }
 
+// New Sales from Google Sheets
+export interface NewSalesRecord {
+    id: string;
+    index: string;      // ลำดับ
+    month: string;      // เดือน
+    year: string;       // ปี
+    salesName: string;  // เซลล์
+    amount: number;     // ยอด
+}
+
 // ============================================
 // User & Role Types
 // ============================================

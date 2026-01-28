@@ -89,7 +89,7 @@ import {
     XAxis, YAxis, CartesianGrid, Tooltip, Legend
 } from 'recharts';
 import ParticlesBackground from "./ParticlesBackground";
-import type { Customer, Installation, Issue, Lead, Activity as CSActivity, GoogleSheetLead, MasterDemoLead, BusinessMetrics } from "@/types";
+import type { Customer, Installation, Issue, Lead, Activity as CSActivity, GoogleSheetLead, MasterDemoLead, BusinessMetrics, NewSalesRecord } from "@/types";
 
 import SegmentedControl from "./SegmentedControl";
 import CustomSelect from "./CustomSelect";
@@ -103,6 +103,7 @@ interface DashboardProps {
     leads: Lead[];
     googleSheetLeads?: GoogleSheetLead[];
     googleSheetDemos?: MasterDemoLead[];
+    newSalesData?: NewSalesRecord[];
     businessMetrics?: BusinessMetrics;
     user: any;
     onViewChange: (view: string) => void;
@@ -132,10 +133,10 @@ const parseLocalISO = (isoStr: string) => {
     return new Date(isoStr);
 };
 
-export default function Dashboard({ customers, installations, issues, activities, leads, googleSheetLeads = [], googleSheetDemos = [], businessMetrics, user, onViewChange }: DashboardProps) {
+export default function Dashboard({ customers, installations, issues, activities, leads, googleSheetLeads = [], googleSheetDemos = [], newSalesData = [], businessMetrics, user, onViewChange }: DashboardProps) {
     const dashboardRef = useRef<HTMLDivElement>(null);
     const [activeTab, setActiveTab] = useState<'cs' | 'business'>('cs');
-    const [timeRange, setTimeRange] = useState<'1w' | '1m' | '1y' | 'custom'>('1w');
+    const [timeRange, setTimeRange] = useState<'1w' | '1m' | '3m' | '6m' | '1y' | 'custom'>('1w');
     const [customStartDate, setCustomStartDate] = useState('');
     const [customEndDate, setCustomEndDate] = useState('');
     const [productFilter, setProductFilter] = useState<'all' | 'Dr.Ease' | 'Ease POS'>('all');
@@ -312,17 +313,53 @@ export default function Dashboard({ customers, installations, issues, activities
             </div>
         );
 
-        // Use dynamic metrics from props or fallback to defaults
-        const newSales = businessMetrics?.newSales ?? 414504.57;
-        const renewal = businessMetrics?.renewal ?? 965629.05;
+        // Calculate New Sales from Google Sheets data
+        const currentMonth = now.getMonth();
+        const currentYear = now.getFullYear();
+        const currentBuddhistYear = String(currentYear + 543);
+
+        // Map to convert Thai month abbreviations
+        const thaiMonthMap: { [key: string]: number } = {
+            'ม.ค.': 0, 'ก.พ.': 1, 'มี.ค.': 2, 'เม.ย.': 3,
+            'พ.ค.': 4, 'มิ.ย.': 5, 'ก.ค.': 6, 'ส.ค.': 7,
+            'ก.ย.': 8, 'ต.ค.': 9, 'พ.ย.': 10, 'ธ.ค.': 11
+        };
+
+        // Calculate current month's new sales
+        const currentMonthSales = newSalesData
+            .filter(s => {
+                const sMonth = thaiMonthMap[s.month];
+                const sYear = s.year;
+                return sMonth === currentMonth && sYear === currentBuddhistYear;
+            })
+            .reduce((sum, s) => sum + (s.amount || 0), 0);
+
+        // Calculate previous month's sales for comparison
+        const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+        const prevYear = currentMonth === 0 ? String(currentYear + 543 - 1) : currentBuddhistYear;
+        const prevMonthSales = newSalesData
+            .filter(s => {
+                const sMonth = thaiMonthMap[s.month];
+                const sYear = s.year;
+                return sMonth === prevMonth && sYear === prevYear;
+            })
+            .reduce((sum, s) => sum + (s.amount || 0), 0);
+
+        // Use calculated sales or fallback to businessMetrics
+        const newSales = currentMonthSales > 0 ? currentMonthSales : (businessMetrics?.newSales ?? 0);
+        const renewal = businessMetrics?.renewal ?? 0;
+
+        // Get Thai month name for display
+        const thaiMonths = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+        const currentMonthName = thaiMonths[currentMonth];
 
         return [
             { id: 'leads', label: "Total Leads – This Week", subLabel: "ผู้สนใจรายสัปดาห์ (Mon-Sun)", numericValue: currentCount, prefix: "", suffix: "", sub: `Dr.Ease: ${dreaseLeads} | Ease: ${easeLeads}`, extraInfo: WoWTag, tooltip: "อัตราการเติบโตเมื่อเทียบกับสัปดาห์ก่อน (WoW): ((จำนวนสัปดาห์นี้-จำนวนสัปดาห์ก่อน) / จำนวนสัปดาห์ก่อน) x 100", icon: Briefcase, color: "text-amber-400", border: "border-amber-500/20", bg: "from-amber-500/10" },
             { id: 'demos', label: "Weekly Demos", subLabel: "การทำ Demo รายสัปดาห์ (Mon-Sun)", numericValue: currentDemos, prefix: "", suffix: "", sub: `เข้าข่ายสัปดาห์ปัจจุบัน`, extraInfo: DemosWoWTag, icon: Monitor, color: "text-blue-400", border: "border-blue-500/20", bg: "from-blue-500/10" },
-            { id: 'sales', label: "New Sales", subLabel: "ยอดเงินปิดใหม่", numericValue: newSales, prefix: "฿", suffix: "", sub: "Revenue สัปดาห์นี้", icon: DollarSign, color: "text-emerald-400", border: "border-emerald-500/20", bg: "from-emerald-500/10" },
-            { id: 'renewals', label: "Renewal", subLabel: "ยอดเงินต่อสัญญา", numericValue: renewal, prefix: "฿", suffix: "", sub: "Revenue สัปดาห์นี้", icon: TrendingUp, color: "text-purple-400", border: "border-purple-500/20", bg: "from-purple-500/10" },
+            { id: 'sales', label: "New Sales", subLabel: `ยอดเงินปิดใหม่ (${currentMonthName} ${currentBuddhistYear.slice(-2)})`, numericValue: newSales, prefix: "฿", suffix: "", sub: prevMonthSales > 0 ? `เดือนก่อน: ฿${prevMonthSales.toLocaleString()}` : "Revenue เดือนนี้", icon: DollarSign, color: "text-emerald-400", border: "border-emerald-500/20", bg: "from-emerald-500/10" },
+            { id: 'renewals', label: "Renewal", subLabel: "ยอดเงินต่อสัญญา", numericValue: renewal, prefix: "฿", suffix: "", sub: "Revenue เดือนนี้", icon: TrendingUp, color: "text-purple-400", border: "border-purple-500/20", bg: "from-purple-500/10" },
         ];
-    }, [googleSheetLeads, googleSheetDemos, activities, businessMetrics]);
+    }, [googleSheetLeads, googleSheetDemos, activities, businessMetrics, newSalesData]);
 
     const dateRange = useMemo(() => {
         let startDate: Date;
@@ -337,7 +374,7 @@ export default function Dashboard({ customers, installations, issues, activities
         } else {
             startDate = new Date();
             startDate.setHours(0, 0, 0, 0);
-            const daysBack = timeRange === '1w' ? 7 : timeRange === '1m' ? 30 : 365;
+            const daysBack = timeRange === '1w' ? 7 : timeRange === '1m' ? 30 : timeRange === '3m' ? 90 : timeRange === '6m' ? 180 : 365;
             startDate.setDate(startDate.getDate() - daysBack + 1);
         }
         return { startDate, endDate };
@@ -361,7 +398,8 @@ export default function Dashboard({ customers, installations, issues, activities
         const { startDate, endDate } = dateRange;
 
         const daysDiff = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)));
-        const groupBy = daysDiff > 400 ? 'month' : (daysDiff > 45 ? 'week' : 'day');
+        // Always group by month for sales metric
+        const groupBy = selectedMetric === 'sales' ? 'month' : (daysDiff > 400 ? 'month' : (daysDiff > 45 ? 'week' : 'day'));
 
         const normalizeDate = (dateVal: string | undefined) => {
             const d = parseSheetDate(dateVal);
@@ -369,12 +407,52 @@ export default function Dashboard({ customers, installations, issues, activities
             return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         };
 
+        // Thai month mapping for sales data
+        const thaiMonthMap: { [key: string]: number } = {
+            'ม.ค.': 1, 'ก.พ.': 2, 'มี.ค.': 3, 'เม.ย.': 4,
+            'พ.ค.': 5, 'มิ.ย.': 6, 'ก.ค.': 7, 'ส.ค.': 8,
+            'ก.ย.': 9, 'ต.ค.': 10, 'พ.ย.': 11, 'ธ.ค.': 12
+        };
+
+        // Helper to get sales for a specific month/year
+        const getSalesForMonth = (gregorianYear: number, month: number) => {
+            const buddhistYear = String(gregorianYear + 543);
+            return newSalesData
+                .filter(s => {
+                    const sMonth = thaiMonthMap[s.month];
+                    return sMonth === month && s.year === buddhistYear;
+                })
+                .reduce((sum, s) => sum + (s.amount || 0), 0);
+        };
+
+        // Helper to get sales for a specific month/year by salesperson
+        const getSalesForMonthBySalesperson = (gregorianYear: number, month: number, salesperson: string) => {
+            const buddhistYear = String(gregorianYear + 543);
+            return newSalesData
+                .filter(s => {
+                    const sMonth = thaiMonthMap[s.month];
+                    return sMonth === month && s.year === buddhistYear && s.salesName?.includes(salesperson);
+                })
+                .reduce((sum, s) => sum + (s.amount || 0), 0);
+        };
+
         if (groupBy === 'month') {
             const monthlyData: { [key: string]: any } = {};
             const current = new Date(startDate);
             while (current <= endDate) {
                 const key = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`;
-                monthlyData[key] = { drease: 0, ease: 0, leads: 0, demos: 0, demosAoey: 0, demosYo: 0 };
+                const salesAoey = getSalesForMonthBySalesperson(current.getFullYear(), current.getMonth() + 1, 'เอย');
+                const salesYo = getSalesForMonthBySalesperson(current.getFullYear(), current.getMonth() + 1, 'โย');
+                // Apply sales filter for sales metric
+                const filteredSalesAoey = (salesFilter === 'all' || salesFilter === 'Aoey') ? salesAoey : 0;
+                const filteredSalesYo = (salesFilter === 'all' || salesFilter === 'Yo') ? salesYo : 0;
+                const salesAmount = salesFilter === 'all'
+                    ? getSalesForMonth(current.getFullYear(), current.getMonth() + 1)
+                    : (filteredSalesAoey + filteredSalesYo);
+                monthlyData[key] = {
+                    drease: 0, ease: 0, leads: 0, demos: 0, demosAoey: 0, demosYo: 0,
+                    sales: salesAmount, salesAoey: filteredSalesAoey, salesYo: filteredSalesYo, renewals: 0
+                };
                 current.setMonth(current.getMonth() + 1);
             }
             googleSheetLeads.forEach(l => {
@@ -405,11 +483,17 @@ export default function Dashboard({ customers, installations, issues, activities
                     }
                 }
             });
-            return Object.entries(monthlyData).map(([key, data]) => ({
-                name: months[parseInt(key.split('-')[1]) - 1] + ' ' + key.split('-')[0].slice(2),
-                fullDate: months[parseInt(key.split('-')[1]) - 1] + ' ' + key.split('-')[0],
-                ...data
-            }));
+            const thaiMonths = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+            return Object.entries(monthlyData).map(([key, data]) => {
+                const monthIndex = parseInt(key.split('-')[1]) - 1;
+                const year = key.split('-')[0];
+                const buddhistYear = (parseInt(year) + 543).toString().slice(-2);
+                return {
+                    name: thaiMonths[monthIndex] + ' ' + buddhistYear,
+                    fullDate: thaiMonths[monthIndex] + ' พ.ศ. ' + (parseInt(year) + 543),
+                    ...data
+                };
+            });
         }
 
         const count = daysDiff;
@@ -435,6 +519,15 @@ export default function Dashboard({ customers, installations, issues, activities
             const demosAoeyOnDay = (salesFilter === 'all' || salesFilter === 'Aoey') ? googleDemosOnDay.filter(d => d.salesperson?.includes('Aoey')).length : 0;
             const demosYoOnDay = (salesFilter === 'all' || salesFilter === 'Yo') ? googleDemosOnDay.filter(d => d.salesperson?.includes('Yo')).length : 0;
 
+            // Get monthly sales for this date (since we don't have daily granularity)
+            const monthlySales = getSalesForMonth(date.getFullYear(), date.getMonth() + 1);
+            const monthlySalesAoey = getSalesForMonthBySalesperson(date.getFullYear(), date.getMonth() + 1, 'เอย');
+            const monthlySalesYo = getSalesForMonthBySalesperson(date.getFullYear(), date.getMonth() + 1, 'โย');
+            const daysInMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+            const dailySalesEstimate = Math.round(monthlySales / daysInMonth);
+            const dailySalesAoey = Math.round(monthlySalesAoey / daysInMonth);
+            const dailySalesYo = Math.round(monthlySalesYo / daysInMonth);
+
             return {
                 name: `${date.getDate()} ${days[date.getDay()]}`,
                 fullDate: date.toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' }),
@@ -444,11 +537,13 @@ export default function Dashboard({ customers, installations, issues, activities
                 demos: (salesFilter === 'all' ? (demosOnDay.length + googleDemosOnDay.length) : (demosAoeyOnDay + demosYoOnDay)),
                 demosAoey: demosAoeyOnDay,
                 demosYo: demosYoOnDay,
-                sales: Math.floor(Math.random() * 50000) + 10000, // Simulated trend data for sales
-                renewals: Math.floor(Math.random() * 30000) + 5000, // Simulated trend data for renewals
+                sales: dailySalesEstimate,
+                salesAoey: dailySalesAoey,
+                salesYo: dailySalesYo,
+                renewals: 0,
             };
         });
-    }, [dateRange, googleSheetLeads, googleSheetDemos, activities, productFilter, salesFilter]);
+    }, [dateRange, googleSheetLeads, googleSheetDemos, activities, productFilter, salesFilter, newSalesData, selectedMetric]);
 
     const graphTotals = useMemo(() => {
         return dynamicGraphData.reduce((acc, curr) => {
@@ -459,10 +554,51 @@ export default function Dashboard({ customers, installations, issues, activities
             acc.demosAoey += (curr.demosAoey || 0);
             acc.demosYo += (curr.demosYo || 0);
             acc.sales += (curr.sales || 0);
+            acc.salesAoey += (curr.salesAoey || 0);
+            acc.salesYo += (curr.salesYo || 0);
             acc.renewals += (curr.renewals || 0);
             return acc;
-        }, { drease: 0, ease: 0, leads: 0, demos: 0, demosAoey: 0, demosYo: 0, sales: 0, renewals: 0 });
+        }, { drease: 0, ease: 0, leads: 0, demos: 0, demosAoey: 0, demosYo: 0, sales: 0, salesAoey: 0, salesYo: 0, renewals: 0 });
     }, [dynamicGraphData]);
+
+    // Compute sales by salesperson dynamically
+    const salesBySalesperson = useMemo(() => {
+        const { startDate, endDate } = dateRange;
+        const thaiMonthMap: { [key: string]: number } = {
+            'ม.ค.': 0, 'ก.พ.': 1, 'มี.ค.': 2, 'เม.ย.': 3,
+            'พ.ค.': 4, 'มิ.ย.': 5, 'ก.ค.': 6, 'ส.ค.': 7,
+            'ก.ย.': 8, 'ต.ค.': 9, 'พ.ย.': 10, 'ธ.ค.': 11
+        };
+
+        const salesMap: { [key: string]: number } = {};
+        const colors = ['#22c55e', '#f59e0b', '#3b82f6', '#ec4899', '#8b5cf6', '#14b8a6'];
+
+        newSalesData.forEach(s => {
+            if (!s.salesName || !s.month || !s.year) return;
+
+            // Convert Thai Buddhist year to Gregorian
+            const buddhistYear = parseInt(s.year);
+            const gregorianYear = buddhistYear - 543;
+            const monthIndex = thaiMonthMap[s.month];
+            if (monthIndex === undefined) return;
+
+            const saleDate = new Date(gregorianYear, monthIndex, 15);
+            if (saleDate >= startDate && saleDate <= endDate) {
+                const name = s.salesName.trim();
+                if (!salesMap[name]) salesMap[name] = 0;
+                salesMap[name] += s.amount || 0;
+            }
+        });
+
+        return Object.entries(salesMap)
+            .filter(([_, amount]) => amount > 0)
+            .sort((a, b) => b[1] - a[1])
+            .map(([name, amount], index) => ({
+                name,
+                amount,
+                color: colors[index % colors.length]
+            }));
+    }, [newSalesData, dateRange]);
 
     const yAxisTicks = useMemo(() => {
         // Find max value across all data points
@@ -645,24 +781,27 @@ export default function Dashboard({ customers, installations, issues, activities
                                 <div className="flex flex-col">
                                     <h3 className="text-white font-bold flex items-center gap-2">
                                         <LineChart className="w-4 h-4 text-indigo-400" />
-                                        {timeRange === '1w' ? 'Weekly' : timeRange === '1m' ? 'Monthly' : timeRange === '1y' ? 'Yearly' : 'Custom'} {
+                                        {timeRange === '1w' ? 'Weekly' : timeRange === '1m' ? 'Monthly' : timeRange === '3m' ? '3 Months' : timeRange === '6m' ? '6 Months' : timeRange === '1y' ? 'Yearly' : 'Custom'} {
                                             selectedMetric === 'leads' ? 'Leads Performance' :
                                                 selectedMetric === 'demos' ? 'Demos Performance' :
                                                     selectedMetric === 'sales' ? 'Sales Revenue Trend' : 'Renewal Revenue Trend'
                                         }
                                     </h3>
                                     <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">
-                                        อัตราการเติบโตของ Lead และ Demo {timeRange === '1w' ? 'รายสัปดาห์' : 'ช่วงเวลาที่กำหนด'}
+                                        {selectedMetric === 'sales'
+                                            ? `ยอดขายรายเดือน ${timeRange === '1m' ? '1 เดือนย้อนหลัง' : timeRange === '3m' ? '3 เดือนย้อนหลัง' : timeRange === '6m' ? '6 เดือนย้อนหลัง' : '1 ปีย้อนหลัง'}`
+                                            : `อัตราการเติบโตของ Lead และ Demo ${timeRange === '1w' ? 'รายสัปดาห์' : 'ช่วงเวลาที่กำหนด'}`
+                                        }
                                     </p>
                                 </div>
                                 <div className="flex items-center gap-2 scale-90 origin-right">
                                     <div className="w-36 flex-shrink-0">
-                                        {selectedMetric === 'demos' ? (
+                                        {(selectedMetric === 'demos' || selectedMetric === 'sales') ? (
                                             <CustomSelect
                                                 options={[
-                                                    { value: 'all', label: 'All Sales' },
-                                                    { value: 'Aoey', label: 'Aoey' },
-                                                    { value: 'Yo', label: 'Yo' }
+                                                    { value: 'all', label: 'ทั้งหมด' },
+                                                    { value: 'Aoey', label: 'Aoey (เอย)' },
+                                                    { value: 'Yo', label: 'Yo (โย)' }
                                                 ]}
                                                 value={salesFilter}
                                                 onChange={(val) => setSalesFilter(val as any)}
@@ -685,15 +824,20 @@ export default function Dashboard({ customers, installations, issues, activities
                                     </div>
                                     <div className="w-28 flex-shrink-0">
                                         <CustomSelect
-                                            options={[
+                                            options={selectedMetric === 'sales' ? [
+                                                { value: '1m', label: '1 เดือน' },
+                                                { value: '3m', label: '3 เดือน' },
+                                                { value: '6m', label: '6 เดือน' },
+                                                { value: '1y', label: '1 ปี' }
+                                            ] : [
                                                 { value: '1w', label: '1 Week' },
                                                 { value: '1m', label: '1 Month' },
                                                 { value: '1y', label: '1 Year' },
                                                 { value: 'custom', label: 'Custom' }
                                             ]}
-                                            value={timeRange}
+                                            value={selectedMetric === 'sales' && !['1m', '3m', '6m', '1y'].includes(timeRange) ? '1m' : timeRange}
                                             onChange={(val) => {
-                                                const newRange = val as '1w' | '1m' | '1y' | 'custom';
+                                                const newRange = val as '1w' | '1m' | '1y' | '3m' | '6m' | 'custom';
                                                 setTimeRange(newRange);
                                                 if (newRange === 'custom' && (!customStartDate || !customEndDate)) {
                                                     const today = new Date();
@@ -838,6 +982,28 @@ export default function Dashboard({ customers, installations, issues, activities
                                                     </div>
                                                 </div>
                                             </div>
+                                        ) : selectedMetric === 'sales' ? (
+                                            <div className="relative flex flex-col gap-2 ml-1.5 pl-5 border-l border-white/10 max-h-[200px] overflow-y-auto custom-scrollbar">
+                                                {/* Sales by Salesperson - Dynamic */}
+                                                {salesBySalesperson.map((sp, index) => (
+                                                    <div key={sp.name} className="flex flex-col relative">
+                                                        <div className="absolute -left-5 top-2 w-4 h-px bg-white/10" />
+                                                        <div className="flex items-center gap-1.5 mb-0.5">
+                                                            <div
+                                                                className="w-2 h-2 rounded-full"
+                                                                style={{ backgroundColor: sp.color, boxShadow: `0 0 8px ${sp.color}` }}
+                                                            />
+                                                            <span className="text-text-muted text-[10px] uppercase font-bold tracking-widest truncate max-w-[120px]">{sp.name}</span>
+                                                        </div>
+                                                        <p className="text-white text-base font-bold tracking-tighter tabular-nums leading-none">
+                                                            ฿{sp.amount.toLocaleString()}
+                                                        </p>
+                                                    </div>
+                                                ))}
+                                                {salesBySalesperson.length === 0 && (
+                                                    <p className="text-slate-500 text-xs">ไม่มีข้อมูลในช่วงเวลานี้</p>
+                                                )}
+                                            </div>
                                         ) : (
                                             <div className="p-3 rounded-xl bg-white/5 border border-white/5 space-y-2">
                                                 <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest">Period Insights</p>
@@ -974,7 +1140,10 @@ export default function Dashboard({ customers, installations, issues, activities
                                                 </>
                                             )}
                                             {selectedMetric === 'sales' && (
-                                                <Area type="monotone" dataKey="sales" name="New Sales" stroke="#10b981" fill="url(#colorSales)" strokeWidth={3} filter="url(#glowSales)" activeDot={{ r: 6, stroke: '#10b981', strokeWidth: 2, fill: '#fff' }} />
+                                                <>
+                                                    <Area type="monotone" dataKey="salesAoey" name="Aoey (เอย)" stroke="#22c55e" fill="url(#colorAoey)" strokeWidth={3} filter="url(#glowAoey)" activeDot={{ r: 6, stroke: '#22c55e', strokeWidth: 2, fill: '#fff' }} />
+                                                    <Area type="monotone" dataKey="salesYo" name="Yo (โย)" stroke="#f59e0b" fill="url(#colorYo)" strokeWidth={3} filter="url(#glowYo)" activeDot={{ r: 6, stroke: '#f59e0b', strokeWidth: 2, fill: '#fff' }} />
+                                                </>
                                             )}
                                             {selectedMetric === 'renewals' && (
                                                 <Area type="monotone" dataKey="renewals" name="Renewal" stroke="#8b5cf6" fill="url(#colorRenewals)" strokeWidth={3} filter="url(#glowRenewals)" activeDot={{ r: 6, stroke: '#8b5cf6', strokeWidth: 2, fill: '#fff' }} />

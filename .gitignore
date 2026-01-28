@@ -40,3 +40,18 @@ next-env.d.ts
 # temp files
 init-db.js
 import-csv.js
+
+# Custom exclusions
+.agent_brain/
+*.json
+!package.json
+!tsconfig.json
+!next.config.json
+!package-lock.json
+*.txt
+!CLAUDE.md
+Book1.csv
+crm-connect/
+nul
+debug_leads.ts
+fetch_raw.js

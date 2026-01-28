@@ -20,7 +20,7 @@ import LeadManager from "@/components/LeadManager";
 import GoogleSheetLeadManager from "@/components/GoogleSheetLeadManager";
 import DemoManager from "@/components/DemoManager";
 import CustomDatePicker from "@/components/CustomDatePicker";
-import { Customer, Branch, Installation, Issue, UsageStatus, Activity as CSActivity, ActivityType, SentimentType, Lead, GoogleSheetLead, MasterDemoLead, BusinessMetrics } from "@/types";
+import { Customer, Branch, Installation, Issue, UsageStatus, Activity as CSActivity, ActivityType, SentimentType, Lead, GoogleSheetLead, MasterDemoLead, BusinessMetrics, NewSalesRecord } from "@/types";
 import { useNotification } from "@/components/NotificationProvider";
 import { db } from "@/lib/db";
 import {
@@ -162,8 +162,10 @@ export default function CRMPage() {
   });
   const [googleSheetLeads, setGoogleSheetLeads] = useState<GoogleSheetLead[]>([]);
   const [googleSheetDemos, setGoogleSheetDemos] = useState<MasterDemoLead[]>([]);
+  const [newSalesData, setNewSalesData] = useState<NewSalesRecord[]>([]);
   const [isGoogleSheetLeadsLoading, setGoogleSheetLeadsLoading] = useState(true);
   const [isGoogleSheetDemosLoading, setGoogleSheetDemosLoading] = useState(true);
+  const [isNewSalesLoading, setNewSalesLoading] = useState(true);
   const [businessMetrics, setBusinessMetrics] = useState<BusinessMetrics | undefined>(undefined);
   const [isLeadModalOpen, setLeadModalOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
@@ -295,10 +297,26 @@ export default function CRMPage() {
     }
   }, []);
 
+  const fetchNewSalesData = useCallback(async () => {
+    try {
+      setNewSalesLoading(true);
+      const response = await fetch('/api/sales');
+      const result = await response.json();
+      if (result.success) {
+        setNewSalesData(result.data);
+      }
+    } catch (error: any) {
+      console.error('Error fetching New Sales data:', error);
+    } finally {
+      setNewSalesLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchGoogleSheetLeads();
     fetchGoogleSheetDemos();
-  }, [fetchGoogleSheetLeads, fetchGoogleSheetDemos]);
+    fetchNewSalesData();
+  }, [fetchGoogleSheetLeads, fetchGoogleSheetDemos, fetchNewSalesData]);
 
   useEffect(() => {
     if (mounted) {
@@ -1137,6 +1155,7 @@ export default function CRMPage() {
                   leads={leads}
                   googleSheetLeads={googleSheetLeads}
                   googleSheetDemos={googleSheetDemos}
+                  newSalesData={newSalesData}
                   businessMetrics={businessMetrics}
                   user={user}
                   onViewChange={setView}
