@@ -34,7 +34,7 @@ export interface NewSalesRow {
 
 export async function getNewSales(): Promise<NewSalesRow[]> {
     const spreadsheetId = process.env.GOOGLE_MASTER_SPREADSHEET_ID?.trim();
-    const sheetName = 'Sheet6';
+    const sheetName = (process.env.GOOGLE_SALES_SHEET_NAME || 'Sheet6').trim();
 
     if (!spreadsheetId) {
         console.warn('GOOGLE_MASTER_SPREADSHEET_ID is missing, skipping fetch');
