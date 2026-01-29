@@ -212,12 +212,12 @@ export default function IssueManager({ issues, customers: _customers, onAdd, onE
                             <tr className="bg-white/5 text-slate-400 text-xs uppercase tracking-wider border-b border-white/5">
                                 <th className="px-4 py-3 font-semibold w-[4%] text-center">No.</th>
                                 <th className="px-4 py-3 font-semibold w-[8%] text-center">Id</th>
-                                <th className="px-4 py-3 font-semibold w-[25%] text-center">Case Name</th>
-                                <th className="px-4 py-3 font-semibold w-[15%] text-center">Customer</th>
-                                <th className="px-4 py-3 font-semibold w-[9%] text-center">Severity</th>
-                                <th className="px-4 py-3 font-semibold w-[9%] text-center">Status</th>
-                                <th className="px-4 py-3 font-semibold w-[9%] text-center">Type</th>
-                                <th className="px-4 py-3 font-semibold w-[15%] text-center">Modified By</th>
+                                <th className="px-4 py-3 font-semibold w-[38%] text-center">Case Name</th>
+                                <th className="px-4 py-3 font-semibold w-[11%] text-center">Customer</th>
+                                <th className="px-4 py-3 font-semibold w-[8%] text-center">Severity</th>
+                                <th className="px-4 py-3 font-semibold w-[8%] text-center">Status</th>
+                                <th className="px-4 py-3 font-semibold w-[8%] text-center">Type</th>
+                                <th className="px-4 py-3 font-semibold w-[9%] text-center">Modified By</th>
                                 <th className="px-4 py-3 font-semibold w-[6%] text-center">Actions</th>
                             </tr>
                         </thead>
@@ -233,9 +233,9 @@ export default function IssueManager({ issues, customers: _customers, onAdd, onE
                                                 {issue.caseNumber}
                                             </span>
                                         </td>
-                                        <td className="px-4 py-3 text-center">
-                                            <div className="flex items-center justify-center gap-2">
-                                                <div className="font-normal text-slate-200 text-xs truncate max-w-[200px]" title={issue.title}>
+                                        <td className="px-4 py-3 text-left">
+                                            <div className="flex items-center justify-start gap-2">
+                                                <div className="font-normal text-slate-200 text-xs truncate max-w-[450px]" title={issue.title}>
                                                     {issue.title}
                                                 </div>
                                                 {issue.attachments && (typeof issue.attachments === 'string' ? issue.attachments.length > 2 : issue.attachments.length > 0) && (

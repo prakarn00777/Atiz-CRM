@@ -349,6 +349,32 @@ export default function Dashboard({ customers, installations, issues, activities
         const newSales = currentMonthSales > 0 ? currentMonthSales : (businessMetrics?.newSales ?? 0);
         const renewal = businessMetrics?.renewal ?? 0;
 
+        // Calculate Sales MoM %
+        let salesMoMPercent = 0;
+        if (prevMonthSales > 0) salesMoMPercent = ((currentMonthSales - prevMonthSales) / prevMonthSales) * 100;
+        else if (currentMonthSales > 0) salesMoMPercent = 100;
+
+        const salesMoMColor = salesMoMPercent >= 0 ? "text-emerald-400" : "text-rose-400";
+        const SalesMoMTag = (
+            <div className="flex items-center gap-1.5 relative">
+                <span className={`${salesMoMColor} flex items-center gap-0.5 whitespace-nowrap text-[14px] font-bold`}>
+                    ({salesMoMPercent >= 0 ? "+" : "-"}{Math.abs(salesMoMPercent).toFixed(1)}%)
+                </span>
+                <div className="relative group/tooltip">
+                    <div className="p-0.5 rounded-full bg-white/5 text-slate-400 hover:text-white transition-colors cursor-help">
+                        <Info className="w-3 h-3" />
+                    </div>
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 z-[100] text-[11px] leading-relaxed text-slate-300 pointer-events-none">
+                        <p className="font-bold text-white mb-1">Sales Growth (MoM)</p>
+                        <p>รายได้ปิดใหม่เทียบกับเดือนก่อนหน้า:</p>
+                        <div className="mt-2 p-2 bg-black/30 rounded-lg font-mono text-indigo-300">
+                            ((ยอดเดือนนี้ - เดือนก่อน) / เดือนก่อน) x 100
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+
         // Get Thai month name for display
         const thaiMonths = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
         const currentMonthName = thaiMonths[currentMonth];
@@ -356,7 +382,7 @@ export default function Dashboard({ customers, installations, issues, activities
         return [
             { id: 'leads', label: "Total Leads – This Week", subLabel: "ผู้สนใจรายสัปดาห์ (Mon-Sun)", numericValue: currentCount, prefix: "", suffix: "", sub: `Dr.Ease: ${dreaseLeads} | Ease: ${easeLeads}`, extraInfo: WoWTag, tooltip: "อัตราการเติบโตเมื่อเทียบกับสัปดาห์ก่อน (WoW): ((จำนวนสัปดาห์นี้-จำนวนสัปดาห์ก่อน) / จำนวนสัปดาห์ก่อน) x 100", icon: Briefcase, color: "text-amber-400", border: "border-amber-500/20", bg: "from-amber-500/10" },
             { id: 'demos', label: "Weekly Demos", subLabel: "การทำ Demo รายสัปดาห์ (Mon-Sun)", numericValue: currentDemos, prefix: "", suffix: "", sub: `เข้าข่ายสัปดาห์ปัจจุบัน`, extraInfo: DemosWoWTag, icon: Monitor, color: "text-blue-400", border: "border-blue-500/20", bg: "from-blue-500/10" },
-            { id: 'sales', label: "New Sales", subLabel: `ยอดเงินปิดใหม่ (${currentMonthName} ${currentBuddhistYear.slice(-2)})`, numericValue: newSales, prefix: "฿", suffix: "", sub: prevMonthSales > 0 ? `เดือนก่อน: ฿${prevMonthSales.toLocaleString()}` : "Revenue เดือนนี้", icon: DollarSign, color: "text-emerald-400", border: "border-emerald-500/20", bg: "from-emerald-500/10" },
+            { id: 'sales', label: "New Sales", subLabel: `ยอดเงินปิดใหม่ (${currentMonthName} ${currentBuddhistYear.slice(-2)})`, numericValue: newSales, prefix: "฿", suffix: "", sub: prevMonthSales > 0 ? `เดือนก่อน: ฿${prevMonthSales.toLocaleString()}` : "Revenue เดือนนี้", extraInfo: SalesMoMTag, icon: DollarSign, color: "text-emerald-400", border: "border-emerald-500/20", bg: "from-emerald-500/10" },
             { id: 'renewals', label: "Renewal", subLabel: "ยอดเงินต่อสัญญา", numericValue: renewal, prefix: "฿", suffix: "", sub: "Revenue เดือนนี้", icon: TrendingUp, color: "text-purple-400", border: "border-purple-500/20", bg: "from-purple-500/10" },
         ];
     }, [googleSheetLeads, googleSheetDemos, activities, businessMetrics, newSalesData]);
@@ -796,7 +822,7 @@ export default function Dashboard({ customers, installations, issues, activities
                                 </div>
                                 <div className="flex items-center gap-2 scale-90 origin-right">
                                     <div className="w-36 flex-shrink-0">
-                                        {(selectedMetric === 'demos' || selectedMetric === 'sales') ? (
+                                        {selectedMetric === 'demos' ? (
                                             <CustomSelect
                                                 options={[
                                                     { value: 'all', label: 'ทั้งหมด' },
@@ -808,7 +834,7 @@ export default function Dashboard({ customers, installations, issues, activities
                                                 className="h-9"
                                                 portalContainer={dashboardRef.current}
                                             />
-                                        ) : (
+                                        ) : selectedMetric === 'leads' ? (
                                             <CustomSelect
                                                 options={[
                                                     { value: 'all', label: 'All Products' },
@@ -820,13 +846,13 @@ export default function Dashboard({ customers, installations, issues, activities
                                                 className="h-9"
                                                 portalContainer={dashboardRef.current}
                                             />
-                                        )}
+                                        ) : null}
                                     </div>
                                     <div className="w-28 flex-shrink-0">
                                         <CustomSelect
-                                            options={selectedMetric === 'sales' ? [
+                                            options={(selectedMetric === 'sales' || selectedMetric === 'renewals') ? [
                                                 { value: '1m', label: '1 เดือน' },
-                                                { value: '3m', label: '3 เดือน' },
+                                                { value: '3m', label: '3 เดือน (รายไตรมาส)' },
                                                 { value: '6m', label: '6 เดือน' },
                                                 { value: '1y', label: '1 ปี' }
                                             ] : [
@@ -835,7 +861,7 @@ export default function Dashboard({ customers, installations, issues, activities
                                                 { value: '1y', label: '1 Year' },
                                                 { value: 'custom', label: 'Custom' }
                                             ]}
-                                            value={selectedMetric === 'sales' && !['1m', '3m', '6m', '1y'].includes(timeRange) ? '1m' : timeRange}
+                                            value={(selectedMetric === 'sales' || selectedMetric === 'renewals') && !['1m', '3m', '6m', '1y'].includes(timeRange) ? '3m' : timeRange}
                                             onChange={(val) => {
                                                 const newRange = val as '1w' | '1m' | '1y' | '3m' | '6m' | 'custom';
                                                 setTimeRange(newRange);
@@ -983,25 +1009,22 @@ export default function Dashboard({ customers, installations, issues, activities
                                                 </div>
                                             </div>
                                         ) : selectedMetric === 'sales' ? (
-                                            <div className="relative flex flex-col gap-2 ml-1.5 pl-5 border-l border-white/10 max-h-[200px] overflow-y-auto custom-scrollbar">
-                                                {/* Sales by Salesperson - Dynamic */}
-                                                {salesBySalesperson.map((sp, index) => (
-                                                    <div key={sp.name} className="flex flex-col relative">
-                                                        <div className="absolute -left-5 top-2 w-4 h-px bg-white/10" />
+                                            <div className="relative flex flex-col gap-3 ml-1.5 pl-5 border-l border-white/10 max-h-[350px] overflow-y-auto custom-scrollbar">
+                                                <p className="text-white text-[10px] uppercase font-bold tracking-widest mb-1 opacity-70">สรุปยอดรายเดือน</p>
+                                                {[...dynamicGraphData].reverse().map((data, index) => (
+                                                    <div key={index} className="flex flex-col relative group/item">
+                                                        <div className="absolute -left-5 top-2 w-4 h-px bg-white/10 group-hover/item:bg-emerald-500/50 transition-colors" />
                                                         <div className="flex items-center gap-1.5 mb-0.5">
-                                                            <div
-                                                                className="w-2 h-2 rounded-full"
-                                                                style={{ backgroundColor: sp.color, boxShadow: `0 0 8px ${sp.color}` }}
-                                                            />
-                                                            <span className="text-text-muted text-[10px] uppercase font-bold tracking-widest truncate max-w-[120px]">{sp.name}</span>
+                                                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]" />
+                                                            <span className="text-text-muted text-[10px] uppercase font-bold tracking-widest">{data.name}</span>
                                                         </div>
                                                         <p className="text-white text-base font-bold tracking-tighter tabular-nums leading-none">
-                                                            ฿{sp.amount.toLocaleString()}
+                                                            ฿{(data.sales || 0).toLocaleString()}
                                                         </p>
                                                     </div>
                                                 ))}
-                                                {salesBySalesperson.length === 0 && (
-                                                    <p className="text-slate-500 text-xs">ไม่มีข้อมูลในช่วงเวลานี้</p>
+                                                {dynamicGraphData.length === 0 && (
+                                                    <p className="text-slate-500 text-xs italic">ไม่มีข้อมูลในช่วงเวลานี้</p>
                                                 )}
                                             </div>
                                         ) : (
@@ -1140,10 +1163,7 @@ export default function Dashboard({ customers, installations, issues, activities
                                                 </>
                                             )}
                                             {selectedMetric === 'sales' && (
-                                                <>
-                                                    <Area type="monotone" dataKey="salesAoey" name="Aoey (เอย)" stroke="#22c55e" fill="url(#colorAoey)" strokeWidth={3} filter="url(#glowAoey)" activeDot={{ r: 6, stroke: '#22c55e', strokeWidth: 2, fill: '#fff' }} />
-                                                    <Area type="monotone" dataKey="salesYo" name="Yo (โย)" stroke="#f59e0b" fill="url(#colorYo)" strokeWidth={3} filter="url(#glowYo)" activeDot={{ r: 6, stroke: '#f59e0b', strokeWidth: 2, fill: '#fff' }} />
-                                                </>
+                                                <Area type="monotone" dataKey="sales" name="ยอดขายรวม" stroke="#10b981" fill="url(#colorSales)" strokeWidth={3} filter="url(#glowSales)" activeDot={{ r: 6, stroke: '#10b981', strokeWidth: 2, fill: '#fff' }} />
                                             )}
                                             {selectedMetric === 'renewals' && (
                                                 <Area type="monotone" dataKey="renewals" name="Renewal" stroke="#8b5cf6" fill="url(#colorRenewals)" strokeWidth={3} filter="url(#glowRenewals)" activeDot={{ r: 6, stroke: '#8b5cf6', strokeWidth: 2, fill: '#fff' }} />

@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import Sidebar from "@/components/Sidebar";
 import CustomerTable from "@/components/CustomerTable";
-import { Layers, X, ChevronDown, Plus, Edit2, Trash2, Users, Activity as ActivityIcon, Award, TrendingUp, Clock, AlertTriangle, MapPin, Play, CheckCircle2, AlertCircle, Paperclip, History as HistoryIcon, Download } from "lucide-react";
+import { Layers, X, ChevronDown, Plus, Edit2, Trash2, Users, Activity as ActivityIcon, Award, TrendingUp, Clock, AlertTriangle, MapPin, Play, CheckCircle2, AlertCircle, Paperclip, History as HistoryIcon, Download, ExternalLink } from "lucide-react";
 import CustomSelect from "@/components/CustomSelect";
 import UserManager from "@/components/UserManager";
 import RoleManager from "@/components/RoleManager";
@@ -19,6 +19,7 @@ import NotificationBell from "@/components/NotificationBell";
 import LeadManager from "@/components/LeadManager";
 import GoogleSheetLeadManager from "@/components/GoogleSheetLeadManager";
 import DemoManager from "@/components/DemoManager";
+import SalesManager from "@/components/SalesManager";
 import CustomDatePicker from "@/components/CustomDatePicker";
 import { Customer, Branch, Installation, Issue, UsageStatus, Activity as CSActivity, ActivityType, SentimentType, Lead, GoogleSheetLead, MasterDemoLead, BusinessMetrics, NewSalesRecord } from "@/types";
 import { useNotification } from "@/components/NotificationProvider";
@@ -1230,6 +1231,12 @@ export default function CRMPage() {
                   isLoading={isGoogleSheetDemosLoading}
                   onRefresh={fetchGoogleSheetDemos}
                 />
+              ) : currentView === "sales" ? (
+                <SalesManager
+                  sales={newSalesData}
+                  isLoading={isNewSalesLoading}
+                  onRefresh={fetchNewSalesData}
+                />
               ) : null}
             </div>
           </main>
@@ -1476,7 +1483,7 @@ export default function CRMPage() {
                                     // Fallback to internal branch status
                                     return (
                                       <span className={`inline-flex px-2.5 py-1 rounded-full text-[10px] font-bold whitespace-nowrap shadow-sm ${activeBranch.status === "Completed" ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20" :
-                                          "bg-slate-500/15 text-slate-400 border border-slate-500/20"
+                                        "bg-slate-500/15 text-slate-400 border border-slate-500/20"
                                         }`}>
                                         {activeBranch.status || "Pending"}
                                       </span>
@@ -1645,7 +1652,27 @@ export default function CRMPage() {
                 <div className="flex-1 overflow-y-auto p-6">
                   <form id="issue-form" onSubmit={handleSaveIssue} className="space-y-4">
                     <div className="space-y-1">
-                      <label className="text-xs font-medium text-slate-400">Customer</label>
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-medium text-slate-400">Customer</label>
+                        {(() => {
+                          const customer = customers.find(c => c.id === selectedCustomerId);
+                          if (customer?.subdomain) {
+                            return (
+                              <a
+                                href={customer.subdomain.startsWith('http') ? customer.subdomain : `https://${customer.subdomain}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title="Go to System"
+                                className="flex items-center gap-1.5 text-[10px] font-bold text-indigo-400 hover:text-indigo-300 transition-colors bg-indigo-500/5 px-2 py-0.5 rounded-md border border-indigo-500/10"
+                              >
+                                <ExternalLink className="w-3 h-3" />
+                                <span className="truncate max-w-[150px]">{customer.subdomain.replace(/^https?:\/\//, '')}</span>
+                              </a>
+                            );
+                          }
+                          return null;
+                        })()}
+                      </div>
                       <SearchableCustomerSelect customers={customers} value={selectedCustomerId} onChange={(id, name) => { setSelectedCustomerId(id); setSelectedCustomerName(name); }} />
                     </div>
                     <div className="space-y-1">
