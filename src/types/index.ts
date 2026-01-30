@@ -69,6 +69,8 @@ export interface Branch {
     isMain: boolean;
     address?: string;
     status?: "Pending" | "Completed";
+    contractStart?: string;
+    csOwner?: string;
 }
 
 export interface Customer {
@@ -80,13 +82,10 @@ export interface Customer {
     package: string;
     usageStatus: UsageStatus;
     installationStatus: InstallationStatus;
-    businessType?: string;
-    contractNumber?: string;
     contractStart?: string;
     contractEnd?: string;
     salesName?: string;
-    contactName?: string;
-    contactPhone?: string;
+    csOwner?: string;
     note?: string;
     branches?: Branch[];
     createdBy?: string;
@@ -266,4 +265,19 @@ export interface BusinessMetrics {
         bookings: number;
     };
     updatedAt: string;
+}
+
+export type FollowUpStatus = "Pending" | "Calling" | "Completed" | "Overdue";
+
+export interface FollowUpRound {
+    id: number;
+    customerId: number;
+    customerName: string;
+    branchName?: string;
+    csOwner: string;
+    round: 7 | 14 | 30 | 60 | 90;
+    dueDate: string;
+    status: FollowUpStatus;
+    completedAt?: string;
+    notes?: string;
 }

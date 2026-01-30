@@ -136,13 +136,13 @@ export default function IssueManager({ issues, customers: _customers, onAdd, onE
     return (
         <div className="space-y-6">
             <div>
-                <h1 className="text-3xl font-bold tracking-tight mb-4">Issue Reporting</h1>
+                <h1 className="text-3xl font-bold tracking-tight mb-4 text-text-main">Issue Reporting</h1>
             </div>
 
             <div className="flex flex-col md:flex-row gap-4 items-end md:items-center justify-between">
                 <div className="flex flex-col md:flex-row gap-3 items-end md:items-center w-full md:w-auto">
                     <div className="relative w-full md:w-64">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted" />
                         <input
                             type="text"
                             placeholder="ค้นหา..."
@@ -208,8 +208,8 @@ export default function IssueManager({ issues, customers: _customers, onAdd, onE
             <div className="glass-card overflow-hidden border-indigo-500/5 flex flex-col h-[calc(100vh-175px)]">
                 <div className="overflow-auto custom-scrollbar flex-1">
                     <table className="w-full text-left border-collapse relative">
-                        <thead className="sticky top-0 z-10 bg-[#0f172a] shadow-sm">
-                            <tr className="bg-white/5 text-slate-400 text-xs uppercase tracking-wider border-b border-white/5">
+                        <thead className="sticky top-0 z-10 bg-card-bg shadow-sm backdrop-blur-xl">
+                            <tr className="bg-bg-hover text-text-muted text-xs uppercase tracking-wider border-b border-border-light">
                                 <th className="px-4 py-3 font-semibold w-[4%] text-center">No.</th>
                                 <th className="px-4 py-3 font-semibold w-[8%] text-center">Id</th>
                                 <th className="px-4 py-3 font-semibold w-[38%] text-center">Case Name</th>
@@ -221,33 +221,33 @@ export default function IssueManager({ issues, customers: _customers, onAdd, onE
                                 <th className="px-4 py-3 font-semibold w-[6%] text-center">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-white/5">
+                        <tbody className="divide-y divide-border-light">
                             {paginatedIssues.length > 0 ? (
                                 paginatedIssues.map((issue, index) => (
-                                    <tr key={issue.id || issue.caseNumber} className="group hover:bg-white/[0.02] transition-colors h-14">
+                                    <tr key={issue.id || issue.caseNumber} className="group hover:bg-bg-hover transition-colors h-14">
                                         <td className="px-4 py-3 text-center">
-                                            <span className="text-xs text-slate-500">{(currentPage - 1) * itemsPerPage + index + 1}</span>
+                                            <span className="text-xs text-text-muted opacity-60">{(currentPage - 1) * itemsPerPage + index + 1}</span>
                                         </td>
                                         <td className="px-4 py-3 text-center">
-                                            <span className="text-xs font-mono text-slate-400">
+                                            <span className="text-xs font-mono text-text-muted">
                                                 {issue.caseNumber}
                                             </span>
                                         </td>
                                         <td className="px-4 py-3 text-left">
                                             <div className="flex items-center justify-start gap-2">
-                                                <div className="font-normal text-slate-200 text-xs truncate max-w-[450px]" title={issue.title}>
+                                                <div className="font-normal text-text-main text-xs truncate max-w-[450px]" title={issue.title}>
                                                     {issue.title}
                                                 </div>
                                                 {issue.attachments && (typeof issue.attachments === 'string' ? issue.attachments.length > 2 : issue.attachments.length > 0) && (
-                                                    <Paperclip className="w-3 h-3 text-slate-500 flex-shrink-0" />
+                                                    <Paperclip className="w-3 h-3 text-text-muted opacity-50 flex-shrink-0" />
                                                 )}
                                             </div>
                                         </td>
                                         <td className="px-4 py-3 text-center">
                                             <div className="flex flex-col items-center max-h-[2.5rem] overflow-hidden">
-                                                <span className="text-xs text-slate-300 font-medium line-clamp-1">{issue.customerName}</span>
+                                                <span className="text-xs text-text-main font-medium line-clamp-1">{issue.customerName}</span>
                                                 {issue.branchName && (
-                                                    <span className="text-[10px] text-slate-500 italic line-clamp-1">สาขา: {issue.branchName}</span>
+                                                    <span className="text-[10px] text-text-muted opacity-70 italic line-clamp-1">สาขา: {issue.branchName}</span>
                                                 )}
                                             </div>
                                         </td>
@@ -264,13 +264,13 @@ export default function IssueManager({ issues, customers: _customers, onAdd, onE
                                             </div>
                                         </td>
                                         <td className="px-4 py-3 text-center">
-                                            <span className="text-xs text-slate-400 whitespace-nowrap">{issue.type}</span>
+                                            <span className="text-xs text-text-muted whitespace-nowrap">{issue.type}</span>
                                         </td>
                                         <td className="px-4 py-3 text-center">
                                             {issue.modifiedBy ? (
                                                 <div className="flex flex-col items-center">
-                                                    <span className="text-xs font-medium text-slate-300">{issue.modifiedBy}</span>
-                                                    <span className="text-[10px] text-slate-500">
+                                                    <span className="text-xs font-medium text-text-main">{issue.modifiedBy}</span>
+                                                    <span className="text-[10px] text-text-muted opacity-60">
                                                         {new Date(issue.modifiedAt!).toLocaleString('th-TH', {
                                                             month: 'short',
                                                             day: 'numeric',
@@ -287,7 +287,7 @@ export default function IssueManager({ issues, customers: _customers, onAdd, onE
                                             <div className="flex justify-center">
                                                 <button
                                                     onClick={(e) => handleMenuToggle(e, issue.id)}
-                                                    className={`p-2 rounded-lg transition-colors ${activeMenu === issue.id ? 'bg-indigo-500/20 text-white' : 'hover:bg-white/5 text-slate-400 hover:text-white'}`}
+                                                    className={`p-2 rounded-lg transition-colors ${activeMenu === issue.id ? 'bg-indigo-500/20 text-indigo-500 dark:text-white' : 'hover:bg-bg-hover text-text-muted hover:text-text-main'}`}
                                                 >
                                                     <MoreVertical className="w-4 h-4" />
                                                 </button>
@@ -340,15 +340,15 @@ export default function IssueManager({ issues, customers: _customers, onAdd, onE
 
                 {/* Pagination Controls */}
                 {totalPages > 1 && (
-                    <div className="px-6 py-4 border-t border-white/5 bg-gradient-to-r from-white/[0.02] to-transparent">
+                    <div className="px-6 py-4 border-t border-border-light bg-gradient-to-r from-bg-hover to-transparent">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                                 <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></div>
-                                <span className="text-xs font-medium text-slate-300">
+                                <span className="text-xs font-medium text-text-main">
                                     หน้า {currentPage} / {totalPages}
                                 </span>
-                                <div className="h-4 w-px bg-white/10 mx-2"></div>
-                                <span className="text-xs text-slate-400">
+                                <div className="h-4 w-px bg-border-light mx-2"></div>
+                                <span className="text-xs text-text-muted">
                                     {((currentPage - 1) * itemsPerPage) + 1}–{Math.min(currentPage * itemsPerPage, filteredIssues.length)} จาก {filteredIssues.length} รายการ
                                 </span>
                             </div>
@@ -357,7 +357,7 @@ export default function IssueManager({ issues, customers: _customers, onAdd, onE
                                 <button
                                     onClick={() => setCurrentPage(1)}
                                     disabled={currentPage === 1}
-                                    className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/5 disabled:opacity-30 disabled:hover:bg-transparent transition-all text-slate-300 group"
+                                    className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-bg-hover disabled:opacity-30 disabled:hover:bg-transparent transition-all text-text-main group"
                                     title="หน้าแรก"
                                 >
                                     <svg className="w-4 h-4 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -368,7 +368,7 @@ export default function IssueManager({ issues, customers: _customers, onAdd, onE
                                 <button
                                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                                     disabled={currentPage === 1}
-                                    className="px-3 h-8 rounded-lg flex items-center gap-1.5 hover:bg-white/5 disabled:opacity-30 disabled:hover:bg-transparent transition-all text-slate-300 text-xs font-medium group"
+                                    className="px-3 h-8 rounded-lg flex items-center gap-1.5 hover:bg-bg-hover disabled:opacity-30 disabled:hover:bg-transparent transition-all text-text-main text-xs font-medium group"
                                 >
                                     <svg className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -403,14 +403,14 @@ export default function IssueManager({ issues, customers: _customers, onAdd, onE
 
                                         return pageNumbers.map((page, idx) => (
                                             page === '...' ? (
-                                                <span key={`ellipsis-${idx}`} className="w-8 h-8 flex items-center justify-center text-slate-500 text-xs">•••</span>
+                                                <span key={`ellipsis-${idx}`} className="w-8 h-8 flex items-center justify-center text-text-muted text-xs">•••</span>
                                             ) : (
                                                 <button
                                                     key={page}
                                                     onClick={() => setCurrentPage(page as number)}
                                                     className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${currentPage === page
                                                         ? "bg-gradient-to-br from-indigo-500 to-indigo-600 text-white shadow-lg shadow-indigo-500/30 scale-110"
-                                                        : "hover:bg-white/5 text-slate-400 hover:text-white hover:scale-105"
+                                                        : "hover:bg-bg-hover text-text-muted hover:text-text-main hover:scale-105"
                                                         }`}
                                                 >
                                                     {page}
@@ -423,7 +423,7 @@ export default function IssueManager({ issues, customers: _customers, onAdd, onE
                                 <button
                                     onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                                     disabled={currentPage === totalPages}
-                                    className="px-3 h-8 rounded-lg flex items-center gap-1.5 hover:bg-white/5 disabled:opacity-30 disabled:hover:bg-transparent transition-all text-slate-300 text-xs font-medium group"
+                                    className="px-3 h-8 rounded-lg flex items-center gap-1.5 hover:bg-bg-hover disabled:opacity-30 disabled:hover:bg-transparent transition-all text-text-main text-xs font-medium group"
                                 >
                                     ถัดไป
                                     <svg className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -434,7 +434,7 @@ export default function IssueManager({ issues, customers: _customers, onAdd, onE
                                 <button
                                     onClick={() => setCurrentPage(totalPages)}
                                     disabled={currentPage === totalPages}
-                                    className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/5 disabled:opacity-30 disabled:hover:bg-transparent transition-all text-slate-300 group"
+                                    className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-bg-hover disabled:opacity-30 disabled:hover:bg-transparent transition-all text-text-main group"
                                     title="หน้าสุดท้าย"
                                 >
                                     <svg className="w-4 h-4 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">

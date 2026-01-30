@@ -123,8 +123,8 @@ export default function CustomDatePicker({
                 className={`input-field flex items-center justify-between group cursor-pointer active:scale-[0.99] transition-all duration-200 px-3 ${className || ""}`}
             >
                 <div className="flex items-center gap-2 min-w-0">
-                    <CalendarIcon className="w-4 h-4 text-slate-400 shrink-0" />
-                    <span className={`truncate text-xs ${value ? "text-white" : "text-slate-400"}`}>
+                    <CalendarIcon className="w-4 h-4 text-text-muted shrink-0" />
+                    <span className={`truncate text-xs ${value ? "text-text-main" : "text-text-muted"}`}>
                         {value ? formatDisplayDate(value) : placeholder}
                     </span>
                 </div>
@@ -136,7 +136,7 @@ export default function CustomDatePicker({
             {isOpen && createPortal(
                 <div
                     ref={portalRef}
-                    className={`fixed z-[9999] w-[280px] mt-1.5 p-4 bg-slate-900/95 border border-white/10 rounded-xl shadow-2xl transition-all duration-150 ease-out origin-top ${isOpen
+                    className={`fixed z-[9999] w-[280px] mt-1.5 p-4 bg-card-bg border border-border rounded-xl shadow-2xl transition-all duration-150 ease-out origin-top backdrop-blur-xl ${isOpen
                         ? "opacity-100 translate-y-0 visible"
                         : "opacity-0 -translate-y-2 invisible"
                         }`}
@@ -153,16 +153,16 @@ export default function CustomDatePicker({
                     <div className="flex items-center justify-between mb-4">
                         <button
                             onClick={(e) => { e.stopPropagation(); changeMonth(-1); }}
-                            className="p-1 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition-colors"
+                            className="p-1 hover:bg-bg-hover rounded-lg text-text-muted hover:text-text-main transition-colors"
                         >
                             <ChevronLeft className="w-4 h-4" />
                         </button>
-                        <span className="text-sm font-semibold text-white">
+                        <span className="text-sm font-semibold text-text-main">
                             {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear() + 543}
                         </span>
                         <button
                             onClick={(e) => { e.stopPropagation(); changeMonth(1); }}
-                            className="p-1 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition-colors"
+                            className="p-1 hover:bg-bg-hover rounded-lg text-text-muted hover:text-text-main transition-colors"
                         >
                             <ChevronRight className="w-4 h-4" />
                         </button>
@@ -198,10 +198,10 @@ export default function CustomDatePicker({
                                     ${selected
                                             ? "bg-indigo-500 text-white font-bold shadow-lg shadow-indigo-500/20"
                                             : disabled
-                                                ? "text-slate-600 cursor-not-allowed opacity-50"
-                                                : "text-slate-300 hover:bg-white/10 hover:text-white"
+                                                ? "text-text-muted cursor-not-allowed opacity-30"
+                                                : "text-text-main hover:bg-bg-hover"
                                         }
-                                    ${today && !selected ? "border border-indigo-500/50 text-indigo-400" : ""}
+                                    ${today && !selected ? "border border-indigo-500/50 text-indigo-500 dark:text-indigo-400" : ""}
                                 `}
                                 >
                                     {day}

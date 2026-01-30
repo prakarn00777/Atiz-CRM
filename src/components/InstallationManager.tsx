@@ -137,13 +137,13 @@ export default function InstallationManager({
         <div className="space-y-6">
             <div className="flex flex-col gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Installations</h1>
+                    <h1 className="text-3xl font-bold tracking-tight text-text-main">Installations</h1>
                 </div>
 
                 <div className="flex flex-col xl:flex-row gap-4 items-start xl:items-center justify-between">
                     <div className="flex flex-col md:flex-row gap-3 w-full xl:w-auto">
                         <div className="relative w-full md:w-64 shrink-0">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted" />
                             <input
                                 type="text"
                                 placeholder="ค้นหา (ชื่อลูกค้า)..."
@@ -200,8 +200,8 @@ export default function InstallationManager({
             <div className="glass-card overflow-hidden border-indigo-500/5 flex flex-col h-[calc(100vh-175px)]">
                 <div className="overflow-auto custom-scrollbar flex-1">
                     <table className="w-full text-left border-collapse relative">
-                        <thead className="sticky top-0 z-10 bg-[#0f172a] shadow-sm">
-                            <tr className="bg-white/5 text-slate-400 text-xs uppercase tracking-wider border-b border-white/5">
+                        <thead className="sticky top-0 z-10 bg-card-bg shadow-sm backdrop-blur-xl">
+                            <tr className="bg-bg-hover text-text-muted text-xs uppercase tracking-wider border-b border-border-light">
                                 <th className="px-4 py-3 font-semibold w-[4%] text-center">No.</th>
                                 <th className="px-4 py-3 font-semibold w-[15%]">Customer</th>
                                 <th className="px-4 py-3 font-semibold w-[10%] text-center">Type</th>
@@ -212,19 +212,19 @@ export default function InstallationManager({
                                 <th className="px-4 py-3 font-semibold w-[8%] text-right">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-white/5">
+                        <tbody className="divide-y divide-border-light">
                             {paginatedInstallations.length > 0 ? (
                                 paginatedInstallations.map((inst, index) => (
-                                    <tr key={inst.id} className="group hover:bg-white/[0.02] transition-colors h-14">
+                                    <tr key={inst.id} className="group hover:bg-bg-hover transition-colors h-14">
                                         <td className="px-4 py-3 text-center">
-                                            <span className="text-xs text-slate-500">{(currentPage - 1) * itemsPerPage + index + 1}</span>
+                                            <span className="text-xs text-text-muted opacity-60">{(currentPage - 1) * itemsPerPage + index + 1}</span>
                                         </td>
                                         <td className="px-4 py-3">
                                             <div className="flex flex-col">
-                                                <span className="font-semibold text-slate-200 text-xs truncate max-w-[180px]" title={inst.customerName}>
+                                                <span className="font-semibold text-text-main text-xs truncate max-w-[180px]" title={inst.customerName}>
                                                     {inst.customerName}
                                                 </span>
-                                                <span className="text-[10px] text-slate-500 font-mono">ID: {inst.customerId}</span>
+                                                <span className="text-[10px] text-text-muted opacity-60 font-mono">ID: {inst.customerId}</span>
                                             </div>
                                         </td>
                                         <td className="px-4 py-3 text-center">
@@ -264,10 +264,10 @@ export default function InstallationManager({
                                         <td className="px-4 py-3">
                                             {inst.requestedBy ? (
                                                 <div className="flex items-start gap-2">
-                                                    <User className="w-3.5 h-3.5 text-slate-500 mt-0.5 flex-shrink-0" />
+                                                    <User className="w-3.5 h-3.5 text-text-muted opacity-50 mt-0.5 flex-shrink-0" />
                                                     <div className="flex flex-col">
-                                                        <span className="text-xs font-medium text-slate-300">{inst.requestedBy}</span>
-                                                        <span className="text-[10px] text-slate-500">
+                                                        <span className="text-xs font-medium text-text-main">{inst.requestedBy}</span>
+                                                        <span className="text-[10px] text-text-muted opacity-70">
                                                             {new Date(inst.requestedAt).toLocaleString('th-TH', {
                                                                 month: 'short',
                                                                 day: 'numeric',
@@ -278,16 +278,16 @@ export default function InstallationManager({
                                                     </div>
                                                 </div>
                                             ) : (
-                                                <span className="text-xs text-slate-600">-</span>
+                                                <span className="text-xs text-text-muted opacity-50">-</span>
                                             )}
                                         </td>
                                         <td className="px-4 py-3">
                                             {inst.modifiedBy ? (
                                                 <div className="flex items-start gap-2">
-                                                    <Clock className="w-3.5 h-3.5 text-slate-500 mt-0.5 flex-shrink-0" />
+                                                    <Clock className="w-3.5 h-3.5 text-text-muted opacity-50 mt-0.5 flex-shrink-0" />
                                                     <div className="flex flex-col">
-                                                        <span className="text-xs font-medium text-slate-300">{inst.modifiedBy}</span>
-                                                        <span className="text-[10px] text-slate-500">
+                                                        <span className="text-xs font-medium text-text-main">{inst.modifiedBy}</span>
+                                                        <span className="text-[10px] text-text-muted opacity-70">
                                                             {new Date(inst.modifiedAt!).toLocaleString('th-TH', {
                                                                 month: 'short',
                                                                 day: 'numeric',
@@ -298,14 +298,14 @@ export default function InstallationManager({
                                                     </div>
                                                 </div>
                                             ) : (
-                                                <span className="text-xs text-slate-600">-</span>
+                                                <span className="text-xs text-text-muted opacity-50">-</span>
                                             )}
                                         </td>
                                         <td className="px-4 py-3 text-right">
                                             <div className="flex justify-end gap-2 relative">
                                                 <button
                                                     onClick={(e) => handleMenuToggle(e, inst.id)}
-                                                    className={`p-2 rounded-lg transition-colors ${activeMenu === inst.id ? 'bg-indigo-500/20 text-white' : 'hover:bg-white/5 text-slate-400 hover:text-white'}`}
+                                                    className={`p-2 rounded-lg transition-colors ${activeMenu === inst.id ? 'bg-indigo-500/20 text-indigo-500 dark:text-white' : 'hover:bg-bg-hover text-text-muted hover:text-text-main'}`}
                                                 >
                                                     <MoreVertical className="w-4 h-4" />
                                                 </button>
@@ -317,12 +317,12 @@ export default function InstallationManager({
                                                             top: `${menuPosition.top + 8}px`,
                                                             left: `${menuPosition.left - 144}px`,
                                                         }}
-                                                        className="z-[9999] w-40 py-1.5 bg-[#1e293b] border border-white/10 rounded-xl shadow-2xl animate-in fade-in zoom-in duration-150 origin-top-right"
+                                                        className="z-[9999] w-40 py-1.5 bg-card-bg border border-border rounded-xl shadow-2xl animate-in fade-in zoom-in duration-150 origin-top-right backdrop-blur-xl"
                                                         onClick={(e) => e.stopPropagation()}
                                                     >
                                                         <button
                                                             onClick={() => { setSelectedInst(inst); setActiveMenu(null); }}
-                                                            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-300 hover:bg-white/5 hover:text-white transition-colors"
+                                                            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-text-main hover:bg-bg-hover transition-colors"
                                                         >
                                                             <Edit2 className="w-3.5 h-3.5" />
                                                             แก้ไขรายละเอียด
@@ -346,15 +346,15 @@ export default function InstallationManager({
                 </div>
 
                 {totalPages > 1 && (
-                    <div className="px-4 py-3 border-t border-white/5 flex items-center justify-between mt-auto">
-                        <div className="text-xs text-slate-400">
+                    <div className="px-4 py-3 border-t border-border-light flex items-center justify-between mt-auto bg-gradient-to-r from-bg-hover to-transparent">
+                        <div className="text-xs text-text-muted">
                             แสดง {((currentPage - 1) * itemsPerPage) + 1} ถึง {Math.min(currentPage * itemsPerPage, filteredInstallations.length)} จาก {filteredInstallations.length} รายการ
                         </div>
                         <div className="flex gap-2">
                             <button
                                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                                 disabled={currentPage === 1}
-                                className="px-3 py-1 text-xs rounded-lg hover:bg-white/5 disabled:opacity-50 disabled:hover:bg-transparent transition-colors text-slate-300"
+                                className="px-3 py-1 text-xs rounded-lg hover:bg-bg-hover disabled:opacity-50 disabled:hover:bg-transparent transition-colors text-text-main"
                             >
                                 ก่อนหน้า
                             </button>
@@ -363,8 +363,8 @@ export default function InstallationManager({
                                     key={page}
                                     onClick={() => setCurrentPage(page)}
                                     className={`w-7 h-7 rounded-lg text-xs font-medium transition-colors ${currentPage === page
-                                        ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/20"
-                                        : "hover:bg-white/5 text-slate-400"
+                                        ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20"
+                                        : "hover:bg-bg-hover text-text-muted hover:text-text-main"
                                         }`}
                                 >
                                     {page}
@@ -373,7 +373,7 @@ export default function InstallationManager({
                             <button
                                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                                 disabled={currentPage === totalPages}
-                                className="px-3 py-1 text-xs rounded-lg hover:bg-white/5 disabled:opacity-50 disabled:hover:bg-transparent transition-colors text-slate-300"
+                                className="px-3 py-1 text-xs rounded-lg hover:bg-bg-hover disabled:opacity-50 disabled:hover:bg-transparent transition-colors text-text-main"
                             >
                                 ถัดไป
                             </button>
@@ -384,27 +384,27 @@ export default function InstallationManager({
 
             {isModalOpen && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="w-full max-w-lg glass-card p-6 shadow-2xl border-white/20">
+                    <div className="w-full max-w-lg bg-card-bg rounded-2xl p-6 shadow-2xl border border-border">
                         <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-base font-bold text-white flex items-center gap-2">
-                                <Plus className="w-4 h-4 text-indigo-400" />
+                            <h2 className="text-base font-bold text-text-main flex items-center gap-2">
+                                <Plus className="w-4 h-4 text-indigo-500" />
                                 แจ้งงานติดตั้งใหม่
                             </h2>
-                            <button onClick={() => { resetModal(); setModalOpen(false); }} className="p-1.5 hover:bg-white/5 rounded-full text-slate-400 hover:text-white transition-colors">
+                            <button onClick={() => { resetModal(); setModalOpen(false); }} className="p-1.5 hover:bg-bg-hover rounded-full text-text-muted hover:text-text-main transition-colors">
                                 <X className="w-4 h-4" />
                             </button>
                         </div>
 
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-xs font-medium text-slate-400 mb-2">ประเภทงานติดตั้ง</label>
+                                <label className="block text-xs font-medium text-text-muted mb-2">ประเภทงานติดตั้ง</label>
                                 <div className="flex gap-2">
                                     <button
                                         type="button"
                                         onClick={() => setCustomerType("new")}
                                         className={`flex-1 py-2.5 px-4 rounded-lg text-xs font-medium transition-all ${customerType === "new"
-                                            ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/20"
-                                            : "bg-white/5 text-slate-400 hover:bg-white/10"
+                                            ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20"
+                                            : "bg-bg-hover text-text-muted hover:text-text-main"
                                             }`}
                                     >
                                         ติดตั้งลูกค้าใหม่
@@ -413,8 +413,8 @@ export default function InstallationManager({
                                         type="button"
                                         onClick={() => setCustomerType("existing")}
                                         className={`flex-1 py-2.5 px-4 rounded-lg text-xs font-medium transition-all ${customerType === "existing"
-                                            ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/20"
-                                            : "bg-white/5 text-slate-400 hover:bg-white/10"
+                                            ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20"
+                                            : "bg-bg-hover text-text-muted hover:text-text-main"
                                             }`}
                                     >
                                         ติดตั้งสาขาเพิ่ม
@@ -425,7 +425,7 @@ export default function InstallationManager({
                             {customerType === "existing" && (
                                 <div className="space-y-4">
                                     <div>
-                                        <label className="block text-xs font-medium text-slate-400 mb-1.5">เลือกลูกค้า</label>
+                                        <label className="block text-xs font-medium text-text-muted mb-1.5">เลือกลูกค้า</label>
                                         <SearchableCustomerSelect
                                             customers={customers}
                                             value={newInst.customerId || null}
@@ -434,10 +434,10 @@ export default function InstallationManager({
                                         />
                                     </div>
                                     {newInst.customerId > 0 && (
-                                        <div className="space-y-3 p-4 bg-white/5 rounded-xl border border-white/10">
-                                            <p className="text-xs font-medium text-slate-300">ข้อมูลสาขาใหม่</p>
+                                        <div className="space-y-3 p-4 bg-bg-hover rounded-xl border border-border">
+                                            <p className="text-xs font-medium text-text-main">ข้อมูลสาขาใหม่</p>
                                             <div>
-                                                <label className="block text-xs font-medium text-slate-400 mb-1.5">
+                                                <label className="block text-xs font-medium text-text-muted mb-1.5">
                                                     ชื่อสาขา <span className="text-rose-500">*</span>
                                                 </label>
                                                 <input
@@ -454,9 +454,9 @@ export default function InstallationManager({
                             )}
 
                             {customerType === "new" && (
-                                <div className="space-y-4 p-4 bg-white/5 rounded-xl border border-white/10">
+                                <div className="space-y-4 p-4 bg-bg-hover rounded-xl border border-border">
                                     <div>
-                                        <label className="block text-xs font-medium text-slate-400 mb-1.5">
+                                        <label className="block text-xs font-medium text-text-muted mb-1.5">
                                             ชื่อคลินิก/ร้านค้า <span className="text-rose-500">*</span>
                                         </label>
                                         <input
@@ -470,7 +470,7 @@ export default function InstallationManager({
 
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
-                                            <label className="block text-xs font-medium text-slate-400 mb-1.5">
+                                            <label className="block text-xs font-medium text-text-muted mb-1.5">
                                                 ประเภทระบบ <span className="text-rose-500">*</span>
                                             </label>
                                             <CustomSelect
@@ -484,7 +484,7 @@ export default function InstallationManager({
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-xs font-medium text-slate-400 mb-1.5">
+                                            <label className="block text-xs font-medium text-text-muted mb-1.5">
                                                 แพ็คเกจ <span className="text-rose-500">*</span>
                                             </label>
                                             <CustomSelect
@@ -501,7 +501,7 @@ export default function InstallationManager({
                                     </div>
 
                                     <div>
-                                        <label className="block text-xs font-medium text-slate-400 mb-1.5">
+                                        <label className="block text-xs font-medium text-text-muted mb-1.5">
                                             ลิงก์เข้าระบบ (System Link) <span className="text-rose-500">*</span>
                                         </label>
                                         <div className="relative">
@@ -512,14 +512,14 @@ export default function InstallationManager({
                                                 value={newInst.newCustomerLink}
                                                 onChange={(e) => setNewInst({ ...newInst, newCustomerLink: e.target.value })}
                                             />
-                                            <ExternalLink className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                                            <ExternalLink className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
                                         </div>
                                     </div>
                                 </div>
                             )}
 
                             <div>
-                                <label className="block text-xs font-medium text-slate-400 mb-1.5">หมายเหตุ</label>
+                                <label className="block text-xs font-medium text-text-muted mb-1.5">หมายเหตุ</label>
                                 <textarea
                                     className="input-field min-h-[80px] py-3 h-auto resize-none text-xs"
                                     value={newInst.notes}
@@ -553,15 +553,15 @@ export default function InstallationManager({
 
             {selectedInst && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="w-full max-w-lg glass-card p-6 shadow-2xl border-white/20">
+                    <div className="w-full max-w-lg bg-card-bg rounded-2xl p-6 shadow-2xl border border-border">
                         <div className="flex justify-between items-start mb-0">
                             <div>
-                                <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                                    <MessageSquare className="w-5 h-5 text-indigo-400" />
+                                <h2 className="text-xl font-bold text-text-main flex items-center gap-2">
+                                    <MessageSquare className="w-5 h-5 text-indigo-500" />
                                     รายละเอียดการติดตั้ง
                                 </h2>
                             </div>
-                            <button onClick={() => setSelectedInst(null)} className="p-2 hover:bg-white/5 rounded-full text-slate-400 hover:text-white transition-colors">
+                            <button onClick={() => setSelectedInst(null)} className="p-2 hover:bg-bg-hover rounded-full text-text-muted hover:text-text-main transition-colors">
                                 <X className="w-5 h-5" />
                             </button>
                         </div>

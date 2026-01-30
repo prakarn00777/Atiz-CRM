@@ -87,12 +87,12 @@ export default function LeadManager({ leads, onEdit, onDelete, onAdd }: LeadMana
         <div className="space-y-6">
             <div className="flex flex-col gap-6">
                 <div className="flex flex-col">
-                    <h1 className="text-3xl font-bold tracking-tight">Leads</h1>
+                    <h1 className="text-3xl font-bold tracking-tight text-text-main">Leads</h1>
                 </div>
 
                 <div className="flex flex-col xl:flex-row gap-4 items-start xl:items-center w-full">
                     <div className="relative w-full md:w-64 shrink-0">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted" />
                         <input
                             type="text"
                             placeholder="Search name, phone, lead no..."
@@ -187,8 +187,8 @@ export default function LeadManager({ leads, onEdit, onDelete, onAdd }: LeadMana
             <div className="glass-card overflow-hidden border-indigo-500/5 flex flex-col h-[calc(100vh-175px)]">
                 <div className="overflow-auto custom-scrollbar flex-1">
                     <table className="w-full text-left border-collapse relative">
-                        <thead className="sticky top-0 z-10 bg-[#0f172a] shadow-sm">
-                            <tr className="bg-white/5 text-slate-400 text-xs uppercase tracking-wider border-b border-white/5">
+                        <thead className="sticky top-0 z-10 bg-card-bg shadow-sm backdrop-blur-xl">
+                            <tr className="bg-bg-hover text-text-muted text-xs uppercase tracking-wider border-b border-border-light">
                                 <th className="px-4 py-3 font-semibold w-[5%] text-center">No.</th>
                                 <th className="px-4 py-3 font-semibold w-[12%] text-center">Lead No.</th>
                                 <th className="px-4 py-3 font-semibold w-[15%]">Customer Name</th>
@@ -201,12 +201,12 @@ export default function LeadManager({ leads, onEdit, onDelete, onAdd }: LeadMana
                                 <th className="px-4 py-3 font-semibold w-[5%] text-right">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-white/5">
+                        <tbody className="divide-y divide-border-light">
                             {paginatedLeads.length > 0 ? (
                                 paginatedLeads.map((l, index) => (
-                                    <tr key={l.id} className="group hover:bg-white/[0.02] transition-colors h-14">
+                                    <tr key={l.id} className="group hover:bg-bg-hover transition-colors h-14">
                                         <td className="px-4 py-3 text-center">
-                                            <span className="text-xs text-slate-500">{(currentPage - 1) * itemsPerPage + index + 1}</span>
+                                            <span className="text-xs text-text-muted opacity-60">{(currentPage - 1) * itemsPerPage + index + 1}</span>
                                         </td>
                                         <td className="px-4 py-3 text-center">
                                             <span className="text-xs font-mono text-indigo-400 font-bold">
@@ -215,17 +215,17 @@ export default function LeadManager({ leads, onEdit, onDelete, onAdd }: LeadMana
                                         </td>
                                         <td className="px-4 py-3">
                                             <div className="flex flex-col">
-                                                <div className="font-semibold text-slate-200 text-xs truncate max-w-[150px]" title={l.customerName}>
+                                                <div className="font-semibold text-text-main text-xs truncate max-w-[150px]" title={l.customerName}>
                                                     {l.customerName}
                                                 </div>
                                                 <div className="flex items-center gap-1.5 mt-1">
-                                                    <Phone className="w-2.5 h-2.5 text-slate-500" />
-                                                    <span className="text-[10px] text-slate-400 font-mono">{l.phone}</span>
+                                                    <Phone className="w-2.5 h-2.5 text-text-muted opacity-50" />
+                                                    <span className="text-[10px] text-text-muted opacity-70 font-mono">{l.phone}</span>
                                                 </div>
                                             </div>
                                         </td>
                                         <td className="px-4 py-3 text-center">
-                                            <span className="text-xs text-slate-400 font-mono italic">
+                                            <span className="text-xs text-text-muted opacity-70 font-mono italic">
                                                 {l.receivedDate ? new Date(l.receivedDate).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '-'}
                                             </span>
                                         </td>
@@ -238,35 +238,35 @@ export default function LeadManager({ leads, onEdit, onDelete, onAdd }: LeadMana
                                             </span>
                                         </td>
                                         <td className="px-4 py-3">
-                                            <span className="text-xs text-slate-300">{l.source}</span>
+                                            <span className="text-xs text-text-main">{l.source}</span>
                                         </td>
                                         <td className="px-4 py-3 text-center">
-                                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-slate-400 border border-white/10">
+                                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-bg-hover text-text-muted border border-border-light">
                                                 {l.leadType}
                                             </span>
                                         </td>
                                         <td className="px-4 py-3 text-center">
                                             <div className="flex flex-col items-center">
-                                                <span className="text-[10px] uppercase font-black text-slate-200">{l.salesName}</span>
+                                                <span className="text-[10px] uppercase font-black text-text-main">{l.salesName}</span>
                                             </div>
                                         </td>
                                         <td className="px-4 py-3">
                                             {l.modifiedAt ? (
                                                 <div className="flex flex-col">
-                                                    <span className="text-[10px] text-slate-300 font-bold">{l.modifiedBy || 'System'}</span>
-                                                    <span className="text-[9px] text-slate-500">
+                                                    <span className="text-[10px] text-text-main font-bold">{l.modifiedBy || 'System'}</span>
+                                                    <span className="text-[9px] text-text-muted opacity-70">
                                                         {new Date(l.modifiedAt).toLocaleString('th-TH', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                                     </span>
                                                 </div>
                                             ) : (
-                                                <span className="text-xs text-slate-600">-</span>
+                                                <span className="text-xs text-text-muted opacity-50">-</span>
                                             )}
                                         </td>
                                         <td className="px-4 py-3 text-right">
                                             <div className="flex justify-end">
                                                 <button
                                                     onClick={(e) => handleMenuToggle(e, l.id)}
-                                                    className={`p-2 rounded-lg transition-colors ${activeMenu === l.id ? 'bg-indigo-500/20 text-white' : 'hover:bg-white/5 text-slate-400 hover:text-white'}`}
+                                                    className={`p-2 rounded-lg transition-colors ${activeMenu === l.id ? 'bg-indigo-500/20 text-indigo-500 dark:text-white' : 'hover:bg-bg-hover text-text-muted hover:text-text-main'}`}
                                                 >
                                                     <MoreVertical className="w-4 h-4" />
                                                 </button>
@@ -278,17 +278,17 @@ export default function LeadManager({ leads, onEdit, onDelete, onAdd }: LeadMana
                                                             top: `${menuPosition.top + 8}px`,
                                                             left: `${menuPosition.left - 144}px`,
                                                         }}
-                                                        className="z-[9999] w-36 py-1.5 bg-[#1e293b] border border-white/10 rounded-xl shadow-2xl animate-in fade-in zoom-in duration-150 origin-top-right"
+                                                        className="z-[9999] w-36 py-1.5 bg-card-bg border border-border rounded-xl shadow-2xl animate-in fade-in zoom-in duration-150 origin-top-right backdrop-blur-xl"
                                                         onClick={(e) => e.stopPropagation()}
                                                     >
                                                         <button
                                                             onClick={() => { onEdit(l); setActiveMenu(null); }}
-                                                            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-300 hover:bg-white/5 hover:text-white transition-colors"
+                                                            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-text-main hover:bg-bg-hover transition-colors"
                                                         >
                                                             <Edit2 className="w-3.5 h-3.5" />
                                                             แก้ไขข้อมูล
                                                         </button>
-                                                        <div className="my-1 border-t border-white/5" />
+                                                        <div className="my-1 border-t border-border-light" />
                                                         <button
                                                             onClick={(e) => { e.stopPropagation(); onDelete(l.id); setActiveMenu(null); }}
                                                             className="w-full flex items-center gap-2 px-3 py-2 text-xs text-rose-400 hover:bg-rose-500/10 transition-colors"
@@ -305,7 +305,7 @@ export default function LeadManager({ leads, onEdit, onDelete, onAdd }: LeadMana
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={9} className="px-4 py-8 text-center text-slate-500 text-sm">
+                                    <td colSpan={9} className="px-4 py-8 text-center text-text-muted opacity-60 text-sm">
                                         ไม่พบข้อมูลลีด
                                     </td>
                                 </tr>
@@ -316,23 +316,23 @@ export default function LeadManager({ leads, onEdit, onDelete, onAdd }: LeadMana
 
                 {/* Pagination */}
                 {totalPages > 1 && (
-                    <div className="px-6 py-4 border-t border-white/5 bg-white/[0.01]">
+                    <div className="px-6 py-4 border-t border-border-light bg-bg-hover/30">
                         <div className="flex items-center justify-between">
-                            <span className="text-xs text-slate-400">
+                            <span className="text-xs text-text-muted">
                                 แสดง {((currentPage - 1) * itemsPerPage) + 1}–{Math.min(currentPage * itemsPerPage, sortedLeads.length)} จาก {sortedLeads.length} ลีด
                             </span>
                             <div className="flex gap-2">
                                 <button
                                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                                     disabled={currentPage === 1}
-                                    className="px-3 py-1 rounded bg-white/5 hover:bg-white/10 disabled:opacity-30 text-xs transition-colors"
+                                    className="px-3 py-1 rounded bg-bg-hover hover:bg-bg-hover/70 disabled:opacity-30 text-xs transition-colors text-text-main border border-border-light"
                                 >
                                     ก่อนหน้า
                                 </button>
                                 <button
                                     onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                                     disabled={currentPage === totalPages}
-                                    className="px-3 py-1 rounded bg-white/5 hover:bg-white/10 disabled:opacity-30 text-xs transition-colors"
+                                    className="px-3 py-1 rounded bg-bg-hover hover:bg-bg-hover/70 disabled:opacity-30 text-xs transition-colors text-text-main border border-border-light"
                                 >
                                     ถัดไป
                                 </button>

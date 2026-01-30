@@ -68,16 +68,16 @@ export default function SalesManager({ sales, isLoading, onRefresh }: SalesManag
             <div className="flex flex-col gap-6">
                 <div className="flex flex-col">
                     <div className="flex items-center gap-3 mb-2">
-                        <TrendingUp className="w-8 h-8 text-emerald-400" />
-                        <h1 className="text-3xl font-bold tracking-tight">New Sales</h1>
-                        <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5">
+                        <TrendingUp className="w-8 h-8 text-emerald-500" />
+                        <h1 className="text-3xl font-bold tracking-tight text-text-main">New Sales</h1>
+                        <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-500 border border-emerald-500/30 flex items-center gap-1.5">
                             <ExternalLink className="w-3 h-3" />
                             Google Sheets
                         </span>
                         <button
                             onClick={onRefresh}
                             disabled={isLoading}
-                            className={`p-2 rounded-lg bg-white/5 text-slate-400 hover:text-white hover:bg-white/10 transition-all ${isLoading ? 'animate-spin opacity-50' : ''}`}
+                            className={`p-2 rounded-lg bg-bg-hover text-text-muted hover:text-text-main hover:bg-bg-hover/70 transition-all ${isLoading ? 'animate-spin opacity-50' : ''}`}
                             title="รีเฟรชข้อมูล"
                         >
                             <RefreshCw className="w-4 h-4" />
@@ -87,7 +87,7 @@ export default function SalesManager({ sales, isLoading, onRefresh }: SalesManag
 
                 <div className="flex flex-col xl:flex-row gap-4 items-start xl:items-center w-full">
                     <div className="relative w-full md:w-64 shrink-0">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted" />
                         <input
                             type="text"
                             placeholder="ค้นหาชื่อเซลล์, เดือน, ปี..."
@@ -141,16 +141,16 @@ export default function SalesManager({ sales, isLoading, onRefresh }: SalesManag
                 {isLoading ? (
                     <div className="flex-1 flex items-center justify-center">
                         <div className="flex flex-col items-center gap-4">
-                            <Loader2 className="w-8 h-8 text-emerald-400 animate-spin" />
-                            <p className="text-sm text-slate-400">กำลังโหลดข้อมูลจาก Google Sheets...</p>
+                            <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
+                            <p className="text-sm text-text-muted">กำลังโหลดข้อมูลจาก Google Sheets...</p>
                         </div>
                     </div>
                 ) : (
                     <>
                         <div className="overflow-auto custom-scrollbar flex-1">
                             <table className="w-full text-left border-collapse relative">
-                                <thead className="sticky top-0 z-10 bg-[#0f172a] shadow-sm">
-                                    <tr className="bg-white/5 text-slate-400 text-xs uppercase tracking-wider border-b border-white/5">
+                                <thead className="sticky top-0 z-10 bg-card-bg shadow-sm backdrop-blur-xl">
+                                    <tr className="bg-bg-hover text-text-muted text-xs uppercase tracking-wider border-b border-border-light">
                                         <th className="px-6 py-4 font-semibold w-[10%] text-center">ลำดับ</th>
                                         <th className="px-6 py-4 font-semibold w-[15%] text-center">ปี</th>
                                         <th className="px-6 py-4 font-semibold w-[15%] text-center">เดือน</th>
@@ -161,7 +161,7 @@ export default function SalesManager({ sales, isLoading, onRefresh }: SalesManag
                                 <tbody>
                                     {paginatedSales.length === 0 ? (
                                         <tr>
-                                            <td colSpan={5} className="text-center py-16 text-slate-500">
+                                            <td colSpan={5} className="text-center py-16 text-text-muted opacity-60">
                                                 <Filter className="w-12 h-12 mx-auto mb-3 opacity-30" />
                                                 <p className="text-sm">ไม่พบข้อมูลที่ตรงกับเงื่อนไข</p>
                                             </td>
@@ -170,27 +170,27 @@ export default function SalesManager({ sales, isLoading, onRefresh }: SalesManag
                                         paginatedSales.map((sale, index) => (
                                             <tr
                                                 key={sale.id || index}
-                                                className="border-b border-white/5 hover:bg-white/[0.02] transition-colors"
+                                                className="border-b border-border-light hover:bg-bg-hover transition-colors"
                                             >
                                                 <td className="px-6 py-4 text-center">
-                                                    <span className="text-xs font-mono text-slate-500">{sale.index}</span>
+                                                    <span className="text-xs font-mono text-text-muted opacity-50">{sale.index}</span>
                                                 </td>
                                                 <td className="px-6 py-4 text-center">
-                                                    <span className="text-xs font-bold text-slate-300">{sale.year}</span>
+                                                    <span className="text-xs font-bold text-text-main opacity-80">{sale.year}</span>
                                                 </td>
                                                 <td className="px-6 py-4 text-center">
-                                                    <span className="text-xs text-indigo-400 font-medium">{sale.month}</span>
+                                                    <span className="text-xs text-indigo-500 font-medium">{sale.month}</span>
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     <div className="flex items-center gap-3">
                                                         <div className="w-8 h-8 rounded-full bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20">
-                                                            <User className="w-4 h-4 text-indigo-400" />
+                                                            <User className="w-4 h-4 text-indigo-500" />
                                                         </div>
-                                                        <span className="text-sm font-medium text-white">{sale.salesName}</span>
+                                                        <span className="text-sm font-medium text-text-main">{sale.salesName}</span>
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4 text-right">
-                                                    <span className="text-base font-bold text-emerald-400">
+                                                    <span className="text-base font-bold text-emerald-500">
                                                         {formatCurrency(sale.amount)}
                                                     </span>
                                                 </td>
@@ -203,25 +203,25 @@ export default function SalesManager({ sales, isLoading, onRefresh }: SalesManag
 
                         {/* Pagination */}
                         {totalPages > 1 && (
-                            <div className="p-4 border-t border-white/5 flex items-center justify-between shrink-0">
-                                <p className="text-xs text-slate-500">
+                            <div className="p-4 border-t border-border-light flex items-center justify-between shrink-0 bg-bg-hover/30">
+                                <p className="text-xs text-text-muted">
                                     แสดง {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, sortedSales.length)} จาก {sortedSales.length.toLocaleString()} รายการ
                                 </p>
                                 <div className="flex items-center gap-2">
                                     <button
                                         onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                                         disabled={currentPage === 1}
-                                        className="px-3 py-1.5 rounded-lg text-xs font-medium bg-white/5 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                        className="px-3 py-1.5 rounded-lg text-xs font-medium bg-bg-hover hover:bg-bg-hover/70 text-text-main border border-border-light disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                     >
                                         ก่อนหน้า
                                     </button>
-                                    <span className="px-3 py-1.5 text-xs font-medium text-slate-400">
+                                    <span className="px-3 py-1.5 text-xs font-medium text-text-muted">
                                         หน้า {currentPage} / {totalPages}
                                     </span>
                                     <button
                                         onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                                         disabled={currentPage === totalPages}
-                                        className="px-3 py-1.5 rounded-lg text-xs font-medium bg-white/5 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                        className="px-3 py-1.5 rounded-lg text-xs font-medium bg-bg-hover hover:bg-bg-hover/70 text-text-main border border-border-light disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                     >
                                         ถัดไป
                                     </button>

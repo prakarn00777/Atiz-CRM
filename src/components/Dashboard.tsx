@@ -279,10 +279,10 @@ export default function Dashboard({ customers, installations, issues, activities
                     </div>
 
                     {/* Custom Tooltip */}
-                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 z-[100] text-[11px] leading-relaxed text-slate-300 pointer-events-none">
-                        <p className="font-bold text-white mb-1">Growth Calculation (WoW)</p>
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-card-bg backdrop-blur-xl border border-border rounded-xl shadow-2xl opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 z-[100] text-[11px] leading-relaxed text-text-muted pointer-events-none">
+                        <p className="font-bold text-text-main mb-1">Growth Calculation (WoW)</p>
                         <p>อัตราการเติบโตเมื่อเทียบกับสัปดาห์ก่อน:</p>
-                        <div className="mt-2 p-2 bg-black/30 rounded-lg font-mono text-indigo-300">
+                        <div className="mt-2 p-2 bg-black/5 dark:bg-black/30 rounded-lg font-mono text-indigo-500 dark:text-indigo-300">
                             ((จำนวนสัปดาห์นี้ - จำนวนสัปดาห์ก่อน) / จำนวนสัปดาห์ก่อน) x 100
                         </div>
                     </div>
@@ -302,10 +302,10 @@ export default function Dashboard({ customers, installations, issues, activities
                     </div>
 
                     {/* Custom Tooltip */}
-                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 z-[100] text-[11px] leading-relaxed text-slate-300 pointer-events-none">
-                        <p className="font-bold text-white mb-1">Demos Growth (WoW)</p>
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-card-bg backdrop-blur-xl border border-border rounded-xl shadow-2xl opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 z-[100] text-[11px] leading-relaxed text-text-muted pointer-events-none">
+                        <p className="font-bold text-text-main mb-1">Demos Growth (WoW)</p>
                         <p>อัตราการเติบโตของ Demo เทียบกับสัปดาห์ก่อน:</p>
-                        <div className="mt-2 p-2 bg-black/30 rounded-lg font-mono text-indigo-300">
+                        <div className="mt-2 p-2 bg-black/5 dark:bg-black/30 rounded-lg font-mono text-indigo-500 dark:text-indigo-300">
                             ((Demo สัปดาห์นี้ - ก่อนหน้า) / ก่อนหน้า) x 100
                         </div>
                     </div>
@@ -364,10 +364,10 @@ export default function Dashboard({ customers, installations, issues, activities
                     <div className="p-0.5 rounded-full bg-white/5 text-slate-400 hover:text-white transition-colors cursor-help">
                         <Info className="w-3 h-3" />
                     </div>
-                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 z-[100] text-[11px] leading-relaxed text-slate-300 pointer-events-none">
-                        <p className="font-bold text-white mb-1">Sales Growth (MoM)</p>
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-card-bg backdrop-blur-xl border border-border rounded-xl shadow-2xl opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 z-[100] text-[11px] leading-relaxed text-text-muted pointer-events-none">
+                        <p className="font-bold text-text-main mb-1">Sales Growth (MoM)</p>
                         <p>รายได้ปิดใหม่เทียบกับเดือนก่อนหน้า:</p>
-                        <div className="mt-2 p-2 bg-black/30 rounded-lg font-mono text-indigo-300">
+                        <div className="mt-2 p-2 bg-black/5 dark:bg-black/30 rounded-lg font-mono text-indigo-500 dark:text-indigo-300">
                             ((ยอดเดือนนี้ - เดือนก่อน) / เดือนก่อน) x 100
                         </div>
                     </div>
@@ -646,13 +646,13 @@ export default function Dashboard({ customers, installations, issues, activities
     }, [dynamicGraphData]);
 
     return (
-        <div ref={dashboardRef} className={`animate-in fade-in zoom-in-95 duration-500 relative custom-scrollbar flex flex-col pt-2 ${isFullscreen ? 'p-8 bg-slate-950 h-screen w-screen overflow-hidden gap-4' : 'h-full overflow-hidden space-y-4'}`}>
+        <div ref={dashboardRef} className={`animate-in fade-in zoom-in-95 duration-500 relative custom-scrollbar flex flex-col pt-2 ${isFullscreen ? `p-8 bg-bg-pure h-screen w-screen overflow-hidden gap-4` : 'h-full overflow-hidden space-y-4'}`}>
             <ParticlesBackground className="absolute inset-0 z-0" />
             <style>{iconAnimationStyles}</style>
 
             <div className={`flex flex-col md:flex-row justify-between items-start md:items-end gap-4 relative z-10 ${isFullscreen ? 'mb-4 px-1' : ''}`}>
                 <div className="flex items-center gap-4">
-                    <div className="p-1 bg-white/5 rounded-2xl border border-white/10 shadow-xl overflow-hidden animate-in zoom-in-50 duration-700">
+                    <div className="p-1 bg-bg-hover rounded-2xl border border-border shadow-xl overflow-hidden animate-in zoom-in-50 duration-700">
                         <img
                             src="/images/LOGO ATIZ-02.png"
                             alt="ATIZ Logo"
@@ -661,10 +661,10 @@ export default function Dashboard({ customers, installations, issues, activities
                         />
                     </div>
                     <div>
-                        <h1 className={`text-3xl font-black tracking-tight ${activeTab === 'business' ? 'text-white' : 'text-text-main bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-purple-400 to-indigo-400'}`}>
+                        <h1 className={`text-3xl font-black tracking-tight ${activeTab === 'business' ? 'text-text-main' : 'text-text-main bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-purple-400 to-indigo-400'}`}>
                             {activeTab === 'cs' ? 'CS Operational Center' : 'Business Insights'}
                         </h1>
-                        <p className={`${activeTab === 'business' ? 'text-white' : 'text-indigo-400'} font-bold text-[10px] uppercase tracking-widest mt-0.5`}>
+                        <p className={`${activeTab === 'business' ? 'text-text-main opacity-90' : 'text-indigo-400'} font-bold text-[10px] uppercase tracking-widest mt-0.5`}>
                             {activeTab === 'cs' ? 'ศูนย์ปฏิบัติการทีม CS' : 'ภาพรวมข้อมูลเชิงลึกธุรกิจ'}
                         </p>
                         <p className="text-text-muted mt-1 flex items-center gap-2 text-sm">
@@ -679,7 +679,7 @@ export default function Dashboard({ customers, installations, issues, activities
 
                 <div className="flex flex-col items-end gap-3 mr-1">
                     <div className="flex items-center gap-3 text-text-muted mr-12">
-                        <div className="flex items-center gap-1.5 bg-white/5 px-3 py-1 rounded-lg border border-white/5">
+                        <div className="flex items-center gap-1.5 bg-bg-hover px-3 py-1 rounded-lg border border-border-light">
                             <Clock className="w-3.5 h-3.5 text-indigo-400" />
                             <span className="text-[11px] font-bold tracking-wider font-mono">{currentTime.toLocaleTimeString('th-TH', { hour12: false })}</span>
                         </div>
@@ -688,7 +688,7 @@ export default function Dashboard({ customers, installations, issues, activities
 
                     {!isFullscreen && (
                         <div className="flex items-center gap-2">
-                            <div className="flex bg-white/5 p-1 rounded-xl border border-white/10 mr-2">
+                            <div className="flex bg-bg-hover p-1 rounded-xl border border-border mr-2">
                                 <button onClick={() => setIsAutoCycle(!isAutoCycle)} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${isAutoCycle ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'text-slate-400 hover:text-white'}`}>
                                     {isAutoCycle ? <Pause className="w-3 h-3" /> : <RefreshCw className="w-3 h-3" />}
                                     {isAutoCycle ? 'AUTO-ON' : 'Cycle Off'}
@@ -697,11 +697,11 @@ export default function Dashboard({ customers, installations, issues, activities
                             <button onClick={toggleFullscreen} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-bold transition-all shadow-lg shadow-indigo-500/20 active:scale-95">
                                 <Tv className="w-4 h-4" /> Fullscreen
                             </button>
-                            <div className="flex bg-white/5 p-1 rounded-xl border border-white/10 ml-2">
-                                <button onClick={() => setActiveTab('cs')} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all px-6 ${activeTab === 'cs' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+                            <div className="flex bg-bg-hover p-1 rounded-xl border border-border ml-2">
+                                <button onClick={() => setActiveTab('cs')} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all px-6 ${activeTab === 'cs' ? 'bg-indigo-600 text-white shadow-lg' : 'text-text-muted hover:text-text-main hover:bg-bg-hover'}`}>
                                     <ActivityIcon className="w-4 h-4" /> CS Insights
                                 </button>
-                                <button onClick={() => setActiveTab('business')} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all px-6 ${activeTab === 'business' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+                                <button onClick={() => setActiveTab('business')} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all px-6 ${activeTab === 'business' ? 'bg-indigo-600 text-white shadow-lg' : 'text-text-muted hover:text-text-main hover:bg-bg-hover'}`}>
                                     <BarChart3 className="w-4 h-4" /> Business
                                 </button>
                             </div>
@@ -714,10 +714,10 @@ export default function Dashboard({ customers, installations, issues, activities
                 <div className="relative z-10 animate-in slide-in-from-left-4 duration-500 flex flex-col min-h-0 flex-1 space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 flex-shrink-0">
                         {csStats.map((stat, i) => (
-                            <div key={i} className={`glass-card p-4 border transition-all hover:-translate-y-1 ${stat.border}`}>
+                            <div key={i} className={`glass-card p-4 border transition-all hover:-translate-y-1 ${stat.border} dark:${stat.border}`}>
                                 <div className={`absolute inset-0 bg-gradient-to-br ${stat.bg} to-transparent opacity-30`} />
                                 <div className="relative flex flex-col gap-2">
-                                    <div className={`p-1.5 w-fit rounded-lg bg-white/5 ${stat.color}`}>
+                                    <div className={`p-1.5 w-fit rounded-lg bg-bg-hover ${stat.color}`}>
                                         <stat.icon className="w-4 h-4" style={{ animation: `iconFloat${i} 3s ease-in-out infinite, continuousFloat 5s ease-in-out infinite` }} />
                                     </div>
                                     <div>
@@ -732,12 +732,12 @@ export default function Dashboard({ customers, installations, issues, activities
                     </div>
 
                     <div className="grid grid-cols-1 gap-6 flex-1 min-h-0">
-                        <div className="glass-card p-6 border-white/5 flex flex-col min-h-0">
-                            <h3 className="text-white font-bold flex items-center gap-2 flex-shrink-0">
+                        <div className="glass-card p-6 border-border flex flex-col min-h-0">
+                            <h3 className="text-text-main font-bold flex items-center gap-2 flex-shrink-0">
                                 <ActivityIcon className="w-4 h-4 text-indigo-400" />
                                 Recent Support Activity
                             </h3>
-                            <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-4 flex-shrink-0">กิจกรรมการซัพพอร์ตล่าสุด</p>
+                            <p className="text-text-muted opacity-60 text-[10px] font-bold uppercase tracking-widest mb-4 flex-shrink-0">กิจกรรมการซัพพอร์ตล่าสุด</p>
                             <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 min-h-0 space-y-4">
                                 {issues.slice(0, 5).map((issue, i) => (
                                     <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-indigo-500/5 border border-indigo-500/10 hover:border-indigo-500/30 transition-all cursor-pointer">
@@ -766,14 +766,14 @@ export default function Dashboard({ customers, installations, issues, activities
                                 onClick={() => setSelectedMetric(stat.id)}
                                 className={`group/card glass-card p-4 border transition-all duration-300 cursor-pointer relative hover:z-50 ${selectedMetric === stat.id
                                     ? 'border-indigo-500 ring-2 ring-indigo-500/20 translate-y-[-4px] shadow-2xl shadow-indigo-500/10 z-40'
-                                    : 'border-white/5 hover:border-white/20 hover:-translate-y-1'
+                                    : 'border-border hover:border-border-light hover:-translate-y-1'
                                     }`}
                             >
                                 <div className={`absolute inset-0 bg-gradient-to-br ${stat.bg} to-transparent opacity-30 transition-opacity duration-300 ${selectedMetric === stat.id ? 'opacity-60' : 'group-hover/card:opacity-50'}`} />
                                 <div className="relative flex flex-col gap-2">
                                     <div className="flex items-center justify-between">
                                         <div
-                                            className={`p-1.5 w-fit rounded-lg bg-white/5 ${stat.color} transition-transform duration-300 ${selectedMetric === stat.id ? 'scale-110 shadow-[0_0_15px_currentColor]' : 'group-hover/card:scale-110'}`}
+                                            className={`p-1.5 w-fit rounded-lg bg-bg-hover ${stat.color} transition-transform duration-300 ${selectedMetric === stat.id ? 'scale-110 shadow-[0_0_15px_currentColor]' : 'group-hover/card:scale-110'}`}
                                             style={{ animation: `iconFloat${i} 3s ease-in-out infinite, continuousFloat 6s ease-in-out infinite`, animationDelay: `${i * 0.5}s` }}
                                         >
                                             <stat.icon className="w-4 h-4" />

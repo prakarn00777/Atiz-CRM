@@ -26,11 +26,13 @@ interface RoleManagerProps {
 const AVAILABLE_MENUS = [
     { id: "dashboard", label: "Dashboard", icon: "📊", group: null },
     { id: "customers", label: "Customers", icon: "👥", group: "CS & DEV Team" },
+    { id: "cs_followup", label: "Follow-up Plan", icon: "📅", group: "CS & DEV Team" },
     { id: "installations", label: "Installations", icon: "🔧", group: "CS & DEV Team" },
     { id: "issues", label: "Issues", icon: "📝", group: "CS & DEV Team" },
     { id: "cs_activity", label: "CS Task", icon: "📋", group: "CS & DEV Team" },
     { id: "leads", label: "Leads", icon: "📢", group: "Marketing Team" },
     { id: "demos", label: "Demos", icon: "🎬", group: "Marketing Team" },
+    { id: "sales", label: "Sales", icon: "📈", group: "Marketing Team" },
     { id: "user_management", label: "User Management", icon: "👤", group: "Settings" },
     { id: "role_management", label: "Role Management", icon: "🛡️", group: "Settings" },
 ];
@@ -109,7 +111,7 @@ export default function RoleManager({ roles, onSave, onDelete }: RoleManagerProp
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
-                <h1 className="text-3xl font-bold tracking-tight">Role Management</h1>
+                <h1 className="text-3xl font-bold tracking-tight text-text-main">Role Management</h1>
                 <button onClick={() => handleOpenModal()} className="btn btn-primary px-6">
                     <Plus className="w-5 h-5" />
                     <span>เพิ่มบทบาท</span>
@@ -118,30 +120,30 @@ export default function RoleManager({ roles, onSave, onDelete }: RoleManagerProp
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {roles.map((r) => (
-                    <div key={r.id} className="glass-card p-6 border-white/5 group hover:border-indigo-500/20 transition-all">
+                    <div key={r.id} className="bg-card-bg p-6 border border-border rounded-2xl group hover:border-indigo-500/20 transition-all shadow-sm">
                         <div className="flex justify-between items-start mb-4">
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400">
+                                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-500">
                                     <ShieldCheck className="w-6 h-6" />
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-lg text-slate-200">{r.name}</h3>
-                                    <p className="text-sm text-slate-400">{r.description}</p>
+                                    <h3 className="font-bold text-lg text-text-main">{r.name}</h3>
+                                    <p className="text-sm text-text-muted">{r.description}</p>
                                 </div>
                             </div>
                             <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button onClick={() => handleOpenModal(r)} className="p-2 rounded-lg hover:bg-white/5 text-slate-400 hover:text-white">
+                                <button onClick={() => handleOpenModal(r)} className="p-2 rounded-lg hover:bg-bg-hover text-text-muted hover:text-text-main">
                                     <Edit2 className="w-4 h-4" />
                                 </button>
-                                <button onClick={() => onDelete(r.id)} className="p-2 rounded-lg hover:bg-rose-500/10 text-slate-400 hover:text-rose-400">
+                                <button onClick={() => onDelete(r.id)} className="p-2 rounded-lg hover:bg-rose-500/10 text-text-muted hover:text-rose-500">
                                     <Trash2 className="w-4 h-4" />
                                 </button>
                             </div>
                         </div>
                         <div className="space-y-2">
                             <div className="flex items-center justify-between">
-                                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">สิทธิ์การเข้าถึง:</p>
-                                <span className="text-xs text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-full">
+                                <p className="text-xs font-semibold text-text-muted uppercase tracking-wider">สิทธิ์การเข้าถึง:</p>
+                                <span className="text-xs text-indigo-500 bg-indigo-500/10 px-2 py-0.5 rounded-full border border-indigo-500/20">
                                     {getPermissionCount(r)} สิทธิ์
                                 </span>
                             </div>
@@ -163,7 +165,7 @@ export default function RoleManager({ roles, onSave, onDelete }: RoleManagerProp
                                         </span>
                                     );
                                 })}
-                                {getPermissionCount(r) === 0 && <span className="text-xs text-slate-500 italic">ไม่มีสิทธิการเข้าถึง</span>}
+                                {getPermissionCount(r) === 0 && <span className="text-xs text-text-muted italic opacity-60">ไม่มีสิทธิการเข้าถึง</span>}
                             </div>
                         </div>
                     </div>
@@ -172,11 +174,11 @@ export default function RoleManager({ roles, onSave, onDelete }: RoleManagerProp
 
             {isModalOpen && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
-                    <div className="glass-card w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col relative shadow-2xl animate-in fade-in zoom-in duration-200">
-                        <div className="p-6 border-b border-white/5 flex justify-between items-center shrink-0">
-                            <h2 className="text-2xl font-bold">{editingRole ? "แก้ไขบทบาท" : "เพิ่มบทบาท"}</h2>
-                            <button onClick={() => setModalOpen(false)} className="p-2 text-slate-400 hover:text-white">
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+                    <div className="bg-card-bg w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col relative shadow-2xl border border-border rounded-2xl animate-in fade-in zoom-in duration-200">
+                        <div className="p-6 border-b border-border-light flex justify-between items-center shrink-0">
+                            <h2 className="text-2xl font-bold text-text-main">{editingRole ? "แก้ไขบทบาท" : "เพิ่มบทบาท"}</h2>
+                            <button onClick={() => setModalOpen(false)} className="p-2 text-text-muted hover:text-text-main hover:bg-bg-hover rounded-lg transition-colors">
                                 <X className="w-6 h-6" />
                             </button>
                         </div>
@@ -185,22 +187,22 @@ export default function RoleManager({ roles, onSave, onDelete }: RoleManagerProp
                             <div className="p-6 space-y-6 overflow-y-auto custom-scrollbar flex-1">
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                        <label className="text-sm font-medium text-slate-400">ชื่อบทบาท</label>
+                                        <label className="text-sm font-medium text-text-muted">ชื่อบทบาท</label>
                                         <input name="name" defaultValue={editingRole?.name} className="input-field" required />
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-sm font-medium text-slate-400">รายละเอียด</label>
+                                        <label className="text-sm font-medium text-text-muted">รายละเอียด</label>
                                         <input name="description" defaultValue={editingRole?.description} className="input-field" />
                                     </div>
                                 </div>
 
                                 {/* Permission Matrix */}
                                 <div className="space-y-3">
-                                    <label className="text-sm font-medium text-slate-400">สิทธิ์การเข้าถึงเมนู (CRUD)</label>
-                                    <div className="border border-white/10 rounded-xl overflow-hidden">
+                                    <label className="text-sm font-medium text-text-muted">สิทธิ์การเข้าถึงเมนู (CRUD)</label>
+                                    <div className="border border-border rounded-xl overflow-hidden">
                                         <table className="w-full">
                                             <thead>
-                                                <tr className="bg-white/5 text-slate-400 text-xs uppercase tracking-wider">
+                                                <tr className="bg-bg-hover text-text-muted text-xs uppercase tracking-wider">
                                                     <th className="px-4 py-3 text-left font-semibold">เมนู</th>
                                                     <th className="px-3 py-3 text-center font-semibold w-20">ดู (R)</th>
                                                     <th className="px-3 py-3 text-center font-semibold w-20">เพิ่ม (C)</th>
@@ -209,16 +211,16 @@ export default function RoleManager({ roles, onSave, onDelete }: RoleManagerProp
                                                     <th className="px-3 py-3 text-center font-semibold w-20">ทั้งหมด</th>
                                                 </tr>
                                             </thead>
-                                            <tbody className="divide-y divide-white/5">
+                                            <tbody className="divide-y divide-border-light">
                                                 {AVAILABLE_MENUS.map(menu => {
                                                     const perm = permissions[menu.id] || DEFAULT_PERMISSION;
                                                     const allChecked = perm.create && perm.read && perm.update && perm.delete;
                                                     return (
-                                                        <tr key={menu.id} className="hover:bg-white/[0.02] transition-colors">
+                                                        <tr key={menu.id} className="hover:bg-bg-hover transition-colors">
                                                             <td className="px-4 py-3">
                                                                 <div className="flex items-center gap-2">
                                                                     <span>{menu.icon}</span>
-                                                                    <span className="text-sm text-slate-300">{menu.label}</span>
+                                                                    <span className="text-sm text-text-main">{menu.label}</span>
                                                                 </div>
                                                             </td>
                                                             {(['read', 'create', 'update', 'delete'] as const).map(action => (
@@ -227,8 +229,8 @@ export default function RoleManager({ roles, onSave, onDelete }: RoleManagerProp
                                                                         type="button"
                                                                         onClick={() => togglePermission(menu.id, action)}
                                                                         className={`w-8 h-8 rounded-lg border-2 transition-all flex items-center justify-center ${perm[action]
-                                                                            ? 'bg-indigo-500 border-indigo-500 text-white'
-                                                                            : 'bg-transparent border-slate-600 hover:border-slate-500'
+                                                                            ? 'bg-indigo-600 border-indigo-600 text-white'
+                                                                            : 'bg-transparent border-border hover:border-text-muted/50'
                                                                             }`}
                                                                     >
                                                                         {perm[action] && <Check className="w-4 h-4" />}
@@ -240,8 +242,8 @@ export default function RoleManager({ roles, onSave, onDelete }: RoleManagerProp
                                                                     type="button"
                                                                     onClick={() => toggleAllForMenu(menu.id)}
                                                                     className={`w-8 h-8 rounded-lg border-2 transition-all flex items-center justify-center ${allChecked
-                                                                        ? 'bg-emerald-500 border-emerald-500 text-white'
-                                                                        : 'bg-transparent border-slate-600 hover:border-slate-500'
+                                                                        ? 'bg-emerald-600 border-emerald-600 text-white'
+                                                                        : 'bg-transparent border-border hover:border-text-muted/50'
                                                                         }`}
                                                                 >
                                                                     {allChecked && <Check className="w-4 h-4" />}
@@ -257,7 +259,7 @@ export default function RoleManager({ roles, onSave, onDelete }: RoleManagerProp
                                 </div>
                             </div>
 
-                            <div className="p-6 border-t border-white/5 flex gap-3 shrink-0">
+                            <div className="p-6 border-t border-border-light flex gap-3 shrink-0">
                                 <button type="button" onClick={() => setModalOpen(false)} className="btn btn-ghost flex-1">ยกเลิก</button>
                                 <button type="submit" className="btn btn-primary flex-1">บันทึก</button>
                             </div>

@@ -20,6 +20,7 @@ import LeadManager from "@/components/LeadManager";
 import GoogleSheetLeadManager from "@/components/GoogleSheetLeadManager";
 import DemoManager from "@/components/DemoManager";
 import SalesManager from "@/components/SalesManager";
+import FollowUpPlanManager from "@/components/FollowUpPlanManager";
 import CustomDatePicker from "@/components/CustomDatePicker";
 import { Customer, Branch, Installation, Issue, UsageStatus, Activity as CSActivity, ActivityType, SentimentType, Lead, GoogleSheetLead, MasterDemoLead, BusinessMetrics, NewSalesRecord } from "@/types";
 import { useNotification } from "@/components/NotificationProvider";
@@ -484,6 +485,13 @@ export default function CRMPage() {
       usageStatus: modalUsageStatus,
       installationStatus: editingCustomer ? editingCustomer.installationStatus : "Pending",
       clientCode: formData.get("clientCode") as string || (editingCustomer ? editingCustomer.clientCode : undefined),
+      csOwner: formData.get("csOwner") as string,
+      salesName: formData.get("salesName") as string,
+      contractStart: formData.get("contractStart") as string,
+      contractEnd: formData.get("contractEnd") as string,
+      contactName: formData.get("contactName") as string,
+      contactPhone: formData.get("contactPhone") as string,
+      note: formData.get("note") as string,
       branches: branchInputs,
       modifiedBy: user?.name,
       modifiedAt: new Date().toISOString()
@@ -1057,10 +1065,10 @@ export default function CRMPage() {
   if (!mounted) return null;
 
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-300 font-sans selection:bg-indigo-500/30">
+    <div className="min-h-screen bg-bg-pure text-text-main font-sans selection:bg-indigo-500/30">
       {!user ? (
-        <div className="min-h-screen flex items-center justify-center p-4 bg-[#0f172a] relative overflow-hidden">
-          <div className="glass-card w-full max-w-md p-8 border-indigo-500/20 relative z-10 backdrop-blur-md">
+        <div className="min-h-screen flex items-center justify-center p-4 bg-bg-dark relative overflow-hidden">
+          <div className="glass-card w-full max-w-md p-8 border-border relative z-10 backdrop-blur-md">
             <div className="flex flex-col items-center mb-8">
               <div className="mb-8 relative group animate-bounce">
                 {/* Animated Glow Effect */}
@@ -1076,12 +1084,12 @@ export default function CRMPage() {
                   />
                 </div>
               </div>
-              <h1 className="text-3xl font-bold text-white tracking-tight">Atiz CRM</h1>
-              <p className="text-slate-400 mt-2 text-sm italic">Advanced Management Console</p>
+              <h1 className="text-3xl font-bold text-text-main tracking-tight">Atiz CRM</h1>
+              <p className="text-text-muted mt-2 text-sm italic">Advanced Management Console</p>
             </div>
             <form className="space-y-6" onSubmit={handleLogin}>
               <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">Username</label>
+                <label className="block text-xs font-semibold text-text-muted uppercase tracking-widest mb-2">Username</label>
                 <input
                   name="username"
                   className="input-field py-3 text-sm h-12"
@@ -1093,7 +1101,7 @@ export default function CRMPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">Password</label>
+                <label className="block text-xs font-semibold text-text-muted uppercase tracking-widest mb-2">Password</label>
                 <input
                   name="password"
                   type="password"
@@ -1130,7 +1138,7 @@ export default function CRMPage() {
             userRole={{ ...roles.find(r => r.id === user?.role), role: user?.role }}
             onQuickAction={handleQuickAction}
           />
-          <main className={`flex-1 relative bg-gradient-to-br from-[#020617] via-[#0f172a] to-[#020617] animate-in fade-in duration-300 ${currentView === 'dashboard' ? 'overflow-hidden' : 'overflow-auto'}`}>
+          <main className={`flex-1 relative bg-gradient-to-br from-bg-pure via-bg-dark to-bg-pure animate-in fade-in duration-300 ${currentView === 'dashboard' ? 'overflow-hidden' : 'overflow-auto'}`}>
             <div className={`p-4 lg:p-8 max-w-[1600px] mx-auto relative z-10 ${currentView === 'dashboard' ? 'h-full flex flex-col' : ''}`}>
               <div className="absolute top-4 lg:top-8 right-4 lg:right-8 z-[100] flex items-center gap-3">
                 {notificationPermission !== "granted" && (
@@ -1236,6 +1244,13 @@ export default function CRMPage() {
                   sales={newSalesData}
                   isLoading={isNewSalesLoading}
                   onRefresh={fetchNewSalesData}
+                />
+              ) : currentView === "cs_followup" ? (
+                <FollowUpPlanManager
+                  customers={customers}
+                  onUpdateStatus={(id, status) => {
+                    setToast({ message: "อัปเดตสถานะการติดตามเรียบร้อยแล้ว", type: "success" });
+                  }}
                 />
               ) : null}
             </div>
@@ -1346,6 +1361,33 @@ export default function CRMPage() {
                         <label className="text-xs font-medium text-slate-400">แพ็คเกจ</label>
                         <CustomSelect name="package" defaultValue={editingCustomer?.package || "Standard"} options={[{ value: "Starter", label: "Starter" }, { value: "Standard", label: "Standard" }, { value: "Elite", label: "Elite" }]} />
                       </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-slate-400">CS Owner (ผู้ดูแลหลัก)</label>
+                        <CustomSelect
+                          name="csOwner"
+                          defaultValue={editingCustomer?.csOwner || ""}
+                          options={[
+                            { value: "", label: "ไม่ระบุ" },
+                            ...users.map(u => ({ value: u.name, label: u.name }))
+                          ]}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-slate-400">ชื่อเซลล์ (Sales Name)</label>
+                        <input name="salesName" defaultValue={editingCustomer?.salesName} className="input-field" placeholder="ระบุชื่อเซลล์..." />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-slate-400">วันที่เริ่มสัญญา</label>
+                        <input type="date" name="contractStart" defaultValue={editingCustomer?.contractStart} className="input-field" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-slate-400">วันที่สิ้นสุดสัญญา</label>
+                        <input type="date" name="contractEnd" defaultValue={editingCustomer?.contractEnd} className="input-field" />
+                      </div>
+                      <div className="space-y-1 col-span-2">
+                        <label className="text-xs font-medium text-slate-400">หมายเหตุ</label>
+                        <textarea name="note" defaultValue={editingCustomer?.note} className="input-field min-h-[80px]" />
+                      </div>
 
                     </div>
                   </div>
@@ -1357,6 +1399,24 @@ export default function CRMPage() {
                         <div className="w-1 h-4 bg-emerald-500 rounded-full"></div>
                         จัดการสาขา ({branchInputs.length})
                       </h3>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const mainCsOwner = (document.getElementsByName('csOwner')[0] as HTMLSelectElement)?.value || editingCustomer?.csOwner || "";
+                          const newBranch: Branch = {
+                            name: "",
+                            isMain: false,
+                            status: "Pending",
+                            csOwner: mainCsOwner
+                          };
+                          setBranchInputs([...branchInputs, newBranch]);
+                          setActiveBranchIndex(branchInputs.length);
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500 hover:text-white text-xs font-bold transition-all border border-emerald-500/20"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        เพิ่มสาขา
+                      </button>
                     </div>
 
                     <div className="flex flex-col md:flex-row gap-6 h-[320px] bg-slate-900/40 rounded-xl border border-white/5 p-4">
@@ -1480,15 +1540,39 @@ export default function CRMPage() {
                                       );
                                     }
 
-                                    // Fallback to internal branch status
-                                    return (
-                                      <span className={`inline-flex px-2.5 py-1 rounded-full text-[10px] font-bold whitespace-nowrap shadow-sm ${activeBranch.status === "Completed" ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20" :
-                                        "bg-slate-500/15 text-slate-400 border border-slate-500/20"
-                                        }`}>
-                                        {activeBranch.status || "Pending"}
-                                      </span>
-                                    );
                                   })()}
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1.5">
+                                  <label className="text-xs font-medium text-slate-400">วันที่เริ่มสัญญา (Contract Start)</label>
+                                  <input
+                                    type="date"
+                                    value={branchInputs[activeBranchIndex].contractStart || ""}
+                                    onChange={(e) => {
+                                      const updated = [...branchInputs];
+                                      updated[activeBranchIndex].contractStart = e.target.value;
+                                      setBranchInputs(updated);
+                                    }}
+                                    className="input-field text-sm w-full h-10 px-3 cursor-pointer"
+                                  />
+                                </div>
+                                <div className="space-y-1.5">
+                                  <label className="text-xs font-medium text-slate-400">CS Owner (สาขา)</label>
+                                  <CustomSelect
+                                    name={`branchCsOwner-${activeBranchIndex}`}
+                                    defaultValue={branchInputs[activeBranchIndex].csOwner || ""}
+                                    onChange={(val) => {
+                                      const updated = [...branchInputs];
+                                      updated[activeBranchIndex].csOwner = val;
+                                      setBranchInputs(updated);
+                                    }}
+                                    options={[
+                                      { value: "", label: "ใช้ตามลูกค้าหลัก" },
+                                      ...users.map(u => ({ value: u.name, label: u.name }))
+                                    ]}
+                                  />
                                 </div>
                               </div>
                             </div>
@@ -1502,747 +1586,761 @@ export default function CRMPage() {
                       </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Installations Tab */}
-                {editingCustomer && (
-                  <div className={`border-t border-white/10 pt-6 ${activeCustomerTab === 'installations' ? 'block' : 'hidden'}`}>
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                        <div className="w-1 h-4 bg-indigo-500 rounded-full"></div>
-                        งานติดตั้ง
-                      </h3>
-                    </div>
+                  {/* Installations Tab */}
+                  {editingCustomer && (
+                    <div className={`border-t border-white/10 pt-6 ${activeCustomerTab === 'installations' ? 'block' : 'hidden'}`}>
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                          <div className="w-1 h-4 bg-indigo-500 rounded-full"></div>
+                          งานติดตั้ง
+                        </h3>
+                      </div>
 
-                    {(() => {
-                      const customerInstallations = installations.filter(i => i.customerId === editingCustomer.id);
+                      {(() => {
+                        const customerInstallations = installations.filter(i => i.customerId === editingCustomer.id);
 
-                      if (customerInstallations.length === 0) {
+                        if (customerInstallations.length === 0) {
+                          return (
+                            <div className="text-center py-8 text-slate-500">
+                              <Layers className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                              <p className="text-xs">ไม่มีงานติดตั้ง</p>
+                            </div>
+                          );
+                        }
+
+                        const formatDateTime = (dateStr?: string) => {
+                          if (!dateStr) return '-';
+                          const d = new Date(dateStr);
+                          return `${d.toLocaleDateString('th-TH')} ${d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}`;
+                        };
+
                         return (
-                          <div className="text-center py-8 text-slate-500">
-                            <Layers className="w-10 h-10 mx-auto mb-2 opacity-30" />
-                            <p className="text-xs">ไม่มีงานติดตั้ง</p>
+                          <div className="space-y-2">
+                            {customerInstallations.map((inst) => (
+                              <div key={inst.id} className="bg-white/5 rounded-xl p-3 border border-white/5 hover:border-white/10 transition-colors">
+                                {/* Header Row */}
+                                <div className="flex items-center justify-between gap-3 mb-2">
+                                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                                    <span className={`shrink-0 px-2 py-0.5 rounded-md text-[10px] font-bold ${inst.installationType === 'new' ? 'bg-blue-500/15 text-blue-400' : 'bg-purple-500/15 text-purple-400'}`}>
+                                      {inst.installationType === 'new' ? 'NEW' : 'BRANCH'}
+                                    </span>
+                                    <span className="text-xs text-white font-medium truncate">
+                                      {inst.installationType === 'new' ? inst.customerName : inst.branchName || '-'}
+                                    </span>
+                                  </div>
+                                  <CustomSelect
+                                    name={`inst-status-${inst.id}`}
+                                    value={pendingInstallationChanges[inst.id] || inst.status}
+                                    onChange={(newStatus) => {
+                                      setPendingInstallationChanges(prev => ({ ...prev, [inst.id]: newStatus }));
+                                    }}
+                                    options={[
+                                      { value: 'Pending', label: 'Pending' },
+                                      { value: 'Completed', label: 'Completed' }
+                                    ]}
+                                    className="!w-auto !min-w-[110px]"
+                                  />
+                                </div>
+                                {/* Details Row */}
+                                <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-slate-500">
+                                  <span>แจ้งโดย: <span className="text-slate-400">{inst.requestedBy || '-'}</span> • {formatDateTime(inst.requestedAt)}</span>
+                                  {inst.modifiedBy && (
+                                    <span>แก้ไขโดย: <span className="text-slate-400">{inst.modifiedBy}</span> • {formatDateTime(inst.modifiedAt)}</span>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         );
-                      }
-
-                      const formatDateTime = (dateStr?: string) => {
-                        if (!dateStr) return '-';
-                        const d = new Date(dateStr);
-                        return `${d.toLocaleDateString('th-TH')} ${d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}`;
-                      };
-
-                      return (
-                        <div className="space-y-2">
-                          {customerInstallations.map((inst) => (
-                            <div key={inst.id} className="bg-white/5 rounded-xl p-3 border border-white/5 hover:border-white/10 transition-colors">
-                              {/* Header Row */}
-                              <div className="flex items-center justify-between gap-3 mb-2">
-                                <div className="flex items-center gap-2 flex-1 min-w-0">
-                                  <span className={`shrink-0 px-2 py-0.5 rounded-md text-[10px] font-bold ${inst.installationType === 'new' ? 'bg-blue-500/15 text-blue-400' : 'bg-purple-500/15 text-purple-400'}`}>
-                                    {inst.installationType === 'new' ? 'NEW' : 'BRANCH'}
-                                  </span>
-                                  <span className="text-xs text-white font-medium truncate">
-                                    {inst.installationType === 'new' ? inst.customerName : inst.branchName || '-'}
-                                  </span>
-                                </div>
-                                <CustomSelect
-                                  name={`inst-status-${inst.id}`}
-                                  value={pendingInstallationChanges[inst.id] || inst.status}
-                                  onChange={(newStatus) => {
-                                    setPendingInstallationChanges(prev => ({ ...prev, [inst.id]: newStatus }));
-                                  }}
-                                  options={[
-                                    { value: 'Pending', label: 'Pending' },
-                                    { value: 'Completed', label: 'Completed' }
-                                  ]}
-                                  className="!w-auto !min-w-[110px]"
-                                />
-                              </div>
-                              {/* Details Row */}
-                              <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-slate-500">
-                                <span>แจ้งโดย: <span className="text-slate-400">{inst.requestedBy || '-'}</span> • {formatDateTime(inst.requestedAt)}</span>
-                                {inst.modifiedBy && (
-                                  <span>แก้ไขโดย: <span className="text-slate-400">{inst.modifiedBy}</span> • {formatDateTime(inst.modifiedAt)}</span>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      );
-                    })()}
-                  </div>
-                )}
-
+                      })()}
+                    </div>
+                  )}
+                </div>
               </form>
-            </div>
+            </div >
             <div className="p-6 border-t border-white/5 bg-[#1e293b]/50 backdrop-blur-sm shrink-0">
               <div className="flex gap-3">
                 <button type="button" onClick={() => { setModalOpen(false); setPendingInstallationChanges({}); }} className="btn btn-ghost flex-1">ยกเลิก</button>
                 <button type="submit" form="save-customer-form" className="btn btn-primary flex-1">บันทึก</button>
               </div>
             </div>
-          </ModalWrapper>
+          </ModalWrapper >
 
           {/* Issue Modal and Delete Confirm remain similar but with updated attachments handling */}
-          {isIssueModalOpen && (
-            <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
-              <div className="absolute inset-0 bg-black/80 backdrop-blur-md" />
-              <div className="glass-card w-full max-w-2xl max-h-[90vh] flex flex-col relative shadow-2xl border-indigo-500/20">
-                <div className="p-6 border-b border-white/5 flex justify-between items-center">
-                  <h2 className="text-xl font-bold text-white">{editingIssue ? "Edit Issue" : "New Issue"}</h2>
-                  <button onClick={() => setIssueModalOpen(false)}><X /></button>
-                </div>
+          {
+            isIssueModalOpen && (
+              <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
+                <div className="absolute inset-0 bg-black/80 backdrop-blur-md" />
+                <div className="glass-card w-full max-w-2xl max-h-[90vh] flex flex-col relative shadow-2xl border-indigo-500/20">
+                  <div className="p-6 border-b border-white/5 flex justify-between items-center">
+                    <h2 className="text-xl font-bold text-white">{editingIssue ? "Edit Issue" : "New Issue"}</h2>
+                    <button onClick={() => setIssueModalOpen(false)}><X /></button>
+                  </div>
 
-                {/* Status Indicator Bar - Only show when editing */}
-                {editingIssue && (
+                  {/* Status Indicator Bar - Only show when editing */}
+                  {editingIssue && (
+                    <div className="px-6 py-4 bg-white/[0.02] border-b border-white/5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-slate-400">Status:</span>
+
+                        {/* Clickable Status Flow Buttons - Forward Only */}
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            disabled={editingIssue.status !== "แจ้งเคส"}
+                            onClick={() => setModalIssueStatus("แจ้งเคส")}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${modalIssueStatus === "แจ้งเคส"
+                              ? "bg-amber-500 text-white shadow-lg shadow-amber-500/30 scale-105"
+                              : editingIssue.status !== "แจ้งเคส"
+                                ? "bg-slate-700/50 text-slate-500 cursor-not-allowed border border-slate-600/20"
+                                : "bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20"
+                              }`}
+                          >
+                            แจ้งเคส
+                          </button>
+
+                          <span className="text-slate-600">→</span>
+
+                          <button
+                            type="button"
+                            disabled={editingIssue.status === "เสร็จสิ้น"}
+                            onClick={() => setModalIssueStatus("กำลังดำเนินการ")}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${modalIssueStatus === "กำลังดำเนินการ"
+                              ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/30 scale-105"
+                              : editingIssue.status === "เสร็จสิ้น"
+                                ? "bg-slate-700/50 text-slate-500 cursor-not-allowed border border-slate-600/20"
+                                : "bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 border border-indigo-500/20"
+                              }`}
+                          >
+                            กำลังดำเนินการ
+                          </button>
+
+                          <span className="text-slate-600">→</span>
+
+                          <button
+                            type="button"
+                            onClick={() => setModalIssueStatus("เสร็จสิ้น")}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${modalIssueStatus === "เสร็จสิ้น"
+                              ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 scale-105"
+                              : "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20"
+                              }`}
+                          >
+                            เสร็จสิ้น
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex-1 overflow-y-auto p-6">
+                    <form id="issue-form" onSubmit={handleSaveIssue} className="space-y-4">
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs font-medium text-slate-400">Customer</label>
+                          {(() => {
+                            const customer = customers.find(c => c.id === selectedCustomerId);
+                            if (customer?.subdomain) {
+                              return (
+                                <a
+                                  href={customer.subdomain.startsWith('http') ? customer.subdomain : `https://${customer.subdomain}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  title="Go to System"
+                                  className="flex items-center gap-1.5 text-[10px] font-bold text-indigo-400 hover:text-indigo-300 transition-colors bg-indigo-500/5 px-2 py-0.5 rounded-md border border-indigo-500/10"
+                                >
+                                  <ExternalLink className="w-3 h-3" />
+                                  <span className="truncate max-w-[150px]">{customer.subdomain.replace(/^https?:\/\//, '')}</span>
+                                </a>
+                              );
+                            }
+                            return null;
+                          })()}
+                        </div>
+                        <SearchableCustomerSelect customers={customers} value={selectedCustomerId} onChange={(id, name) => { setSelectedCustomerId(id); setSelectedCustomerName(name); }} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-slate-400">Subject</label>
+                        <input name="title" defaultValue={editingIssue?.title} className="input-field" required />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium text-slate-400">Issue Type</label>
+                          <CustomSelect
+                            name="type"
+                            defaultValue={editingIssue?.type || "Bug Report"}
+                            options={[
+                              { value: "Bug Report", label: "Bug Report" },
+                              { value: "Data Request", label: "Data Request" },
+                              { value: "System Modification", label: "System Modification" },
+                              { value: "New Requirement", label: "New Requirement" }
+                            ]}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium text-slate-400">Severity</label>
+                          <CustomSelect
+                            name="severity"
+                            defaultValue={editingIssue?.severity || "Low"}
+                            options={[
+                              { value: "Low", label: "Low" },
+                              { value: "Medium", label: "Medium" },
+                              { value: "High", label: "High" },
+                              { value: "Critical", label: "Critical" }
+                            ]}
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-slate-400">Description</label>
+                        <textarea name="description" defaultValue={editingIssue?.description} className="input-field min-h-[100px] text-xs py-3 resize-none" />
+                      </div>
+
+                      {/* File Attachments */}
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-slate-400">Attachments</label>
+
+                        {/* Upload Zone */}
+                        <div
+                          className="border-2 border-dashed border-white/10 rounded-xl p-4 text-center hover:border-indigo-500/50 hover:bg-indigo-500/5 transition-all cursor-pointer"
+                          onClick={() => document.getElementById('file-input')?.click()}
+                        >
+                          <input
+                            id="file-input"
+                            type="file"
+                            multiple
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const files = e.target.files;
+                              if (files) {
+                                Array.from(files).forEach(file => {
+                                  if (!file.type.startsWith('image/')) {
+                                    setToast({ message: `ไฟล์ ${file.name} ต้องเป็นรูปภาพเท่านั้น`, type: "error" });
+                                    return;
+                                  }
+                                  if (file.size > 2 * 1024 * 1024) {
+                                    setToast({ message: `ไฟล์ ${file.name} ใหญ่เกิน 2MB`, type: "error" });
+                                    return;
+                                  }
+                                  const reader = new FileReader();
+                                  reader.onload = () => {
+                                    setSelectedFiles(prev => [...prev, {
+                                      name: file.name,
+                                      type: file.type,
+                                      size: file.size,
+                                      data: reader.result as string
+                                    }]);
+                                  };
+                                  reader.readAsDataURL(file);
+                                });
+                              }
+                              e.target.value = '';
+                            }}
+                          />
+                          <div className="flex flex-col items-center gap-2">
+                            <div className="w-10 h-10 rounded-full bg-indigo-500/10 flex items-center justify-center">
+                              <Paperclip className="w-5 h-5 text-indigo-400" />
+                            </div>
+                            <div>
+                              <p className="text-xs text-slate-300">คลิกเพื่อเลือกรูปภาพหรือลากไฟล์มาวาง</p>
+                              <p className="text-[10px] text-slate-500 mt-1">รองรับ: รูปภาพเท่านั้น (สูงสุด 2MB ต่อไฟล์)</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* File Preview List */}
+                        {selectedFiles.length > 0 && (
+                          <div className="space-y-2 mt-3">
+                            {selectedFiles.map((file, idx) => (
+                              <div key={idx} className="flex items-center gap-3 p-2 bg-white/5 rounded-lg border border-white/10">
+                                {/* Thumbnail for images */}
+                                {file.type.startsWith('image/') ? (
+                                  <img
+                                    src={file.data}
+                                    alt={file.name}
+                                    className="w-10 h-10 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity border border-white/10"
+                                    onClick={() => setPreviewImage(file.data)}
+                                  />
+                                ) : (
+                                  <div className="w-10 h-10 bg-slate-700 rounded flex items-center justify-center text-[10px] font-bold text-slate-400">
+                                    {file.name.split('.').pop()?.toUpperCase()}
+                                  </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs text-slate-300 truncate">{file.name}</p>
+                                  <p className="text-[10px] text-slate-500">{(file.size / 1024).toFixed(1)} KB</p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedFiles(prev => prev.filter((_, i) => i !== idx))}
+                                  className="p-1.5 hover:bg-rose-500/20 rounded-lg transition-colors"
+                                >
+                                  <X className="w-4 h-4 text-rose-400" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </form>
+                  </div>
+                  <div className="p-6 border-t border-white/5 flex gap-2">
+                    <button onClick={() => setIssueModalOpen(false)} className="btn btn-ghost flex-1">Cancel</button>
+                    <button form="issue-form" type="submit" className="btn btn-primary flex-1">Save</button>
+                  </div>
+                </div>
+              </div>
+            )
+          }
+
+          {
+            deleteConfirm && (
+              <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+                <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setDeleteConfirm(null)} />
+                <div className="glass-card w-full max-w-sm p-6 relative border-rose-500/20 text-center">
+                  <h3 className="text-lg font-bold mb-2">ยืนยันการลบ?</h3>
+                  <p className="text-sm text-slate-400 mb-6">{deleteConfirm.title}</p>
+                  <div className="flex gap-3">
+                    <button onClick={() => setDeleteConfirm(null)} className="btn btn-ghost flex-1">ยกเลิก</button>
+                    <button onClick={async () => {
+                      if (deleteConfirm.type === 'customer' && deleteConfirm.id) handleDeleteCustomer(deleteConfirm.id);
+                      if (deleteConfirm.type === 'issue' && deleteConfirm.id) handleDeleteIssue(deleteConfirm.id);
+                      if (deleteConfirm.type === 'branch' && deleteConfirm.index !== undefined) {
+                        const filtered = branchInputs.filter((_, i) => i !== deleteConfirm.index);
+                        setBranchInputs(filtered);
+                        setActiveBranchIndex(Math.max(0, (deleteConfirm.index || 0) - 1));
+                      }
+                      if (deleteConfirm.type === 'activity' && deleteConfirm.id) {
+                        if (isDeleting) return;
+                        const prevActivities = [...activities];
+                        const updatedActivities = activities.filter(a => a.id !== deleteConfirm.id);
+                        setActivities(updatedActivities);
+                        localStorage.setItem("crm_activities_v2", JSON.stringify(updatedActivities));
+                        setToast({ message: "กำลังลบกิจกรรม...", type: "info" });
+                        setIsDeleting(true);
+                        const res = await deleteActivity(deleteConfirm.id);
+                        setIsDeleting(false);
+                        if (!res.success) {
+                          setActivities(prevActivities);
+                          setToast({ message: "เกิดข้อผิดพลาด: " + res.error, type: "error" });
+                          fetchDataDebounced();
+                        } else {
+                          setToast({ message: "ลบกิจกรรมเรียบร้อยแล้ว", type: "success" });
+                        }
+                      }
+                      if (!isDeleting) setDeleteConfirm(null);
+                    }} disabled={isDeleting} className="btn bg-rose-500 hover:bg-rose-600 text-white flex-1 disabled:opacity-50">
+                      {isDeleting ? "กำลังลบ..." : "ลบรายการ"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )
+          }
+
+          {/* Confetti Effect */}
+          {
+            showConfetti && (
+              <div className="fixed inset-0 z-[300] pointer-events-none overflow-hidden">
+                {[...Array(50)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="absolute animate-confetti"
+                    style={{
+                      left: `${Math.random() * 100}%`,
+                      top: '-10px',
+                      width: `${8 + Math.random() * 12}px`,
+                      height: `${8 + Math.random() * 12}px`,
+                      backgroundColor: ['#f59e0b', '#10b981', '#6366f1', '#ec4899', '#8b5cf6', '#06b6d4'][Math.floor(Math.random() * 6)],
+                      borderRadius: Math.random() > 0.5 ? '50%' : '2px',
+                      animationDelay: `${Math.random() * 2}s`,
+                      animationDuration: `${2 + Math.random() * 2}s`,
+                    }}
+                  />
+                ))}
+              </div>
+            )
+          }
+          {/* Activity Modal */}
+          {
+            isActivityModalOpen && (
+              <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+                <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setActivityModalOpen(false)} />
+                <div className="glass-card w-full max-w-lg relative shadow-2xl border-indigo-500/20 flex flex-col h-[85vh] max-h-[90vh] overflow-hidden">
+                  <div className="p-6 border-b border-white/5 shrink-0">
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-xl font-bold flex items-center gap-2 text-white">
+                        <HistoryIcon className="w-5 h-5 text-indigo-400" />
+                        {editingActivity ? "Edit Task" : "Add Task"}
+                      </h2>
+                      <button onClick={() => setActivityModalOpen(false)} className="text-slate-400 hover:text-white transition-colors p-1 hover:bg-white/5 rounded-lg">
+                        <X />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Status Flow Bar */}
                   <div className="px-6 py-4 bg-white/[0.02] border-b border-white/5">
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-slate-400">Status:</span>
 
-                      {/* Clickable Status Flow Buttons - Forward Only */}
                       <div className="flex items-center gap-2">
                         <button
                           type="button"
-                          disabled={editingIssue.status !== "แจ้งเคส"}
-                          onClick={() => setModalIssueStatus("แจ้งเคส")}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${modalIssueStatus === "แจ้งเคส"
+                          onClick={() => setActivityStatus("Open")}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${activityStatus === "Open"
                             ? "bg-amber-500 text-white shadow-lg shadow-amber-500/30 scale-105"
-                            : editingIssue.status !== "แจ้งเคส"
-                              ? "bg-slate-700/50 text-slate-500 cursor-not-allowed border border-slate-600/20"
-                              : "bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20"
+                            : "bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20"
                             }`}
                         >
-                          แจ้งเคส
+                          Open
                         </button>
 
                         <span className="text-slate-600">→</span>
 
                         <button
                           type="button"
-                          disabled={editingIssue.status === "เสร็จสิ้น"}
-                          onClick={() => setModalIssueStatus("กำลังดำเนินการ")}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${modalIssueStatus === "กำลังดำเนินการ"
+                          onClick={() => setActivityStatus("In Progress")}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${activityStatus === "In Progress"
                             ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/30 scale-105"
-                            : editingIssue.status === "เสร็จสิ้น"
-                              ? "bg-slate-700/50 text-slate-500 cursor-not-allowed border border-slate-600/20"
-                              : "bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 border border-indigo-500/20"
+                            : "bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 border border-indigo-500/20"
                             }`}
                         >
-                          กำลังดำเนินการ
+                          In Progress
                         </button>
 
                         <span className="text-slate-600">→</span>
 
                         <button
                           type="button"
-                          onClick={() => setModalIssueStatus("เสร็จสิ้น")}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${modalIssueStatus === "เสร็จสิ้น"
+                          onClick={() => setActivityStatus("Success")}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${activityStatus === "Success"
                             ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 scale-105"
                             : "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20"
                             }`}
                         >
-                          เสร็จสิ้น
+                          Success
                         </button>
                       </div>
                     </div>
                   </div>
-                )}
 
-                <div className="flex-1 overflow-y-auto p-6">
-                  <form id="issue-form" onSubmit={handleSaveIssue} className="space-y-4">
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <label className="text-xs font-medium text-slate-400">Customer</label>
-                        {(() => {
-                          const customer = customers.find(c => c.id === selectedCustomerId);
-                          if (customer?.subdomain) {
-                            return (
-                              <a
-                                href={customer.subdomain.startsWith('http') ? customer.subdomain : `https://${customer.subdomain}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                title="Go to System"
-                                className="flex items-center gap-1.5 text-[10px] font-bold text-indigo-400 hover:text-indigo-300 transition-colors bg-indigo-500/5 px-2 py-0.5 rounded-md border border-indigo-500/10"
-                              >
-                                <ExternalLink className="w-3 h-3" />
-                                <span className="truncate max-w-[150px]">{customer.subdomain.replace(/^https?:\/\//, '')}</span>
-                              </a>
-                            );
-                          }
-                          return null;
-                        })()}
-                      </div>
-                      <SearchableCustomerSelect customers={customers} value={selectedCustomerId} onChange={(id, name) => { setSelectedCustomerId(id); setSelectedCustomerName(name); }} />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-slate-400">Subject</label>
-                      <input name="title" defaultValue={editingIssue?.title} className="input-field" required />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-1">
-                        <label className="text-xs font-medium text-slate-400">Issue Type</label>
-                        <CustomSelect
-                          name="type"
-                          defaultValue={editingIssue?.type || "Bug Report"}
-                          options={[
-                            { value: "Bug Report", label: "Bug Report" },
-                            { value: "Data Request", label: "Data Request" },
-                            { value: "System Modification", label: "System Modification" },
-                            { value: "New Requirement", label: "New Requirement" }
-                          ]}
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-xs font-medium text-slate-400">Severity</label>
-                        <CustomSelect
-                          name="severity"
-                          defaultValue={editingIssue?.severity || "Low"}
-                          options={[
-                            { value: "Low", label: "Low" },
-                            { value: "Medium", label: "Medium" },
-                            { value: "High", label: "High" },
-                            { value: "Critical", label: "Critical" }
-                          ]}
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-slate-400">Description</label>
-                      <textarea name="description" defaultValue={editingIssue?.description} className="input-field min-h-[100px] text-xs py-3 resize-none" />
-                    </div>
-
-                    {/* File Attachments */}
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium text-slate-400">Attachments</label>
-
-                      {/* Upload Zone */}
-                      <div
-                        className="border-2 border-dashed border-white/10 rounded-xl p-4 text-center hover:border-indigo-500/50 hover:bg-indigo-500/5 transition-all cursor-pointer"
-                        onClick={() => document.getElementById('file-input')?.click()}
-                      >
-                        <input
-                          id="file-input"
-                          type="file"
-                          multiple
-                          accept="image/*"
-                          className="hidden"
-                          onChange={(e) => {
-                            const files = e.target.files;
-                            if (files) {
-                              Array.from(files).forEach(file => {
-                                if (!file.type.startsWith('image/')) {
-                                  setToast({ message: `ไฟล์ ${file.name} ต้องเป็นรูปภาพเท่านั้น`, type: "error" });
-                                  return;
-                                }
-                                if (file.size > 2 * 1024 * 1024) {
-                                  setToast({ message: `ไฟล์ ${file.name} ใหญ่เกิน 2MB`, type: "error" });
-                                  return;
-                                }
-                                const reader = new FileReader();
-                                reader.onload = () => {
-                                  setSelectedFiles(prev => [...prev, {
-                                    name: file.name,
-                                    type: file.type,
-                                    size: file.size,
-                                    data: reader.result as string
-                                  }]);
-                                };
-                                reader.readAsDataURL(file);
-                              });
-                            }
-                            e.target.value = '';
+                  <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                    <form id="task-form" onSubmit={handleSaveActivity} className="space-y-5">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">ชื่อลูกค้า</label>
+                        <SearchableCustomerSelect
+                          customers={customers}
+                          value={selectedCustomerId}
+                          onChange={(id: number, name: string) => {
+                            setSelectedCustomerId(id);
+                            setSelectedCustomerName(name);
                           }}
                         />
-                        <div className="flex flex-col items-center gap-2">
-                          <div className="w-10 h-10 rounded-full bg-indigo-500/10 flex items-center justify-center">
-                            <Paperclip className="w-5 h-5 text-indigo-400" />
-                          </div>
-                          <div>
-                            <p className="text-xs text-slate-300">คลิกเพื่อเลือกรูปภาพหรือลากไฟล์มาวาง</p>
-                            <p className="text-[10px] text-slate-500 mt-1">รองรับ: รูปภาพเท่านั้น (สูงสุด 2MB ต่อไฟล์)</p>
-                          </div>
-                        </div>
                       </div>
 
-                      {/* File Preview List */}
-                      {selectedFiles.length > 0 && (
-                        <div className="space-y-2 mt-3">
-                          {selectedFiles.map((file, idx) => (
-                            <div key={idx} className="flex items-center gap-3 p-2 bg-white/5 rounded-lg border border-white/10">
-                              {/* Thumbnail for images */}
-                              {file.type.startsWith('image/') ? (
-                                <img
-                                  src={file.data}
-                                  alt={file.name}
-                                  className="w-10 h-10 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity border border-white/10"
-                                  onClick={() => setPreviewImage(file.data)}
-                                />
-                              ) : (
-                                <div className="w-10 h-10 bg-slate-700 rounded flex items-center justify-center text-[10px] font-bold text-slate-400">
-                                  {file.name.split('.').pop()?.toUpperCase()}
-                                </div>
-                              )}
-                              <div className="flex-1 min-w-0">
-                                <p className="text-xs text-slate-300 truncate">{file.name}</p>
-                                <p className="text-[10px] text-slate-500">{(file.size / 1024).toFixed(1)} KB</p>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => setSelectedFiles(prev => prev.filter((_, i) => i !== idx))}
-                                className="p-1.5 hover:bg-rose-500/20 rounded-lg transition-colors"
-                              >
-                                <X className="w-4 h-4 text-rose-400" />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">Summary</label>
+                        <input
+                          name="title"
+                          defaultValue={editingActivity?.title}
+                          className="input-field text-xs py-2"
+                          required
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">ประเภทงาน</label>
+                        <CustomSelect
+                          value={activityType}
+                          onChange={(val) => setActivityType(val as ActivityType)}
+                          options={[
+                            { value: "Training", label: "Training" },
+                            { value: "Onboarding", label: "Onboarding" },
+                            { value: "Support", label: "Support" },
+                            { value: "Call", label: "Call" },
+                            { value: "Line", label: "Line" },
+                            { value: "Visit", label: "Visit" },
+                            { value: "Renewal", label: "Renewal" },
+                            { value: "Other", label: "Other" },
+                          ]}
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">ผู้รับผิดชอบ (Assignee)</label>
+                        <CustomSelect
+                          value={activityAssignee}
+                          onChange={(val) => setActivityAssignee(val)}
+                          options={[
+                            { value: "", label: "ไม่ระบุ" },
+                            ...users.map(u => ({ value: u.name, label: u.name }))
+                          ]}
+                        />
+                      </div>
+
+
+
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-slate-400">Description</label>
+                        <textarea
+                          name="content"
+                          defaultValue={editingActivity?.content}
+                          className="input-field text-xs py-3 min-h-[100px] resize-none"
+                        />
+                      </div>
+                    </form>
+                  </div>
+
+                  <div className="p-6 border-t border-white/5 flex gap-3 shrink-0">
+                    <button type="button" onClick={() => setActivityModalOpen(false)} className="flex-1 btn btn-ghost py-3 rounded-xl font-bold text-slate-400 hover:bg-white/5">Cancel</button>
+                    <button form="task-form" type="submit" disabled={isSavingActivity} className="flex-1 btn btn-primary py-3 rounded-xl font-bold shadow-xl shadow-indigo-500/20 active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed">
+                      {isSavingActivity ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          Saving...
+                        </span>
+                      ) : (
+                        "Save Task"
                       )}
-                    </div>
-                  </form>
-                </div>
-                <div className="p-6 border-t border-white/5 flex gap-2">
-                  <button onClick={() => setIssueModalOpen(false)} className="btn btn-ghost flex-1">Cancel</button>
-                  <button form="issue-form" type="submit" className="btn btn-primary flex-1">Save</button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {deleteConfirm && (
-            <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-              <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setDeleteConfirm(null)} />
-              <div className="glass-card w-full max-w-sm p-6 relative border-rose-500/20 text-center">
-                <h3 className="text-lg font-bold mb-2">ยืนยันการลบ?</h3>
-                <p className="text-sm text-slate-400 mb-6">{deleteConfirm.title}</p>
-                <div className="flex gap-3">
-                  <button onClick={() => setDeleteConfirm(null)} className="btn btn-ghost flex-1">ยกเลิก</button>
-                  <button onClick={async () => {
-                    if (deleteConfirm.type === 'customer' && deleteConfirm.id) handleDeleteCustomer(deleteConfirm.id);
-                    if (deleteConfirm.type === 'issue' && deleteConfirm.id) handleDeleteIssue(deleteConfirm.id);
-                    if (deleteConfirm.type === 'branch' && deleteConfirm.index !== undefined) {
-                      const filtered = branchInputs.filter((_, i) => i !== deleteConfirm.index);
-                      setBranchInputs(filtered);
-                      setActiveBranchIndex(Math.max(0, (deleteConfirm.index || 0) - 1));
-                    }
-                    if (deleteConfirm.type === 'activity' && deleteConfirm.id) {
-                      if (isDeleting) return;
-                      const prevActivities = [...activities];
-                      const updatedActivities = activities.filter(a => a.id !== deleteConfirm.id);
-                      setActivities(updatedActivities);
-                      localStorage.setItem("crm_activities_v2", JSON.stringify(updatedActivities));
-                      setToast({ message: "กำลังลบกิจกรรม...", type: "info" });
-                      setIsDeleting(true);
-                      const res = await deleteActivity(deleteConfirm.id);
-                      setIsDeleting(false);
-                      if (!res.success) {
-                        setActivities(prevActivities);
-                        setToast({ message: "เกิดข้อผิดพลาด: " + res.error, type: "error" });
-                        fetchDataDebounced();
-                      } else {
-                        setToast({ message: "ลบกิจกรรมเรียบร้อยแล้ว", type: "success" });
-                      }
-                    }
-                    if (!isDeleting) setDeleteConfirm(null);
-                  }} disabled={isDeleting} className="btn bg-rose-500 hover:bg-rose-600 text-white flex-1 disabled:opacity-50">
-                    {isDeleting ? "กำลังลบ..." : "ลบรายการ"}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Confetti Effect */}
-          {showConfetti && (
-            <div className="fixed inset-0 z-[300] pointer-events-none overflow-hidden">
-              {[...Array(50)].map((_, i) => (
-                <div
-                  key={i}
-                  className="absolute animate-confetti"
-                  style={{
-                    left: `${Math.random() * 100}%`,
-                    top: '-10px',
-                    width: `${8 + Math.random() * 12}px`,
-                    height: `${8 + Math.random() * 12}px`,
-                    backgroundColor: ['#f59e0b', '#10b981', '#6366f1', '#ec4899', '#8b5cf6', '#06b6d4'][Math.floor(Math.random() * 6)],
-                    borderRadius: Math.random() > 0.5 ? '50%' : '2px',
-                    animationDelay: `${Math.random() * 2}s`,
-                    animationDuration: `${2 + Math.random() * 2}s`,
-                  }}
-                />
-              ))}
-            </div>
-          )}
-          {/* Activity Modal */}
-          {isActivityModalOpen && (
-            <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
-              <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setActivityModalOpen(false)} />
-              <div className="glass-card w-full max-w-lg relative shadow-2xl border-indigo-500/20 flex flex-col h-[85vh] max-h-[90vh] overflow-hidden">
-                <div className="p-6 border-b border-white/5 shrink-0">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-bold flex items-center gap-2 text-white">
-                      <HistoryIcon className="w-5 h-5 text-indigo-400" />
-                      {editingActivity ? "Edit Task" : "Add Task"}
-                    </h2>
-                    <button onClick={() => setActivityModalOpen(false)} className="text-slate-400 hover:text-white transition-colors p-1 hover:bg-white/5 rounded-lg">
-                      <X />
                     </button>
                   </div>
                 </div>
-
-                {/* Status Flow Bar */}
-                <div className="px-6 py-4 bg-white/[0.02] border-b border-white/5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-slate-400">Status:</span>
-
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setActivityStatus("Open")}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${activityStatus === "Open"
-                          ? "bg-amber-500 text-white shadow-lg shadow-amber-500/30 scale-105"
-                          : "bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20"
-                          }`}
-                      >
-                        Open
-                      </button>
-
-                      <span className="text-slate-600">→</span>
-
-                      <button
-                        type="button"
-                        onClick={() => setActivityStatus("In Progress")}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${activityStatus === "In Progress"
-                          ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/30 scale-105"
-                          : "bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 border border-indigo-500/20"
-                          }`}
-                      >
-                        In Progress
-                      </button>
-
-                      <span className="text-slate-600">→</span>
-
-                      <button
-                        type="button"
-                        onClick={() => setActivityStatus("Success")}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${activityStatus === "Success"
-                          ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 scale-105"
-                          : "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20"
-                          }`}
-                      >
-                        Success
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
-                  <form id="task-form" onSubmit={handleSaveActivity} className="space-y-5">
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">ชื่อลูกค้า</label>
-                      <SearchableCustomerSelect
-                        customers={customers}
-                        value={selectedCustomerId}
-                        onChange={(id: number, name: string) => {
-                          setSelectedCustomerId(id);
-                          setSelectedCustomerName(name);
-                        }}
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">Summary</label>
-                      <input
-                        name="title"
-                        defaultValue={editingActivity?.title}
-                        className="input-field text-xs py-2"
-                        required
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">ประเภทงาน</label>
-                      <CustomSelect
-                        value={activityType}
-                        onChange={(val) => setActivityType(val as ActivityType)}
-                        options={[
-                          { value: "Training", label: "Training" },
-                          { value: "Onboarding", label: "Onboarding" },
-                          { value: "Support", label: "Support" },
-                          { value: "Call", label: "Call" },
-                          { value: "Line", label: "Line" },
-                          { value: "Visit", label: "Visit" },
-                          { value: "Renewal", label: "Renewal" },
-                          { value: "Other", label: "Other" },
-                        ]}
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">ผู้รับผิดชอบ (Assignee)</label>
-                      <CustomSelect
-                        value={activityAssignee}
-                        onChange={(val) => setActivityAssignee(val)}
-                        options={[
-                          { value: "", label: "ไม่ระบุ" },
-                          ...users.map(u => ({ value: u.name, label: u.name }))
-                        ]}
-                      />
-                    </div>
-
-
-
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-slate-400">Description</label>
-                      <textarea
-                        name="content"
-                        defaultValue={editingActivity?.content}
-                        className="input-field text-xs py-3 min-h-[100px] resize-none"
-                      />
-                    </div>
-                  </form>
-                </div>
-
-                <div className="p-6 border-t border-white/5 flex gap-3 shrink-0">
-                  <button type="button" onClick={() => setActivityModalOpen(false)} className="flex-1 btn btn-ghost py-3 rounded-xl font-bold text-slate-400 hover:bg-white/5">Cancel</button>
-                  <button form="task-form" type="submit" disabled={isSavingActivity} className="flex-1 btn btn-primary py-3 rounded-xl font-bold shadow-xl shadow-indigo-500/20 active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed">
-                    {isSavingActivity ? (
-                      <span className="flex items-center justify-center gap-2">
-                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        Saving...
-                      </span>
-                    ) : (
-                      "Save Task"
-                    )}
-                  </button>
-                </div>
               </div>
-            </div>
-          )}
+            )
+          }
 
           {/* Lead Modal */}
-          {isLeadModalOpen && (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-              <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setLeadModalOpen(false)} />
-              <div className="glass-card w-full max-w-2xl max-h-[90vh] flex flex-col relative shadow-2xl">
-                <div className="p-6 border-b border-white/5 flex items-center justify-between shrink-0">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400">
-                      <Plus className="w-5 h-5" />
+          {
+            isLeadModalOpen && (
+              <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setLeadModalOpen(false)} />
+                <div className="glass-card w-full max-w-2xl max-h-[90vh] flex flex-col relative shadow-2xl">
+                  <div className="p-6 border-b border-white/5 flex items-center justify-between shrink-0">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400">
+                        <Plus className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-bold text-white">{editingLead ? "แก้ไขข้อมูลลีด" : "เพิ่มลีดใหม่"}</h2>
+                        <p className="text-xs text-slate-400">กรอกข้อมูลลีดให้ครบถ้วนเพื่อใช้ในการติดตาม</p>
+                      </div>
                     </div>
-                    <div>
-                      <h2 className="text-xl font-bold text-white">{editingLead ? "แก้ไขข้อมูลลีด" : "เพิ่มลีดใหม่"}</h2>
-                      <p className="text-xs text-slate-400">กรอกข้อมูลลีดให้ครบถ้วนเพื่อใช้ในการติดตาม</p>
-                    </div>
+                    <button onClick={() => setLeadModalOpen(false)} className="p-2 hover:bg-white/5 rounded-lg text-slate-400 hover:text-white transition-colors">
+                      <X className="w-5 h-5" />
+                    </button>
                   </div>
-                  <button onClick={() => setLeadModalOpen(false)} className="p-2 hover:bg-white/5 rounded-lg text-slate-400 hover:text-white transition-colors">
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
 
-                <div className="overflow-y-auto p-6 custom-scrollbar flex-1">
-                  <form id="lead-form" onSubmit={handleSaveLead} className="grid grid-cols-2 gap-6">
-                    <div className="space-y-1.5 col-span-2 md:col-span-1">
-                      <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">เลขที่ลีด (Lead Number)</label>
-                      <input
-                        name="leadNumber"
-                        defaultValue={editingLead?.leadNumber || `L${Date.now().toString().slice(-6)}`}
-                        className="input-field text-sm font-bold text-indigo-400"
-                        required
-                        placeholder="L000000"
-                      />
-                    </div>
+                  <div className="overflow-y-auto p-6 custom-scrollbar flex-1">
+                    <form id="lead-form" onSubmit={handleSaveLead} className="grid grid-cols-2 gap-6">
+                      <div className="space-y-1.5 col-span-2 md:col-span-1">
+                        <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">เลขที่ลีด (Lead Number)</label>
+                        <input
+                          name="leadNumber"
+                          defaultValue={editingLead?.leadNumber || `L${Date.now().toString().slice(-6)}`}
+                          className="input-field text-sm font-bold text-indigo-400"
+                          required
+                          placeholder="L000000"
+                        />
+                      </div>
 
-                    <div className="space-y-1.5 col-span-2 md:col-span-1">
-                      <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">Product</label>
-                      <CustomSelect
-                        name="product"
-                        defaultValue={editingLead?.product || "Dr.Ease"}
-                        options={[
-                          { value: "Dr.Ease", label: "Dr.Ease" },
-                          { value: "Ease POS", label: "Ease POS" },
-                        ]}
-                      />
-                    </div>
+                      <div className="space-y-1.5 col-span-2 md:col-span-1">
+                        <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">Product</label>
+                        <CustomSelect
+                          name="product"
+                          defaultValue={editingLead?.product || "Dr.Ease"}
+                          options={[
+                            { value: "Dr.Ease", label: "Dr.Ease" },
+                            { value: "Ease POS", label: "Ease POS" },
+                          ]}
+                        />
+                      </div>
 
-                    <div className="space-y-1.5 col-span-2">
-                      <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">ชื่อลูกค้า / คลินิก / ร้าน</label>
-                      <input
-                        name="customerName"
-                        defaultValue={editingLead?.customerName}
-                        className="input-field text-sm font-semibold"
-                        required
-                        placeholder="ระบุชื่อลูกค้า"
-                      />
-                    </div>
+                      <div className="space-y-1.5 col-span-2">
+                        <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">ชื่อลูกค้า / คลินิก / ร้าน</label>
+                        <input
+                          name="customerName"
+                          defaultValue={editingLead?.customerName}
+                          className="input-field text-sm font-semibold"
+                          required
+                          placeholder="ระบุชื่อลูกค้า"
+                        />
+                      </div>
 
-                    <div className="space-y-1.5 col-span-2 md:col-span-1">
-                      <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">เบอร์โทรศัพท์</label>
-                      <input
-                        name="phone"
-                        defaultValue={editingLead?.phone}
-                        className="input-field text-sm font-mono"
-                        required
-                        placeholder="08X-XXXXXXX"
-                      />
-                    </div>
+                      <div className="space-y-1.5 col-span-2 md:col-span-1">
+                        <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">เบอร์โทรศัพท์</label>
+                        <input
+                          name="phone"
+                          defaultValue={editingLead?.phone}
+                          className="input-field text-sm font-mono"
+                          required
+                          placeholder="08X-XXXXXXX"
+                        />
+                      </div>
 
-                    <div className="space-y-1.5 col-span-2 md:col-span-1">
-                      <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">เซลล์ผู้ดูแล (Sales)</label>
-                      <CustomSelect
-                        name="salesName"
-                        defaultValue={editingLead?.salesName || "Aoey"}
-                        options={[
-                          { value: "Aoey", label: "Aoey" },
-                          { value: "Yo", label: "Yo" },
-                        ]}
-                      />
-                    </div>
+                      <div className="space-y-1.5 col-span-2 md:col-span-1">
+                        <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">เซลล์ผู้ดูแล (Sales)</label>
+                        <CustomSelect
+                          name="salesName"
+                          defaultValue={editingLead?.salesName || "Aoey"}
+                          options={[
+                            { value: "Aoey", label: "Aoey" },
+                            { value: "Yo", label: "Yo" },
+                          ]}
+                        />
+                      </div>
 
-                    <div className="space-y-1.5 col-span-2 md:col-span-1">
-                      <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">ที่มาลีด (Lead Source)</label>
-                      <CustomSelect
-                        name="source"
-                        defaultValue={editingLead?.source || "ยิงแอด"}
-                        options={[
-                          { value: "ยิงแอด", label: "ยิงแอด" },
-                          { value: "เซลล์หา", label: "เซลล์หา" },
-                          { value: "พาร์ทเนอร์", label: "พาร์ทเนอร์" },
-                          { value: "บริษัทหา", label: "บริษัทหา" },
-                        ]}
-                      />
-                    </div>
+                      <div className="space-y-1.5 col-span-2 md:col-span-1">
+                        <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">ที่มาลีด (Lead Source)</label>
+                        <CustomSelect
+                          name="source"
+                          defaultValue={editingLead?.source || "ยิงแอด"}
+                          options={[
+                            { value: "ยิงแอด", label: "ยิงแอด" },
+                            { value: "เซลล์หา", label: "เซลล์หา" },
+                            { value: "พาร์ทเนอร์", label: "พาร์ทเนอร์" },
+                            { value: "บริษัทหา", label: "บริษัทหา" },
+                          ]}
+                        />
+                      </div>
 
-                    <div className="space-y-1.5 col-span-2 md:col-span-1">
-                      <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">วันที่รับลีด (Received Date)</label>
-                      <CustomDatePicker
-                        value={modalLeadDate}
-                        onChange={setModalLeadDate}
-                        placeholder="เลือกวันที่รับลีด"
-                        className="w-full"
-                      />
-                      <input type="hidden" name="receivedDate" value={modalLeadDate} />
-                    </div>
+                      <div className="space-y-1.5 col-span-2 md:col-span-1">
+                        <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">วันที่รับลีด (Received Date)</label>
+                        <CustomDatePicker
+                          value={modalLeadDate}
+                          onChange={setModalLeadDate}
+                          placeholder="เลือกวันที่รับลีด"
+                          className="w-full"
+                        />
+                        <input type="hidden" name="receivedDate" value={modalLeadDate} />
+                      </div>
 
-                    <div className="space-y-1.5 col-span-2 md:col-span-1">
-                      <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">ประเภทลีด (Lead Type)</label>
-                      <CustomSelect
-                        name="leadType"
-                        defaultValue={editingLead?.leadType || "LINE"}
-                        options={[
-                          { value: "LINE", label: "LINE" },
-                          { value: "Facebook", label: "Facebook" },
-                          { value: "Call", label: "Call" },
-                          { value: "ลีดจากสัมนา", label: "ลีดจากสัมนา" },
-                          { value: "ลูกค้าเก่า ต่อสัญญา", label: "ลูกค้าเก่า ต่อสัญญา" },
-                          { value: "ขบายสัญญาเพิ่ม", label: "ขบายสัญญาเพิ่ม" },
-                          { value: "ลีดซ้ำ", label: "ลีดซ้ำ" },
-                        ]}
-                      />
-                    </div>
+                      <div className="space-y-1.5 col-span-2 md:col-span-1">
+                        <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">ประเภทลีด (Lead Type)</label>
+                        <CustomSelect
+                          name="leadType"
+                          defaultValue={editingLead?.leadType || "LINE"}
+                          options={[
+                            { value: "LINE", label: "LINE" },
+                            { value: "Facebook", label: "Facebook" },
+                            { value: "Call", label: "Call" },
+                            { value: "ลีดจากสัมนา", label: "ลีดจากสัมนา" },
+                            { value: "ลูกค้าเก่า ต่อสัญญา", label: "ลูกค้าเก่า ต่อสัญญา" },
+                            { value: "ขบายสัญญาเพิ่ม", label: "ขบายสัญญาเพิ่ม" },
+                            { value: "ลีดซ้ำ", label: "ลีดซ้ำ" },
+                          ]}
+                        />
+                      </div>
 
-                    <div className="space-y-1.5 col-span-2">
-                      <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">หมายเหตุ (Notes)</label>
-                      <textarea
-                        name="notes"
-                        defaultValue={editingLead?.notes}
-                        className="input-field text-sm min-h-[100px] resize-none py-3"
-                        placeholder="เพิ่มเติม..."
-                      />
-                    </div>
-                  </form>
-                </div>
+                      <div className="space-y-1.5 col-span-2">
+                        <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">หมายเหตุ (Notes)</label>
+                        <textarea
+                          name="notes"
+                          defaultValue={editingLead?.notes}
+                          className="input-field text-sm min-h-[100px] resize-none py-3"
+                          placeholder="เพิ่มเติม..."
+                        />
+                      </div>
+                    </form>
+                  </div>
 
-                <div className="p-6 border-t border-white/5 flex gap-3 shrink-0">
-                  <button type="button" onClick={() => setLeadModalOpen(false)} className="flex-1 btn btn-ghost py-3 rounded-xl font-bold">Cancel</button>
-                  <button form="lead-form" type="submit" className="flex-1 btn btn-primary py-3 rounded-xl font-bold shadow-xl shadow-indigo-500/20 active:scale-95 transition-transform">
-                    {editingLead ? "Save Changes" : "Create Lead"}
-                  </button>
+                  <div className="p-6 border-t border-white/5 flex gap-3 shrink-0">
+                    <button type="button" onClick={() => setLeadModalOpen(false)} className="flex-1 btn btn-ghost py-3 rounded-xl font-bold">Cancel</button>
+                    <button form="lead-form" type="submit" className="flex-1 btn btn-primary py-3 rounded-xl font-bold shadow-xl shadow-indigo-500/20 active:scale-95 transition-transform">
+                      {editingLead ? "Save Changes" : "Create Lead"}
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )
+          }
 
           {/* Delete Confirmation Modal for Activity & Leads */}
-          {deleteConfirm?.type === 'activity' && (
-            <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
-              <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-              <div className="glass-card w-full max-w-sm p-6 relative">
-                <div className="flex flex-col items-center text-center space-y-4">
-                  <div className="w-12 h-12 rounded-full bg-rose-500/10 flex items-center justify-center text-rose-500">
-                    <Trash2 className="w-6 h-6" />
-                  </div>
-                  <div className="space-y-2">
-                    <h3 className="text-lg font-bold text-white">ยืนยันการลบ</h3>
-                    <p className="text-xs text-slate-400 leading-relaxed px-4">{deleteConfirm.title}</p>
-                  </div>
-                  <div className="flex gap-3 w-full">
-                    <button onClick={() => setDeleteConfirm(null)} className="flex-1 btn btn-ghost py-2">ยกเลิก</button>
-                    <button onClick={async () => {
-                      console.log('Delete confirm clicked, id:', deleteConfirm.id, 'currentView:', currentView);
-                      if (deleteConfirm.id) {
-                        // Check if it's in leads view
-                        if (currentView === 'leads') {
-                          console.log('Calling handleDeleteLead with id:', deleteConfirm.id);
-                          await handleDeleteLead(deleteConfirm.id);
-                          setDeleteConfirm(null);
-                        } else {
-                          const prevActivities = [...activities];
-                          const updated = activities.filter(a => a.id !== deleteConfirm.id);
-                          setActivities(updated);
-                          setDeleteConfirm(null);
+          {
+            deleteConfirm?.type === 'activity' && (
+              <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
+                <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+                <div className="glass-card w-full max-w-sm p-6 relative">
+                  <div className="flex flex-col items-center text-center space-y-4">
+                    <div className="w-12 h-12 rounded-full bg-rose-500/10 flex items-center justify-center text-rose-500">
+                      <Trash2 className="w-6 h-6" />
+                    </div>
+                    <div className="space-y-2">
+                      <h3 className="text-lg font-bold text-white">ยืนยันการลบ</h3>
+                      <p className="text-xs text-slate-400 leading-relaxed px-4">{deleteConfirm.title}</p>
+                    </div>
+                    <div className="flex gap-3 w-full">
+                      <button onClick={() => setDeleteConfirm(null)} className="flex-1 btn btn-ghost py-2">ยกเลิก</button>
+                      <button onClick={async () => {
+                        console.log('Delete confirm clicked, id:', deleteConfirm.id, 'currentView:', currentView);
+                        if (deleteConfirm.id) {
+                          // Check if it's in leads view
+                          if (currentView === 'leads') {
+                            console.log('Calling handleDeleteLead with id:', deleteConfirm.id);
+                            await handleDeleteLead(deleteConfirm.id);
+                            setDeleteConfirm(null);
+                          } else {
+                            const prevActivities = [...activities];
+                            const updated = activities.filter(a => a.id !== deleteConfirm.id);
+                            setActivities(updated);
+                            setDeleteConfirm(null);
 
-                          try {
-                            const result = await deleteActivity(deleteConfirm.id);
-                            if (result.success) {
-                              setToast({ message: "ลบกิจกรรมเรียบร้อยแล้ว", type: "success" });
-                            } else {
+                            try {
+                              const result = await deleteActivity(deleteConfirm.id);
+                              if (result.success) {
+                                setToast({ message: "ลบกิจกรรมเรียบร้อยแล้ว", type: "success" });
+                              } else {
+                                setActivities(prevActivities);
+                                setToast({ message: "เกิดข้อผิดพลาดในการลบ: " + result.error, type: "error" });
+                              }
+                            } catch (err) {
+                              console.error("Failed to delete activity:", err);
                               setActivities(prevActivities);
-                              setToast({ message: "เกิดข้อผิดพลาดในการลบ: " + result.error, type: "error" });
+                              setToast({ message: "เกิดข้อผิดพลาดในการเชื่อมต่อ", type: "error" });
                             }
-                          } catch (err) {
-                            console.error("Failed to delete activity:", err);
-                            setActivities(prevActivities);
-                            setToast({ message: "เกิดข้อผิดพลาดในการเชื่อมต่อ", type: "error" });
                           }
                         }
-                      }
-                    }} className="flex-1 bg-rose-500 hover:bg-rose-600 text-white font-bold py-2 rounded-xl transition-colors">ลบข้อมูล</button>
+                      }} className="flex-1 bg-rose-500 hover:bg-rose-600 text-white font-bold py-2 rounded-xl transition-colors">ลบข้อมูล</button>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
-        </div>
-      )}
+            )
+          }
+        </div >
+      )
+      }
       {/* Image Preview Modal */}
-      {previewImage && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setPreviewImage(null)}>
-          <div className="absolute top-4 right-4 flex gap-2">
-            <a
-              href={previewImage}
-              download={`image-${Date.now()}.png`}
-              className="p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors flex items-center justify-center"
+      {
+        previewImage && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setPreviewImage(null)}>
+            <div className="absolute top-4 right-4 flex gap-2">
+              <a
+                href={previewImage}
+                download={`image-${Date.now()}.png`}
+                className="p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors flex items-center justify-center"
+                onClick={(e) => e.stopPropagation()}
+                title="Download Image"
+              >
+                <Download className="w-6 h-6" />
+              </a>
+              <button
+                className="p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors flex items-center justify-center"
+                onClick={() => setPreviewImage(null)}
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <img
+              src={previewImage}
+              alt="Preview"
+              className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl animate-in zoom-in-95 duration-200"
               onClick={(e) => e.stopPropagation()}
-              title="Download Image"
-            >
-              <Download className="w-6 h-6" />
-            </a>
-            <button
-              className="p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors flex items-center justify-center"
-              onClick={() => setPreviewImage(null)}
-            >
-              <X className="w-6 h-6" />
-            </button>
+            />
           </div>
-          <img
-            src={previewImage}
-            alt="Preview"
-            className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl animate-in zoom-in-95 duration-200"
-            onClick={(e) => e.stopPropagation()}
-          />
-        </div>
-      )}
-    </div>
+        )
+      }
+    </div >
   );
 }

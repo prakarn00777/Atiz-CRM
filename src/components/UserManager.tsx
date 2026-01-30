@@ -126,7 +126,7 @@ export default function UserManager({ users, roles, onSave, onDelete }: UserMana
             {/* Header with Search and Filters */}
             <div className="flex flex-col gap-4">
                 <div className="flex justify-between items-center">
-                    <h1 className="text-3xl font-bold tracking-tight">User Management</h1>
+                    <h1 className="text-3xl font-bold tracking-tight text-text-main">User Management</h1>
                     <button onClick={() => handleOpenModal()} className="btn btn-primary px-6">
                         <Plus className="w-5 h-5" />
                         <span>Add User</span>
@@ -136,7 +136,7 @@ export default function UserManager({ users, roles, onSave, onDelete }: UserMana
                 {/* Search and Filter Bar */}
                 <div className="flex items-center gap-3 flex-wrap">
                     <div className="relative flex-1 min-w-[200px] max-w-md">
-                        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
                         <input
                             type="text"
                             placeholder="ค้นหาชื่อหรือ Username..."
@@ -165,8 +165,8 @@ export default function UserManager({ users, roles, onSave, onDelete }: UserMana
             <div className="glass-card overflow-hidden border-indigo-500/5 flex flex-col h-[calc(100vh-220px)]">
                 <div className="overflow-auto custom-scrollbar flex-1">
                     <table className="w-full text-left border-collapse relative">
-                        <thead className="sticky top-0 z-10 bg-[#0f172a] shadow-sm">
-                            <tr className="bg-white/5 text-slate-400 text-xs uppercase tracking-wider border-b border-white/5">
+                        <thead className="sticky top-0 z-10 bg-card-bg shadow-sm backdrop-blur-xl">
+                            <tr className="bg-bg-hover text-text-muted text-xs uppercase tracking-wider border-b border-border-light">
                                 <th className="px-4 py-3 font-semibold w-[5%] text-center">No.</th>
                                 <th className="px-4 py-3 font-semibold w-[20%]">ชื่อ-นามสกุล</th>
                                 <th className="px-4 py-3 font-semibold w-[15%]">Username</th>
@@ -175,23 +175,23 @@ export default function UserManager({ users, roles, onSave, onDelete }: UserMana
                                 <th className="px-4 py-3 font-semibold w-[10%] text-center">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-white/5">
+                        <tbody className="divide-y divide-border-light">
                             {paginatedUsers.length > 0 ? (
                                 paginatedUsers.map((u, index) => (
-                                    <tr key={u.id} className="group hover:bg-white/[0.02] transition-colors h-14">
+                                    <tr key={u.id} className="group hover:bg-bg-hover transition-colors h-14">
                                         <td className="px-4 py-3 text-center">
-                                            <span className="text-xs text-slate-500">{(currentPage - 1) * itemsPerPage + index + 1}</span>
+                                            <span className="text-xs text-text-muted opacity-60">{(currentPage - 1) * itemsPerPage + index + 1}</span>
                                         </td>
                                         <td className="px-4 py-3">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-8 h-8 rounded-full bg-indigo-500/10 flex items-center justify-center text-indigo-400">
                                                     <User className="w-4 h-4" />
                                                 </div>
-                                                <span className="font-semibold text-slate-200 text-sm">{u.name}</span>
+                                                <span className="font-semibold text-text-main text-sm">{u.name}</span>
                                             </div>
                                         </td>
                                         <td className="px-4 py-3">
-                                            <span className="text-sm text-slate-400 font-mono">{u.username}</span>
+                                            <span className="text-sm text-text-muted opacity-70 font-mono">{u.username}</span>
                                         </td>
                                         <td className="px-4 py-3 text-center">
                                             <span className="px-3 py-1 rounded-full bg-indigo-500/10 text-xs text-indigo-300 font-medium border border-indigo-500/20">
@@ -201,8 +201,8 @@ export default function UserManager({ users, roles, onSave, onDelete }: UserMana
                                         <td className="px-4 py-3 text-center">
                                             {u.modifiedBy ? (
                                                 <div className="flex flex-col items-center">
-                                                    <span className="text-xs font-medium text-slate-300">{u.modifiedBy}</span>
-                                                    <span className="text-[10px] text-slate-500">
+                                                    <span className="text-xs font-medium text-text-main">{u.modifiedBy}</span>
+                                                    <span className="text-[10px] text-text-muted opacity-70">
                                                         {new Date(u.modifiedAt!).toLocaleString('th-TH', {
                                                             day: '2-digit',
                                                             month: '2-digit',
@@ -213,13 +213,13 @@ export default function UserManager({ users, roles, onSave, onDelete }: UserMana
                                                     </span>
                                                 </div>
                                             ) : (
-                                                <span className="text-xs text-slate-600">-</span>
+                                                <span className="text-xs text-text-muted opacity-50">-</span>
                                             )}
                                         </td>
                                         <td className="px-4 py-3 text-center">
                                             <button
                                                 onClick={(e) => handleMenuToggle(e, u.id)}
-                                                className={`p-2 rounded-lg transition-colors ${activeMenu === u.id ? 'bg-indigo-500/20 text-white' : 'hover:bg-white/5 text-slate-400 hover:text-white'}`}
+                                                className={`p-2 rounded-lg transition-colors ${activeMenu === u.id ? 'bg-indigo-500/20 text-indigo-500 dark:text-white' : 'hover:bg-bg-hover text-text-muted hover:text-text-main'}`}
                                             >
                                                 <MoreVertical className="w-4 h-4" />
                                             </button>
@@ -228,7 +228,7 @@ export default function UserManager({ users, roles, onSave, onDelete }: UserMana
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={6} className="px-4 py-12 text-center text-slate-500">
+                                    <td colSpan={6} className="px-4 py-12 text-center text-text-muted opacity-60">
                                         ไม่พบข้อมูลผู้ใช้งาน
                                     </td>
                                 </tr>
@@ -239,22 +239,22 @@ export default function UserManager({ users, roles, onSave, onDelete }: UserMana
 
                 {/* Pagination */}
                 {totalPages > 1 && (
-                    <div className="px-4 py-3 border-t border-white/5 flex items-center justify-between bg-white/[0.02]">
-                        <span className="text-xs text-slate-500">
+                    <div className="px-4 py-3 border-t border-border-light flex items-center justify-between bg-bg-hover/30">
+                        <span className="text-xs text-text-muted">
                             แสดง {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, filteredUsers.length)} จาก {filteredUsers.length} รายการ
                         </span>
                         <div className="flex items-center gap-1">
                             <button
                                 onClick={() => setCurrentPage(1)}
                                 disabled={currentPage === 1}
-                                className="px-2 py-1 text-xs rounded hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed text-slate-400"
+                                className="px-2 py-1 text-xs rounded hover:bg-bg-hover disabled:opacity-50 disabled:cursor-not-allowed text-text-muted"
                             >
                                 ««
                             </button>
                             <button
                                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                                 disabled={currentPage === 1}
-                                className="px-2 py-1 text-xs rounded hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed text-slate-400"
+                                className="px-2 py-1 text-xs rounded hover:bg-bg-hover disabled:opacity-50 disabled:cursor-not-allowed text-text-muted"
                             >
                                 «
                             </button>
@@ -274,8 +274,8 @@ export default function UserManager({ users, roles, onSave, onDelete }: UserMana
                                         key={pageNum}
                                         onClick={() => setCurrentPage(pageNum)}
                                         className={`w-7 h-7 text-xs rounded transition-colors ${currentPage === pageNum
-                                            ? 'bg-indigo-500 text-white'
-                                            : 'hover:bg-white/5 text-slate-400'
+                                            ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
+                                            : 'hover:bg-bg-hover text-text-muted'
                                             }`}
                                     >
                                         {pageNum}
@@ -285,14 +285,14 @@ export default function UserManager({ users, roles, onSave, onDelete }: UserMana
                             <button
                                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                                 disabled={currentPage === totalPages}
-                                className="px-2 py-1 text-xs rounded hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed text-slate-400"
+                                className="px-2 py-1 text-xs rounded hover:bg-bg-hover disabled:opacity-50 disabled:cursor-not-allowed text-text-muted"
                             >
                                 »
                             </button>
                             <button
                                 onClick={() => setCurrentPage(totalPages)}
                                 disabled={currentPage === totalPages}
-                                className="px-2 py-1 text-xs rounded hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed text-slate-400"
+                                className="px-2 py-1 text-xs rounded hover:bg-bg-hover disabled:opacity-50 disabled:cursor-not-allowed text-text-muted"
                             >
                                 »»
                             </button>
@@ -304,7 +304,7 @@ export default function UserManager({ users, roles, onSave, onDelete }: UserMana
             {/* Action Menu Portal */}
             {mounted && activeMenu !== null && menuPosition && createPortal(
                 <div
-                    className="fixed z-[200] bg-slate-800 border border-white/10 rounded-lg shadow-xl py-1 min-w-[140px]"
+                    className="fixed z-[200] bg-card-bg border border-border rounded-lg shadow-xl py-1 min-w-[140px] backdrop-blur-xl"
                     style={{ top: menuPosition.top + 4, left: menuPosition.left - 140 }}
                     onClick={(e) => e.stopPropagation()}
                 >
@@ -314,9 +314,9 @@ export default function UserManager({ users, roles, onSave, onDelete }: UserMana
                             if (user) handleOpenModal(user);
                             setActiveMenu(null);
                         }}
-                        className="w-full px-4 py-2 text-left text-sm text-slate-300 hover:bg-white/5 flex items-center gap-2"
+                        className="w-full px-4 py-2 text-left text-sm text-text-main hover:bg-bg-hover flex items-center gap-2"
                     >
-                        <Edit2 className="w-4 h-4" />
+                        <Edit2 className="w-4 h-4 text-indigo-500" />
                         แก้ไข
                     </button>
                     <button
@@ -337,21 +337,21 @@ export default function UserManager({ users, roles, onSave, onDelete }: UserMana
             {/* User Details Modal */}
             {isModalOpen && (
                 <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-black/80 backdrop-blur-md" />
-                    <div className="glass-card w-full max-w-lg max-h-[90vh] flex flex-col relative shadow-2xl border-indigo-500/20">
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+                    <div className="bg-card-bg w-full max-w-lg max-h-[90vh] flex flex-col relative shadow-2xl border border-border rounded-2xl overflow-hidden">
                         {/* Header */}
-                        <div className="p-6 border-b border-white/5 flex justify-between items-center shrink-0">
+                        <div className="p-6 border-b border-border-light flex justify-between items-center shrink-0">
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400">
+                                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-500">
                                     <User className="w-5 h-5" />
                                 </div>
                                 <div>
-                                    <h2 className="text-xl font-bold text-white">{editingUser ? "แก้ไขผู้ใช้งาน" : "เพิ่มผู้ใช้งาน"}</h2>
-                                    <p className="text-xs text-slate-500">กรอกข้อมูลผู้ใช้งานระบบ</p>
+                                    <h2 className="text-xl font-bold text-text-main">{editingUser ? "แก้ไขผู้ใช้งาน" : "เพิ่มผู้ใช้งาน"}</h2>
+                                    <p className="text-xs text-text-muted">กรอกข้อมูลผู้ใช้งานระบบ</p>
                                 </div>
                             </div>
-                            <button onClick={() => setModalOpen(false)} className="p-2 hover:bg-white/5 rounded-lg transition-colors">
-                                <X className="w-5 h-5 text-slate-400 hover:text-white" />
+                            <button onClick={() => setModalOpen(false)} className="p-2 hover:bg-bg-hover rounded-lg transition-colors">
+                                <X className="w-5 h-5 text-text-muted hover:text-text-main" />
                             </button>
                         </div>
 
@@ -428,16 +428,16 @@ export default function UserManager({ users, roles, onSave, onDelete }: UserMana
             {/* Delete Confirmation Modal */}
             {deleteConfirm && (
                 <div className="fixed inset-0 z-[250] flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setDeleteConfirm(null)} />
-                    <div className="glass-card w-full max-w-md relative shadow-2xl border-rose-500/20 animate-in zoom-in duration-200">
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setDeleteConfirm(null)} />
+                    <div className="bg-card-bg w-full max-w-md relative shadow-2xl border border-border rounded-2xl overflow-hidden animate-in zoom-in duration-200">
                         <div className="p-6 text-center">
                             <div className="w-16 h-16 rounded-full bg-rose-500/10 flex items-center justify-center text-rose-500 mx-auto mb-4">
                                 <AlertTriangle className="w-8 h-8" />
                             </div>
-                            <h3 className="text-xl font-bold text-white mb-2">ยืนยันการลบผู้ใช้งาน</h3>
-                            <p className="text-slate-400 text-sm mb-6">
-                                คุณต้องการระงับการใช้งานคุณ <span className="text-white font-semibold">&quot;{deleteConfirm.name}&quot;</span> ใช่หรือไม่? <br />
-                                <span className="text-[10px] text-rose-400/80 mt-1 block">*(ผู้ใช้งานนี้จะไม่สามารถเข้าสู่ระบบได้ชั่วคราว)*</span>
+                            <h3 className="text-xl font-bold text-text-main mb-2">ยืนยันการลบผู้ใช้งาน</h3>
+                            <p className="text-text-muted text-sm mb-6">
+                                คุณต้องการระงับการใช้งานคุณ <span className="text-text-main font-semibold">&quot;{deleteConfirm.name}&quot;</span> ใช่หรือไม่? <br />
+                                <span className="text-[10px] text-rose-500 mt-1 block">*(ผู้ใช้งานนี้จะไม่สามารถเข้าสู่ระบบได้ชั่วคราว)*</span>
                             </p>
                             <div className="flex gap-3">
                                 <button

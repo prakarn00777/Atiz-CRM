@@ -121,7 +121,7 @@ export default function CustomSelect({
                         {icon}
                     </span>
                 )}
-                <span className={`truncate text-xs ${activeValue ? "text-white" : "text-slate-400"}`}>
+                <span className={`truncate text-xs ${activeValue ? "text-text-main" : "text-text-muted"}`}>
                     {selectedOption ? selectedOption.label : placeholder}
                 </span>
                 <ChevronDown
@@ -133,7 +133,7 @@ export default function CustomSelect({
             {isOpen && createPortal(
                 <div
                     ref={portalRef}
-                    className="fixed z-[9999] py-1 bg-[#0f172a] border border-white/10 rounded-xl shadow-2xl overflow-hidden"
+                    className="fixed z-[9999] py-1 bg-card-bg border border-border rounded-xl shadow-2xl overflow-hidden backdrop-blur-xl"
                     style={{
                         top: containerRef.current ? containerRef.current.getBoundingClientRect().bottom + 6 : 0,
                         left: containerRef.current ? containerRef.current.getBoundingClientRect().left : 0,
@@ -147,9 +147,9 @@ export default function CustomSelect({
                             key={opt.value}
                             type="button"
                             onClick={() => handleSelect(opt.value)}
-                            className={`w-full text-left px-3 py-2 text-xs transition-colors duration-150 hover:bg-white/10 ${activeValue === opt.value
-                                ? "text-indigo-400 font-bold bg-indigo-500/10"
-                                : "text-slate-300"
+                            className={`w-full text-left px-3 py-2 text-xs transition-colors duration-150 hover:bg-bg-hover ${activeValue === opt.value
+                                ? "text-indigo-500 dark:text-indigo-400 font-bold bg-indigo-500/10"
+                                : "text-text-main"
                                 }`}
                         >
                             {opt.label}

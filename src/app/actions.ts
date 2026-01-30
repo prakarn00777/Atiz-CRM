@@ -2,7 +2,7 @@
 
 import { db } from "@/lib/db";
 import {
-    Customer, UsageStatus, ProductType, Lead, User, Role,
+    Customer, UsageStatus, ProductType, InstallationStatus, Lead, User, Role,
     ApiResponse, ApiErrorCode, PaginationParams, PaginationMeta,
     Installation, Issue, Activity, BusinessMetrics, generateUUID
 } from "@/types";
@@ -116,13 +116,20 @@ export async function importCustomersFromCSV(data: any[]): Promise<ApiResponse<{
 
 export async function getCustomers(params?: PaginationParams): Promise<Customer[]> {
     try {
+        console.log("[getCustomers] Starting fetch...");
         const sortBy = params?.sortBy || 'id';
         const sortOrder = params?.sortOrder === 'asc';
 
         // Build query - fetch all if no limit specified, otherwise use pagination
         let query = db
             .from('customers')
-            .select('id, name, client_code, subdomain, product_type, package, usage_status, business_type, contract_number, contract_start, contract_end, sales_name, contact_name, contact_phone, note, installation_status, branches, created_by, created_at, modified_by, modified_at')
+            .select(`
+                id, name, client_code, subdomain, product_type, package, usage_status,
+                contract_start, contract_end,
+                sales_name, note,
+                installation_status, created_by, created_at, modified_by, modified_at,
+                branches (*)
+            `)
             .order(sortBy, { ascending: sortOrder });
 
         // Only apply range if limit is explicitly specified
@@ -134,9 +141,12 @@ export async function getCustomers(params?: PaginationParams): Promise<Customer[
         const { data, error } = await query;
 
         if (error) {
+            console.error("[getCustomers] Database error:", error.message, error.code, error.details);
             log.error("Error fetching customers:", error);
             return [];
         }
+
+        console.log(`[getCustomers] Success: fetched ${data?.length || 0} customers`);
 
         return (data || []).map(row => ({
             id: Number(row.id),
@@ -146,20 +156,21 @@ export async function getCustomers(params?: PaginationParams): Promise<Customer[
             productType: (row.product_type as ProductType) || "Dr.Ease",
             package: String(row.package),
             usageStatus: (row.usage_status as UsageStatus) || "Active",
-            businessType: row.business_type ? String(row.business_type) : undefined,
-            contractNumber: row.contract_number ? String(row.contract_number) : undefined,
             contractStart: row.contract_start ? String(row.contract_start) : undefined,
             contractEnd: row.contract_end ? String(row.contract_end) : undefined,
             salesName: row.sales_name ? String(row.sales_name) : undefined,
-            contactName: row.contact_name ? String(row.contact_name) : undefined,
-            contactPhone: row.contact_phone ? String(row.contact_phone) : undefined,
             note: row.note ? String(row.note) : undefined,
             installationStatus: row.installation_status ? String(row.installation_status) : undefined,
-            branches: row.branches ? JSON.parse(String(row.branches)) : [],
-            createdBy: row.created_by ? String(row.created_by) : undefined,
-            createdAt: row.created_at ? String(row.created_at) : undefined,
             modifiedBy: row.modified_by ? String(row.modified_by) : undefined,
-            modifiedAt: row.modified_at ? String(row.modified_at) : undefined
+            modifiedAt: row.modified_at ? String(row.modified_at) : undefined,
+            branches: (row.branches as any[] || []).map(b => ({
+                id: Number(b.id),
+                name: String(b.name),
+                isMain: Boolean(b.is_main),
+                status: b.status as any,
+                address: b.address,
+                contractStart: b.contract_start
+            }))
         })) as Customer[];
     } catch (err) {
         log.error("Critical error in getCustomers:", err);
@@ -512,6 +523,8 @@ export async function deleteIssue(id: number): Promise<ApiResponse<{ deleted: bo
 export async function saveCustomer(customerData: Partial<Customer>): Promise<ApiResponse<Customer>> {
     try {
         const { id, ...rest } = customerData;
+        const toNull = (val: any) => (val === "" || val === undefined) ? null : val;
+
         const dbData = {
             name: rest.name,
             client_code: rest.clientCode,
@@ -520,19 +533,15 @@ export async function saveCustomer(customerData: Partial<Customer>): Promise<Api
             package: rest.package,
             usage_status: rest.usageStatus,
             installation_status: rest.installationStatus,
-            business_type: rest.businessType,
-            contract_number: rest.contractNumber,
-            contract_start: rest.contractStart,
-            contract_end: rest.contractEnd,
+            contract_start: toNull(rest.contractStart),
+            contract_end: toNull(rest.contractEnd),
             sales_name: rest.salesName,
-            contact_name: rest.contactName,
-            contact_phone: rest.contactPhone,
             note: rest.note,
             created_by: rest.createdBy,
             created_at: rest.createdAt,
             modified_by: rest.modifiedBy,
-            modified_at: rest.modifiedAt,
-            branches: JSON.stringify(rest.branches || [])
+            modified_at: rest.modifiedAt
+            // branches column is now legacy - managed in separate table
         };
 
         let result;
@@ -550,7 +559,87 @@ export async function saveCustomer(customerData: Partial<Customer>): Promise<Api
             return createError("No data returned from database", 'DATABASE_ERROR');
         }
 
-        return createSuccess(result as Customer);
+        // --- Branch Normalization Logic ---
+        const customerId = Number(result.id);
+        const incomingBranches = rest.branches || [];
+
+        try {
+            // 1. Get existing branches from DB for this customer
+            const { data: existingBranches } = await db
+                .from('branches')
+                .select('id')
+                .eq('customer_id', customerId);
+
+            const existingIds = (existingBranches || []).map(b => Number(b.id));
+            const incomingIds = incomingBranches
+                .filter(b => b.id && !isTemporaryId(b.id))
+                .map(b => Number(b.id));
+
+            // 2. Determine branches to delete (in DB but not in incoming)
+            const idsToDelete = existingIds.filter(id => !incomingIds.includes(id));
+            if (idsToDelete.length > 0) {
+                await db.from('branches').delete().in('id', idsToDelete);
+            }
+
+            // 3. Upsert incoming branches
+            if (incomingBranches.length > 0) {
+                const branchesToUpsert = incomingBranches.map(b => {
+                    const data: any = {
+                        customer_id: customerId,
+                        name: b.name,
+                        is_main: b.isMain,
+                        status: b.status,
+                        address: b.address,
+                        contract_start: b.contractStart
+                    };
+                    // Only include ID if it's not a temporary/new one
+                    if (b.id && !isTemporaryId(b.id)) {
+                        data.id = b.id;
+                    }
+                    return data;
+                });
+
+                const { error: branchError } = await db.from('branches').upsert(branchesToUpsert);
+                if (branchError) throw branchError;
+            }
+        } catch (branchErr: any) {
+            log.error("Error managing branches for customer:", customerId, branchErr);
+            // We don't fail the whole customer save, but log it
+        }
+
+        // Fetch the customer again with branches to return complete data
+        const { data: finalData, error: finalError } = await db
+            .from('customers')
+            .select('*, branches(*)')
+            .eq('id', customerId)
+            .maybeSingle();
+
+        if (finalError || !finalData) {
+            return createSuccess(result as Customer); // Fallback to partial data
+        }
+
+        // Map back to Customer type
+        const savedCustomer: Customer = {
+            ...result,
+            id: Number(finalData.id),
+            name: String(finalData.name),
+            clientCode: finalData.client_code,
+            subdomain: finalData.subdomain,
+            productType: finalData.product_type as ProductType,
+            package: finalData.package,
+            usageStatus: finalData.usage_status as UsageStatus,
+            installationStatus: finalData.installation_status as InstallationStatus,
+            branches: (finalData.branches as any[] || []).map(b => ({
+                id: Number(b.id),
+                name: String(b.name),
+                isMain: Boolean(b.is_main),
+                status: b.status as any,
+                address: b.address,
+                contractStart: b.contract_start
+            }))
+        } as Customer;
+
+        return createSuccess(savedCustomer);
     } catch (err) {
         return handleDbError(err, "saveCustomer");
     }

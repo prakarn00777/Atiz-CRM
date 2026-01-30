@@ -105,12 +105,12 @@ export default function CustomerTable({ customers, onEdit, onDelete, onImport }:
         <div className="space-y-6">
             <div className="flex flex-col gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Customers</h1>
+                    <h1 className="text-3xl font-bold tracking-tight text-text-main">Customers</h1>
                 </div>
 
                 <div className="flex flex-col xl:flex-row gap-4 items-start xl:items-center w-full">
                     <div className="relative w-full md:w-64 shrink-0">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted" />
                         <input
                             type="text"
                             placeholder="Search..."
@@ -190,8 +190,8 @@ export default function CustomerTable({ customers, onEdit, onDelete, onImport }:
             <div className="glass-card overflow-hidden border-indigo-500/5 flex flex-col h-[calc(100vh-175px)]">
                 <div className="overflow-auto custom-scrollbar flex-1">
                     <table className="w-full text-left border-collapse relative">
-                        <thead className="sticky top-0 z-10 bg-[#0f172a] shadow-sm">
-                            <tr className="bg-white/5 text-slate-400 text-xs uppercase tracking-wider border-b border-white/5">
+                        <thead className="sticky top-0 z-10 bg-card-bg shadow-sm backdrop-blur-xl">
+                            <tr className="bg-bg-hover text-text-muted text-xs uppercase tracking-wider border-b border-border-light">
                                 <th className="px-4 py-3 font-semibold w-[5%] text-center">No.</th>
                                 <th className="px-4 py-3 font-semibold w-[10%] text-center">ID</th>
                                 <th className="px-4 py-3 font-semibold w-[15%]">Clinic/Shop Name</th>
@@ -203,21 +203,21 @@ export default function CustomerTable({ customers, onEdit, onDelete, onImport }:
                                 <th className="px-4 py-3 font-semibold w-[10%] text-right">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-white/5">
+                        <tbody className="divide-y divide-border-light">
                             {paginatedCustomers.length > 0 ? (
                                 paginatedCustomers.map((c, index) => (
-                                    <tr key={c.id} className="group hover:bg-white/[0.02] transition-colors h-14">
+                                    <tr key={c.id} className="group hover:bg-bg-hover transition-colors h-14">
                                         <td className="px-4 py-3 text-center">
-                                            <span className="text-xs text-slate-500">{(currentPage - 1) * itemsPerPage + index + 1}</span>
+                                            <span className="text-xs text-text-muted opacity-60">{(currentPage - 1) * itemsPerPage + index + 1}</span>
                                         </td>
                                         <td className="px-4 py-3 text-center">
-                                            <span className="text-xs font-mono text-slate-400">
+                                            <span className="text-xs font-mono text-text-muted">
                                                 {c.clientCode || `DE${c.id.toString().padStart(4, "0")}`}
                                             </span>
                                         </td>
                                         <td className="px-4 py-3">
                                             <div className="flex flex-col">
-                                                <div className="font-semibold text-slate-200 text-xs truncate max-w-[150px]" title={c.name}>
+                                                <div className="font-semibold text-text-main text-xs truncate max-w-[150px]" title={c.name}>
                                                     {c.name}
                                                 </div>
                                                 <span className={`text-[10px] w-fit px-1.5 rounded mt-1 font-medium ${c.productType === "EasePos"
@@ -244,7 +244,7 @@ export default function CustomerTable({ customers, onEdit, onDelete, onImport }:
                                             )}
                                         </td>
                                         <td className="px-4 py-3 text-center">
-                                            <span className="text-xs text-slate-300 font-medium">{c.package}</span>
+                                            <span className="text-xs text-text-main font-medium">{c.package}</span>
                                         </td>
                                         <td className="px-4 py-3 text-center">
                                             <div className="flex flex-col items-center gap-1">
@@ -259,27 +259,27 @@ export default function CustomerTable({ customers, onEdit, onDelete, onImport }:
                                                 </span>
                                                 {/* Installation Status */}
                                                 <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium whitespace-nowrap ${c.installationStatus === "Completed" ? "bg-blue-500/10 text-blue-400" :
-                                                        "bg-purple-500/10 text-purple-400"
+                                                    "bg-purple-500/10 text-purple-400"
                                                     }`}>
                                                     {c.installationStatus}
                                                 </span>
                                             </div>
                                         </td>
                                         <td className="px-4 py-3 text-center">
-                                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800 border border-white/10 group-hover:border-indigo-500/30 transition-colors">
-                                                <MapPin className="w-3 h-3 text-indigo-400" />
-                                                <span className="text-xs font-medium text-slate-300">
-                                                    {1 + (c.branches?.filter(b => !b.isMain).length || 0)} <span className="text-slate-500 text-[10px] ml-0.5">สาขา</span>
+                                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-bg-hover border border-border-light group-hover:border-indigo-500/30 transition-colors">
+                                                <MapPin className="w-3 h-3 text-indigo-500 dark:text-indigo-400" />
+                                                <span className="text-xs font-medium text-text-main">
+                                                    {1 + (c.branches?.filter(b => !b.isMain).length || 0)} <span className="text-text-muted text-[10px] ml-0.5">สาขา</span>
                                                 </span>
                                             </div>
                                         </td>
                                         <td className="px-4 py-3">
                                             {c.modifiedBy ? (
                                                 <div className="flex items-start gap-2">
-                                                    <Clock className="w-3.5 h-3.5 text-slate-500 mt-0.5 flex-shrink-0" />
+                                                    <Clock className="w-3.5 h-3.5 text-text-muted opacity-50 mt-0.5 flex-shrink-0" />
                                                     <div className="flex flex-col">
-                                                        <span className="text-xs font-medium text-slate-300">{c.modifiedBy}</span>
-                                                        <span className="text-[10px] text-slate-500">
+                                                        <span className="text-xs font-medium text-text-main">{c.modifiedBy}</span>
+                                                        <span className="text-[10px] text-text-muted opacity-70">
                                                             {new Date(c.modifiedAt!).toLocaleString('th-TH', {
                                                                 month: 'short',
                                                                 day: 'numeric',
@@ -297,7 +297,7 @@ export default function CustomerTable({ customers, onEdit, onDelete, onImport }:
                                             <div className="flex justify-end">
                                                 <button
                                                     onClick={(e) => handleMenuToggle(e, c.id)}
-                                                    className={`p-2 rounded-lg transition-colors ${activeMenu === c.id ? 'bg-indigo-500/20 text-white' : 'hover:bg-white/5 text-slate-400 hover:text-white'}`}
+                                                    className={`p-2 rounded-lg transition-colors ${activeMenu === c.id ? 'bg-indigo-500/20 text-indigo-500 dark:text-white' : 'hover:bg-bg-hover text-text-muted hover:text-text-main'}`}
                                                 >
                                                     <MoreVertical className="w-4 h-4" />
                                                 </button>
@@ -309,17 +309,17 @@ export default function CustomerTable({ customers, onEdit, onDelete, onImport }:
                                                             top: `${menuPosition.top + 8}px`,
                                                             left: `${menuPosition.left - 144}px`,
                                                         }}
-                                                        className="z-[9999] w-36 py-1.5 bg-[#1e293b] border border-white/10 rounded-xl shadow-2xl animate-in fade-in zoom-in duration-150 origin-top-right"
+                                                        className="z-[9999] w-36 py-1.5 bg-card-bg border border-border rounded-xl shadow-2xl animate-in fade-in zoom-in duration-150 origin-top-right backdrop-blur-xl"
                                                         onClick={(e) => e.stopPropagation()}
                                                     >
                                                         <button
                                                             onClick={() => { onEdit(c); setActiveMenu(null); }}
-                                                            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-300 hover:bg-white/5 hover:text-white transition-colors"
+                                                            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-text-main hover:bg-bg-hover transition-colors"
                                                         >
                                                             <Edit2 className="w-3.5 h-3.5" />
                                                             แก้ไขข้อมูล
                                                         </button>
-                                                        <div className="my-1 border-t border-white/5" />
+                                                        <div className="my-1 border-t border-border-light" />
                                                         <button
                                                             onClick={() => { onDelete(c.id); setActiveMenu(null); }}
                                                             className="w-full flex items-center gap-2 px-3 py-2 text-xs text-rose-400 hover:bg-rose-500/10 transition-colors"
@@ -347,15 +347,15 @@ export default function CustomerTable({ customers, onEdit, onDelete, onImport }:
 
                 {/* Pagination Controls - Enhanced Design */}
                 {totalPages > 1 && (
-                    <div className="px-6 py-4 border-t border-white/5 bg-gradient-to-r from-white/[0.02] to-transparent">
+                    <div className="px-6 py-4 border-t border-border-light bg-gradient-to-r from-bg-hover to-transparent">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                                 <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></div>
-                                <span className="text-xs font-medium text-slate-300">
+                                <span className="text-xs font-medium text-text-main">
                                     หน้า {currentPage} / {totalPages}
                                 </span>
-                                <div className="h-4 w-px bg-white/10 mx-2"></div>
-                                <span className="text-xs text-slate-400">
+                                <div className="h-4 w-px bg-border-light mx-2"></div>
+                                <span className="text-xs text-text-muted">
                                     {((currentPage - 1) * itemsPerPage) + 1}–{Math.min(currentPage * itemsPerPage, sortedCustomers.length)} จาก {sortedCustomers.length} รายการ
                                 </span>
                             </div>
@@ -364,7 +364,7 @@ export default function CustomerTable({ customers, onEdit, onDelete, onImport }:
                                 <button
                                     onClick={() => setCurrentPage(1)}
                                     disabled={currentPage === 1}
-                                    className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/5 disabled:opacity-30 disabled:hover:bg-transparent transition-all text-slate-300 group"
+                                    className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-bg-hover disabled:opacity-30 disabled:hover:bg-transparent transition-all text-text-main group"
                                     title="หน้าแรก"
                                 >
                                     <svg className="w-4 h-4 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -375,7 +375,7 @@ export default function CustomerTable({ customers, onEdit, onDelete, onImport }:
                                 <button
                                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                                     disabled={currentPage === 1}
-                                    className="px-3 h-8 rounded-lg flex items-center gap-1.5 hover:bg-white/5 disabled:opacity-30 disabled:hover:bg-transparent transition-all text-slate-300 text-xs font-medium group"
+                                    className="px-3 h-8 rounded-lg flex items-center gap-1.5 hover:bg-bg-hover disabled:opacity-30 disabled:hover:bg-transparent transition-all text-text-main text-xs font-medium group"
                                 >
                                     <svg className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -410,14 +410,14 @@ export default function CustomerTable({ customers, onEdit, onDelete, onImport }:
 
                                         return pageNumbers.map((page, idx) => (
                                             page === '...' ? (
-                                                <span key={`ellipsis-${idx}`} className="w-8 h-8 flex items-center justify-center text-slate-500 text-xs">•••</span>
+                                                <span key={`ellipsis-${idx}`} className="w-8 h-8 flex items-center justify-center text-text-muted text-xs">•••</span>
                                             ) : (
                                                 <button
                                                     key={page}
                                                     onClick={() => setCurrentPage(page as number)}
                                                     className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${currentPage === page
                                                         ? "bg-gradient-to-br from-indigo-500 to-indigo-600 text-white shadow-lg shadow-indigo-500/30 scale-110"
-                                                        : "hover:bg-white/5 text-slate-400 hover:text-white hover:scale-105"
+                                                        : "hover:bg-bg-hover text-text-muted hover:text-text-main hover:scale-105"
                                                         }`}
                                                 >
                                                     {page}
@@ -430,7 +430,7 @@ export default function CustomerTable({ customers, onEdit, onDelete, onImport }:
                                 <button
                                     onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                                     disabled={currentPage === totalPages}
-                                    className="px-3 h-8 rounded-lg flex items-center gap-1.5 hover:bg-white/5 disabled:opacity-30 disabled:hover:bg-transparent transition-all text-slate-300 text-xs font-medium group"
+                                    className="px-3 h-8 rounded-lg flex items-center gap-1.5 hover:bg-bg-hover disabled:opacity-30 disabled:hover:bg-transparent transition-all text-text-main text-xs font-medium group"
                                 >
                                     ถัดไป
                                     <svg className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -441,7 +441,7 @@ export default function CustomerTable({ customers, onEdit, onDelete, onImport }:
                                 <button
                                     onClick={() => setCurrentPage(totalPages)}
                                     disabled={currentPage === totalPages}
-                                    className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/5 disabled:opacity-30 disabled:hover:bg-transparent transition-all text-slate-300 group"
+                                    className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-bg-hover disabled:opacity-30 disabled:hover:bg-transparent transition-all text-text-main group"
                                     title="หน้าสุดท้าย"
                                 >
                                     <svg className="w-4 h-4 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">

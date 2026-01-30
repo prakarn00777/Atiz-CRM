@@ -35,7 +35,7 @@ export default function SegmentedControl({
     };
 
     return (
-        <div className={`flex p-1 bg-black/20 border border-white/10 rounded-xl w-full ${className}`}>
+        <div className={`flex p-1 bg-bg-hover border border-border rounded-xl w-full ${className}`}>
             {name && <input type="hidden" name={name} value={activeValue} />}
             {options.map((option) => (
                 <button
@@ -44,7 +44,7 @@ export default function SegmentedControl({
                     onClick={() => handleSelect(option.value)}
                     className={`flex-1 py-1.5 px-3 text-[10px] sm:text-xs font-medium rounded-lg transition-all duration-200 ${activeValue === option.value
                         ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/20"
-                        : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
+                        : "text-text-muted hover:text-text-main hover:bg-bg-hover"
                         }`}
                 >
                     {option.label}
