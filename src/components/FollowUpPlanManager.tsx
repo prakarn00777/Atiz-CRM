@@ -1,8 +1,20 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Search, MapPin, Phone, Calendar, CheckCircle2, Clock, AlertTriangle, User, ExternalLink, ChevronRight, Filter } from "lucide-react";
-import { Customer, FollowUpRound, FollowUpStatus } from "@/types";
+import { Search, Phone, Calendar, CheckCircle2, Clock, AlertTriangle, ChevronRight } from "lucide-react";
+import { Customer, FollowUpStatus } from "@/types";
+
+// Extended FollowUpRound with contractStart
+interface FollowUpRound {
+    id: number;
+    customerId: number;
+    customerName: string;
+    branchName: string;
+    round: 7 | 14 | 30 | 60 | 90;
+    dueDate: string;
+    contractStart: string; // Added to show reference date
+    status: FollowUpStatus;
+}
 
 interface FollowUpPlanManagerProps {
     customers: Customer[];
@@ -12,20 +24,8 @@ interface FollowUpPlanManagerProps {
 export default function FollowUpPlanManager({ customers, onUpdateStatus }: FollowUpPlanManagerProps) {
     const [searchTerm, setSearchTerm] = useState("");
     const [activeTab, setActiveTab] = useState<"today" | "upcoming" | "overdue" | "all">("today");
-    const [csFilter, setCsFilter] = useState("all");
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
-
-    const csOwners = useMemo(() => {
-        const owners = new Set<string>();
-        customers.forEach(c => {
-            if (c.csOwner) owners.add(c.csOwner);
-            c.branches?.forEach(b => {
-                if (b.csOwner) owners.add(b.csOwner);
-            });
-        });
-        return Array.from(owners);
-    }, [customers]);
 
     // Generate Follow-up rounds based on customers' contract start dates
     const followUpQueue: FollowUpRound[] = useMemo(() => {
@@ -47,7 +47,6 @@ export default function FollowUpPlanManager({ customers, onUpdateStatus }: Follo
                 if (!branchContractStart) return;
 
                 const startDate = new Date(branchContractStart);
-                const branchCsOwner = branch.csOwner || customer.csOwner || "Unassigned";
 
                 // Track rounds for this specific branch
                 const branchRounds: FollowUpRound[] = [];
@@ -65,13 +64,13 @@ export default function FollowUpPlanManager({ customers, onUpdateStatus }: Follo
                     }
 
                     branchRounds.push({
-                        id: (customer.id * 100000) + (Math.abs(branch.name.split('').reduce((a, b) => (a << 5) - a + b.charCodeAt(0), 0)) % 1000) * 100 + roundDays, // More unique Pseudo ID
+                        id: (customer.id * 100000) + (Math.abs(branch.name.split('').reduce((a, b) => (a << 5) - a + b.charCodeAt(0), 0)) % 1000) * 100 + roundDays,
                         customerId: customer.id,
                         customerName: customer.name,
                         branchName: branch.name,
-                        csOwner: branchCsOwner,
                         round: roundDays,
                         dueDate: dueDate.toISOString(),
+                        contractStart: branchContractStart, // Store contract start date for reference
                         status: status
                     });
                 });
@@ -79,7 +78,6 @@ export default function FollowUpPlanManager({ customers, onUpdateStatus }: Follo
                 // Pick the most relevant round for this branch:
                 // 1. If there's an overdue/calling round, pick the earliest one.
                 // 2. Otherwise, pick the next upcoming round.
-                // 3. (Future: Filter out Completed rounds if we add persistence)
 
                 const criticalRound = branchRounds.find(r => r.status === "Overdue" || r.status === "Calling");
                 if (criticalRound) {
@@ -105,10 +103,10 @@ export default function FollowUpPlanManager({ customers, onUpdateStatus }: Follo
 
         return followUpQueue.filter(item => {
             const itemDateStr = item.dueDate.split('T')[0];
-            const matchesSearch = item.customerName.toLowerCase().includes(searchTerm.toLowerCase());
-            const matchesCs = csFilter === "all" || item.csOwner === csFilter;
+            const matchesSearch = item.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                  item.branchName.toLowerCase().includes(searchTerm.toLowerCase());
 
-            if (!matchesSearch || !matchesCs) return false;
+            if (!matchesSearch) return false;
 
             if (activeTab === "today") return itemDateStr === todayStr;
             if (activeTab === "overdue") return itemDateStr < todayStr && item.status !== "Completed";
@@ -116,7 +114,7 @@ export default function FollowUpPlanManager({ customers, onUpdateStatus }: Follo
 
             return true;
         });
-    }, [followUpQueue, activeTab, searchTerm, csFilter]);
+    }, [followUpQueue, activeTab, searchTerm]);
 
     const totalPages = Math.ceil(filteredQueue.length / itemsPerPage);
     const paginatedQueue = useMemo(() => {
@@ -180,30 +178,19 @@ export default function FollowUpPlanManager({ customers, onUpdateStatus }: Follo
 
             <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
                 <div className="flex flex-col md:flex-row gap-3 items-center w-full md:w-auto">
-                    <div className="relative w-full md:w-64">
+                    <div className="relative w-full md:w-80">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted" />
                         <input
                             type="text"
-                            placeholder="ค้นหาชื่อลูกค้า..."
+                            placeholder="ค้นหาชื่อลูกค้าหรือสาขา..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="input-field pl-10 w-full"
                         />
                     </div>
-
-                    <div className="relative w-full md:w-48">
-                        <User className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted" />
-                        <select
-                            value={csFilter}
-                            onChange={(e) => setCsFilter(e.target.value)}
-                            className="input-field pl-10 w-full appearance-none pr-8 cursor-pointer"
-                        >
-                            <option value="all">All CS Owners</option>
-                            {csOwners.map(owner => (
-                                <option key={owner} value={owner} className="bg-card-bg text-text-main">{owner}</option>
-                            ))}
-                        </select>
-                    </div>
+                </div>
+                <div className="text-xs text-text-muted bg-bg-hover px-3 py-1.5 rounded-lg border border-border-light">
+                    📅 วันที่ติดตาม = วันเริ่มสัญญา + จำนวนวัน (7, 14, 30, 60, 90)
                 </div>
             </div>
 
@@ -213,9 +200,9 @@ export default function FollowUpPlanManager({ customers, onUpdateStatus }: Follo
                         <thead>
                             <tr className="bg-bg-hover text-text-muted text-[10px] uppercase tracking-wider border-b border-border-light">
                                 <th className="px-6 py-4 font-semibold">Customer</th>
-                                <th className="px-6 py-4 font-semibold">CS Owner</th>
+                                <th className="px-6 py-4 font-semibold">วันเริ่มสัญญา</th>
                                 <th className="px-6 py-4 font-semibold text-center">Round</th>
-                                <th className="px-6 py-4 font-semibold">Due Date</th>
+                                <th className="px-6 py-4 font-semibold">วันที่ต้องติดตาม</th>
                                 <th className="px-6 py-4 font-semibold">Status</th>
                                 <th className="px-6 py-4 font-semibold text-right">Actions</th>
                             </tr>
@@ -239,9 +226,15 @@ export default function FollowUpPlanManager({ customers, onUpdateStatus }: Follo
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <div className="flex items-center gap-1.5">
-                                                <User className="w-3.5 h-3.5 text-indigo-500" />
-                                                <span className="text-xs font-medium text-text-main">{item.csOwner}</span>
+                                            <div className="flex items-center gap-2">
+                                                <Calendar className="w-3.5 h-3.5 text-emerald-500 opacity-70" />
+                                                <span className="text-xs font-medium text-text-main">
+                                                    {new Date(item.contractStart).toLocaleDateString('th-TH', {
+                                                        day: 'numeric',
+                                                        month: 'short',
+                                                        year: 'numeric'
+                                                    })}
+                                                </span>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 text-center">
