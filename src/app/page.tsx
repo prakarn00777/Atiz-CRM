@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Sidebar from "@/components/Sidebar";
 import CustomerTable from "@/components/CustomerTable";
-import { Layers, X, ChevronDown, Plus, Edit2, Trash2, Users, Activity as ActivityIcon, Award, TrendingUp, Clock, AlertTriangle, MapPin, Play, CheckCircle2, AlertCircle, Paperclip, History as HistoryIcon, Download, ExternalLink } from "lucide-react";
+import { X, Plus, Trash2, AlertTriangle, Paperclip, History as HistoryIcon, Download, ExternalLink } from "lucide-react";
 import CustomSelect from "@/components/CustomSelect";
 import UserManager from "@/components/UserManager";
 import RoleManager from "@/components/RoleManager";
@@ -11,17 +11,18 @@ import ActivityManager from "@/components/ActivityManager";
 import Toast from "@/components/Toast";
 import IssueManager from "@/components/IssueManager";
 import SearchableCustomerSelect from "@/components/SearchableCustomerSelect";
-import SegmentedControl from "@/components/SegmentedControl";
 import Dashboard from "@/components/Dashboard";
 import InstallationManager from "@/components/InstallationManager";
 import InstallationRequestModal from "@/components/InstallationRequestModal";
 import NotificationBell from "@/components/NotificationBell";
-import LeadManager from "@/components/LeadManager";
 import GoogleSheetLeadManager from "@/components/GoogleSheetLeadManager";
 import DemoManager from "@/components/DemoManager";
 import SalesManager from "@/components/SalesManager";
 import FollowUpPlanManager from "@/components/FollowUpPlanManager";
 import CustomDatePicker from "@/components/CustomDatePicker";
+import CustomerModal from "@/components/modals/CustomerModal";
+import IssueModal from "@/components/modals/IssueModal";
+import LeadModal from "@/components/modals/LeadModal";
 import { Customer, Branch, Installation, Issue, UsageStatus, Activity as CSActivity, ActivityType, SentimentType, Lead, GoogleSheetLead, MasterDemoLead, BusinessMetrics, NewSalesRecord } from "@/types";
 import { useNotification } from "@/components/NotificationProvider";
 import { db } from "@/lib/db";
@@ -30,73 +31,8 @@ import {
   getUsers, saveUser, deleteUser, getRoles, saveRole, deleteRole, loginUser,
   saveIssue, deleteIssue, saveCustomer, deleteCustomer, saveInstallation, updateInstallationStatus,
   getActivities, saveActivity, deleteActivity,
-  getLeads, saveLead, deleteLead, importLeads, getBusinessMetrics
+  getLeads, saveLead, deleteLead, getBusinessMetrics
 } from "./actions";
-
-function TableSummary({ customers }: { customers: Customer[] }) {
-  return (
-    <table className="w-full text-left">
-      <thead>
-        <tr className="bg-white/5 text-slate-400 text-xs uppercase tracking-wider">
-          <th className="px-6 py-3 font-semibold">Clinic/Shop Name</th>
-          <th className="px-6 py-3 font-semibold">Package</th>
-          <th className="px-6 py-3 font-semibold">Status</th>
-        </tr>
-      </thead>
-      <tbody className="divide-y divide-white/5">
-        {customers.map((c) => (
-          <tr key={c.id}>
-            <td className="px-5 py-3 text-sm font-medium">{c.name}</td>
-            <td className="px-5 py-3 text-sm text-slate-400">{c.package}</td>
-            <td className="px-5 py-3">
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${c.usageStatus === "Active" ? "text-emerald-400 bg-emerald-500/10" :
-                c.usageStatus === "Pending" ? "text-amber-400 bg-amber-500/10" :
-                  c.usageStatus === "Training" ? "text-indigo-400 bg-indigo-500/10" : "text-rose-400 bg-rose-500/10"
-                }`}>{c.usageStatus === "Active" ? "ใช้งานแล้ว" :
-                  c.usageStatus === "Pending" ? "รอการใช้งาน" :
-                    c.usageStatus === "Training" ? "รอการเทรนนิ่ง" : "ยกเลิก"}</span>
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
-}
-
-// Reusable Modal Wrapper with smooth animations
-const ModalWrapper = ({ isOpen, onClose, children, maxWidth = "max-w-2xl", zIndex = "z-[100]" }: {
-  isOpen: boolean,
-  onClose: () => void,
-  children: React.ReactNode,
-  maxWidth?: string,
-  zIndex?: string
-}) => {
-  const [shouldRender, setShouldRender] = useState(isOpen);
-  const [isAnimating, setIsAnimating] = useState(false);
-
-  useEffect(() => {
-    if (isOpen) {
-      setShouldRender(true);
-      const timer = setTimeout(() => setIsAnimating(true), 10);
-      return () => clearTimeout(timer);
-    } else {
-      setIsAnimating(false);
-      const timer = setTimeout(() => setShouldRender(false), 300);
-      return () => clearTimeout(timer);
-    }
-  }, [isOpen]);
-
-  if (!shouldRender) return null;
-
-  return (
-    <div className={`fixed inset-0 ${zIndex} flex items-center justify-center p-4 transition-all duration-300 ${isAnimating ? 'opacity-100' : 'opacity-0'}`}>
-      <div className={`absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity duration-300 ${isAnimating ? 'opacity-100' : 'opacity-0'}`} onClick={onClose} />
-      <div className={`glass-card w-full ${maxWidth} max-h-[90vh] flex flex-col relative shadow-2xl border-white/10 transform transition-all duration-300 ease-out ${isAnimating ? 'scale-100 opacity-100 translate-y-0' : 'scale-95 opacity-0 translate-y-8'}`}>
-        {children}
-      </div>
-    </div>
-  );
-};
 
 export default function CRMPage() {
   const [currentView, setView] = useState(() => {
@@ -186,9 +122,6 @@ export default function CRMPage() {
   // Branch states
   const [branchInputs, setBranchInputs] = useState<Branch[]>([]);
   const [activeBranchIndex, setActiveBranchIndex] = useState(0);
-  const [editingBranchIndex, setEditingBranchIndex] = useState<number | null>(null);
-  const [tempBranchName, setTempBranchName] = useState("");
-  const [tempBranchAddress, setTempBranchAddress] = useState("");
   const [modalUsageStatus, setModalUsageStatus] = useState<UsageStatus>("Active");
 
   const [modalIssueStatus, setModalIssueStatus] = useState<"แจ้งเคส" | "กำลังดำเนินการ" | "เสร็จสิ้น">("แจ้งเคส");
@@ -628,22 +561,6 @@ export default function CRMPage() {
     }
   };
 
-  const handleImportLeads = async (data: any[]) => {
-    try {
-      setToast({ message: "กำลังนำเข้าข้อมูลลีด...", type: "info" });
-      const result = await importLeads(data);
-      if (result.success) {
-        setToast({ message: `นำเข้าข้อมูลลีดสำเร็จ ${result.data.count} รายการ`, type: "success" });
-        fetchData();
-      } else {
-        setToast({ message: "เกิดข้อผิดพลาด: " + result.error, type: "error" });
-      }
-    } catch (err) {
-      console.error(err);
-      setToast({ message: "เกิดข้อผิดพลาดในการนำเข้าข้อมูล", type: "error" });
-    }
-  };
-
   const handleDeleteLead = async (id: number) => {
     const previousLeads = [...leads];
     const updatedLeads = leads.filter(l => l.id !== id);
@@ -768,7 +685,7 @@ export default function CRMPage() {
     }
   };
 
-  const handleAddInstallation = async (newInst: any) => {
+  const handleAddInstallation = useCallback(async (newInst: any) => {
     const previousInstallations = [...installations];
     const previousCustomers = [...customers];
 
@@ -873,9 +790,9 @@ export default function CRMPage() {
       setCustomers(previousCustomers);
       setToast({ message: "เกิดข้อผิดพลาด: " + err.message, type: "error" });
     }
-  };
+  }, [installations, customers, user]);
 
-  const handleUpdateInstallationStatus = async (id: number, status: Installation["status"]) => {
+  const handleUpdateInstallationStatus = useCallback(async (id: number, status: Installation["status"]) => {
     try {
       if (!id || id >= 1000000000000) {
         setToast({ message: "กรุณารอสักครู่ กำลังเตรียมความพร้อมข้อมูล...", type: "info" });
@@ -917,9 +834,7 @@ export default function CRMPage() {
       console.error("Failed to update installation status:", err);
       setToast({ message: "เกิดข้อผิดพลาดในการเชื่อมต่อ", type: "error" });
     }
-  };
-
-
+  }, [customers, user]);
 
   const handleSaveUser = async (userData: any) => {
     try {
@@ -1039,13 +954,13 @@ export default function CRMPage() {
     }
   };
 
-  const handleDeleteActivity = (id: number) => {
+  const handleDeleteActivity = useCallback((id: number) => {
     setDeleteConfirm({
       type: 'activity',
       id,
       title: 'คุณต้องการลบบันทึกกิจกรรมนี้ใช่หรือไม่?'
     });
-  };
+  }, []);
 
   const handleQuickAction = (action: string) => {
     if (action === 'new_install') {
@@ -1265,634 +1180,45 @@ export default function CRMPage() {
 
           {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
-          {/* Simplified Customer Modal for types fix - in a real app would have full fields */}
-          <ModalWrapper isOpen={isModalOpen} onClose={() => { setModalOpen(false); setActiveCustomerTab('general'); setPendingInstallationChanges({}); }} maxWidth="max-w-4xl">
-            <div className="p-6 border-b border-white/5 flex items-center justify-between shrink-0">
-              <h2 className="text-xl font-bold">{editingCustomer ? "แก้ไขข้อมูลลูกค้า" : "เพิ่มข้อมูลลูกค้า"}</h2>
-              <button onClick={() => { setModalOpen(false); setPendingInstallationChanges({}); }} className="text-slate-400 hover:text-white transition-colors p-1 hover:bg-white/5 rounded-lg"><X /></button>
-            </div>
+          {/* Customer Modal - Extracted to separate component */}
+          <CustomerModal
+            isOpen={isModalOpen}
+            onClose={() => { setModalOpen(false); setActiveCustomerTab('general'); setPendingInstallationChanges({}); }}
+            editingCustomer={editingCustomer}
+            activeTab={activeCustomerTab}
+            setActiveTab={setActiveCustomerTab}
+            branchInputs={branchInputs}
+            setBranchInputs={setBranchInputs}
+            activeBranchIndex={activeBranchIndex}
+            setActiveBranchIndex={setActiveBranchIndex}
+            modalUsageStatus={modalUsageStatus}
+            setModalUsageStatus={setModalUsageStatus}
+            pendingInstallationChanges={pendingInstallationChanges}
+            setPendingInstallationChanges={setPendingInstallationChanges}
+            users={users}
+            installations={installations}
+            onSave={handleSaveCustomer}
+            onDeleteBranch={(index, name) => setDeleteConfirm({ type: 'branch', index, title: name })}
+          />
 
-            {/* Tab Navigation */}
-            <div className="flex items-center px-6 border-b border-white/5">
-              <button
-                type="button"
-                onClick={() => setActiveCustomerTab('general')}
-                className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${activeCustomerTab === 'general' ? 'border-indigo-500 text-white' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
-              >
-                ข้อมูลทั่วไป
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveCustomerTab('branches')}
-                className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${activeCustomerTab === 'branches' ? 'border-indigo-500 text-white' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
-              >
-                จัดการสาขา
-              </button>
-              {editingCustomer && (
-                <button
-                  type="button"
-                  onClick={() => setActiveCustomerTab('installations')}
-                  className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${activeCustomerTab === 'installations' ? 'border-indigo-500 text-white' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
-                >
-                  งานติดตั้ง
-                </button>
-              )}
-            </div>
-
-            <div className="overflow-y-auto p-6 custom-scrollbar flex-1 min-h-[500px]">
-              <form id="save-customer-form" onSubmit={handleSaveCustomer}>
-                <div className="space-y-6">
-                  {/* Basic Information Section */}
-                  <div className={activeCustomerTab === 'general' ? 'block' : 'hidden'}>
-                    <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-                      <div className="w-1 h-4 bg-indigo-500 rounded-full"></div>
-                      ข้อมูลพื้นฐาน
-                    </h3>
-                    <div className="grid grid-cols-2 gap-4">
-                      {editingCustomer && (
-                        <div className="space-y-1">
-                          <label className="text-xs font-medium text-slate-400">Customer ID</label>
-                          <input
-                            type="text"
-                            name="clientCode"
-                            defaultValue={editingCustomer.clientCode || `DE${editingCustomer.id.toString().padStart(4, "0")}`}
-                            className="input-field"
-                            placeholder="DE0000"
-                          />
-                        </div>
-                      )}
-
-                      <div className="space-y-1 col-span-2">
-                        <label className="text-xs font-medium text-slate-400">ชื่อคลินิก/ร้าน</label>
-                        <div className="relative group">
-                          <input
-                            name="name"
-                            defaultValue={editingCustomer?.name}
-                            className="input-field"
-                            placeholder="กรอกชื่อคลินิกหรือร้าน..."
-                            required
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-xs font-medium text-slate-400">Subdomain / Link</label>
-                        <input name="subdomain" defaultValue={editingCustomer?.subdomain} className="input-field" required />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-xs font-medium text-slate-400">ประเภทระบบ</label>
-                        <CustomSelect name="product" defaultValue={editingCustomer?.productType || "Dr.Ease"} options={[{ value: "Dr.Ease", label: "Dr.Ease" }, { value: "EasePos", label: "EasePos" }]} />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-xs font-medium text-slate-400">สถานะการใช้งาน</label>
-                        <CustomSelect
-                          name="usageStatus"
-                          options={[
-                            { value: "Training", label: "รอการเทรนนิ่ง" },
-                            { value: "Pending", label: "รอการใช้งาน" },
-                            { value: "Active", label: "ใช้งานแล้ว" },
-                            { value: "Canceled", label: "ยกเลิก" },
-                          ]}
-                          value={modalUsageStatus}
-                          onChange={(val) => setModalUsageStatus(val as UsageStatus)}
-                          placeholder="เลือกสถานะ..."
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-xs font-medium text-slate-400">แพ็คเกจ</label>
-                        <CustomSelect name="package" defaultValue={editingCustomer?.package || "Standard"} options={[{ value: "Starter", label: "Starter" }, { value: "Standard", label: "Standard" }, { value: "Elite", label: "Elite" }]} />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-xs font-medium text-slate-400">CS Owner (ผู้ดูแลหลัก)</label>
-                        <CustomSelect
-                          name="csOwner"
-                          defaultValue={editingCustomer?.csOwner || ""}
-                          options={[
-                            { value: "", label: "ไม่ระบุ" },
-                            ...users.map(u => ({ value: u.name, label: u.name }))
-                          ]}
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-xs font-medium text-slate-400">ชื่อเซลล์ (Sales Name)</label>
-                        <input name="salesName" defaultValue={editingCustomer?.salesName} className="input-field" placeholder="ระบุชื่อเซลล์..." />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-xs font-medium text-slate-400">วันที่เริ่มสัญญา</label>
-                        <input type="date" name="contractStart" defaultValue={editingCustomer?.contractStart} className="input-field" />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-xs font-medium text-slate-400">วันที่สิ้นสุดสัญญา</label>
-                        <input type="date" name="contractEnd" defaultValue={editingCustomer?.contractEnd} className="input-field" />
-                      </div>
-                      <div className="space-y-1 col-span-2">
-                        <label className="text-xs font-medium text-slate-400">หมายเหตุ</label>
-                        <textarea name="note" defaultValue={editingCustomer?.note} className="input-field min-h-[80px]" />
-                      </div>
-
-                    </div>
-                  </div>
-
-                  {/* Branch Management - Master Detail Layout */}
-                  <div className={`border-t border-white/10 pt-6 ${activeCustomerTab === 'branches' ? 'block' : 'hidden'}`}>
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                        <div className="w-1 h-4 bg-emerald-500 rounded-full"></div>
-                        จัดการสาขา ({branchInputs.length})
-                      </h3>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const mainCsOwner = (document.getElementsByName('csOwner')[0] as HTMLSelectElement)?.value || editingCustomer?.csOwner || "";
-                          const newBranch: Branch = {
-                            name: "",
-                            isMain: false,
-                            status: "Pending",
-                            csOwner: mainCsOwner
-                          };
-                          setBranchInputs([...branchInputs, newBranch]);
-                          setActiveBranchIndex(branchInputs.length);
-                        }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500 hover:text-white text-xs font-bold transition-all border border-emerald-500/20"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        เพิ่มสาขา
-                      </button>
-                    </div>
-
-                    <div className="flex flex-col md:flex-row gap-6 h-[320px] bg-slate-900/40 rounded-xl border border-white/5 p-4">
-                      {/* Left: Branch List */}
-                      <div className="w-full md:w-1/3 flex flex-col border-r border-white/5 pr-4">
-                        <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2">
-                          {branchInputs.map((branch, idx) => (
-                            <button
-                              type="button"
-                              key={idx}
-                              onClick={() => setActiveBranchIndex(idx)}
-                              className={`w-full text-left p-3 rounded-lg border transition-all duration-200 group relative ${idx === activeBranchIndex
-                                ? "bg-indigo-500/10 border-indigo-500/30 shadow-sm"
-                                : "bg-transparent border-transparent hover:bg-white/5"
-                                }`}
-                            >
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                  <div className={`w-6 h-6 rounded flex items-center justify-center text-[10px] font-bold ${idx === activeBranchIndex ? "bg-indigo-500 text-white" : "bg-slate-700 text-slate-400"
-                                    }`}>
-                                    {idx + 1}
-                                  </div>
-                                  <div className="flex flex-col">
-                                    <span className={`text-xs font-semibold truncate max-w-[120px] ${idx === activeBranchIndex ? "text-white" : "text-slate-400 group-hover:text-slate-200"
-                                      }`}>
-                                      {branch.name || "ระบุชื่อสาขา..."}
-                                    </span>
-                                    {branch.isMain && (
-                                      <span className="text-[9px] text-emerald-400 font-medium">Main Branch</span>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* Status Indicator Dot */}
-                              <div className={`absolute right-3 top-3 w-1.5 h-1.5 rounded-full ${branch.status === "Completed" ? "bg-emerald-500" : "bg-slate-600"
-                                }`} />
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Right: Branch Details */}
-                      <div className="flex-1 pl-2">
-                        {branchInputs[activeBranchIndex] ? (
-                          <div className="h-full flex flex-col animate-in fade-in slide-in-from-right-2 duration-200">
-                            <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/5">
-                              <div>
-                                <h4 className="text-sm font-semibold text-white">รายละเอียดสาขา</h4>
-                                <p className="text-[10px] text-slate-500">แก้ไขข้อมูลและจัดการสถานะของสาขาที่เลือก</p>
-                              </div>
-                              {!branchInputs[activeBranchIndex].isMain && (
-                                <button
-                                  type="button"
-                                  onClick={() => setDeleteConfirm({ type: 'branch', index: activeBranchIndex, title: branchInputs[activeBranchIndex].name || "สาขาที่เลือก" })}
-                                  className="px-3 py-1.5 rounded bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 text-xs font-medium flex items-center gap-1.5 transition-colors"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                  ลบสาขานี้
-                                </button>
-                              )}
-                            </div>
-
-                            <div className="space-y-4">
-                              <div className="space-y-1.5">
-                                <label className="text-xs font-medium text-slate-400">ชื่อสาขา (Branch Name)</label>
-                                <div className="relative">
-                                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
-                                  <input
-                                    type="text"
-                                    value={branchInputs[activeBranchIndex].name}
-                                    onChange={(e) => {
-                                      const updated = [...branchInputs];
-                                      updated[activeBranchIndex].name = e.target.value;
-                                      setBranchInputs(updated);
-                                    }}
-                                    placeholder="เช่น สาขาสยามพารากอน..."
-                                    className="input-field pl-9 py-2 text-sm w-full"
-                                    autoFocus
-                                  />
-                                </div>
-                              </div>
-
-
-
-                              <div className="space-y-1.5">
-                                <label className="text-xs font-medium text-slate-400">สถานะการติดตั้ง (Installation Status)</label>
-                                <div className="h-9 flex items-center">
-                                  {(() => {
-                                    const activeBranch = branchInputs[activeBranchIndex];
-                                    const inst = installations.find(i =>
-                                      i.customerId === editingCustomer?.id &&
-                                      ((activeBranch.isMain && i.installationType === "new") ||
-                                        (!activeBranch.isMain && i.installationType === "branch" && i.branchName === activeBranch.name))
-                                    );
-
-                                    if (inst) {
-                                      const getStatusIcon = (status: string) => {
-                                        switch (status) {
-                                          case "Pending": return <Clock className="w-3.5 h-3.5 text-amber-400" />;
-                                          case "Completed": return <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />;
-                                          default: return <AlertCircle className="w-3.5 h-3.5 text-slate-400" />;
-                                        }
-                                      };
-
-                                      const getStatusStyle = (status: string) => {
-                                        switch (status) {
-                                          case "Pending": return "bg-amber-500/15 text-amber-400 border-amber-500/20";
-                                          case "Completed": return "bg-emerald-500/15 text-emerald-400 border-emerald-500/20";
-                                          default: return "bg-slate-500/15 text-slate-400 border-slate-500/20";
-                                        }
-                                      };
-
-                                      const statusLabel = inst.status; // Directly use English status label
-
-                                      return (
-                                        <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border shadow-sm ${getStatusStyle(inst.status)}`}>
-                                          {getStatusIcon(inst.status)}
-                                          {statusLabel}
-                                        </div>
-                                      );
-                                    }
-
-                                  })()}
-                                </div>
-                              </div>
-
-                              <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-1.5">
-                                  <label className="text-xs font-medium text-slate-400">วันที่เริ่มสัญญา (Contract Start)</label>
-                                  <input
-                                    type="date"
-                                    value={branchInputs[activeBranchIndex].contractStart || ""}
-                                    onChange={(e) => {
-                                      const updated = [...branchInputs];
-                                      updated[activeBranchIndex].contractStart = e.target.value;
-                                      setBranchInputs(updated);
-                                    }}
-                                    className="input-field text-sm w-full h-10 px-3 cursor-pointer"
-                                  />
-                                </div>
-                                <div className="space-y-1.5">
-                                  <label className="text-xs font-medium text-slate-400">CS Owner (สาขา)</label>
-                                  <CustomSelect
-                                    name={`branchCsOwner-${activeBranchIndex}`}
-                                    defaultValue={branchInputs[activeBranchIndex].csOwner || ""}
-                                    onChange={(val) => {
-                                      const updated = [...branchInputs];
-                                      updated[activeBranchIndex].csOwner = val;
-                                      setBranchInputs(updated);
-                                    }}
-                                    options={[
-                                      { value: "", label: "ใช้ตามลูกค้าหลัก" },
-                                      ...users.map(u => ({ value: u.name, label: u.name }))
-                                    ]}
-                                  />
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="h-full flex flex-col items-center justify-center text-slate-500 opacity-50">
-                            <MapPin className="w-12 h-12 mb-3" />
-                            <p className="text-sm">เลือกสาขาเพื่อแก้ไขรายละเอียด</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Installations Tab */}
-                  {editingCustomer && (
-                    <div className={`border-t border-white/10 pt-6 ${activeCustomerTab === 'installations' ? 'block' : 'hidden'}`}>
-                      <div className="flex items-center justify-between mb-3">
-                        <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                          <div className="w-1 h-4 bg-indigo-500 rounded-full"></div>
-                          งานติดตั้ง
-                        </h3>
-                      </div>
-
-                      {(() => {
-                        const customerInstallations = installations.filter(i => i.customerId === editingCustomer.id);
-
-                        if (customerInstallations.length === 0) {
-                          return (
-                            <div className="text-center py-8 text-slate-500">
-                              <Layers className="w-10 h-10 mx-auto mb-2 opacity-30" />
-                              <p className="text-xs">ไม่มีงานติดตั้ง</p>
-                            </div>
-                          );
-                        }
-
-                        const formatDateTime = (dateStr?: string) => {
-                          if (!dateStr) return '-';
-                          const d = new Date(dateStr);
-                          return `${d.toLocaleDateString('th-TH')} ${d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}`;
-                        };
-
-                        return (
-                          <div className="space-y-2">
-                            {customerInstallations.map((inst) => (
-                              <div key={inst.id} className="bg-white/5 rounded-xl p-3 border border-white/5 hover:border-white/10 transition-colors">
-                                {/* Header Row */}
-                                <div className="flex items-center justify-between gap-3 mb-2">
-                                  <div className="flex items-center gap-2 flex-1 min-w-0">
-                                    <span className={`shrink-0 px-2 py-0.5 rounded-md text-[10px] font-bold ${inst.installationType === 'new' ? 'bg-blue-500/15 text-blue-400' : 'bg-purple-500/15 text-purple-400'}`}>
-                                      {inst.installationType === 'new' ? 'NEW' : 'BRANCH'}
-                                    </span>
-                                    <span className="text-xs text-white font-medium truncate">
-                                      {inst.installationType === 'new' ? inst.customerName : inst.branchName || '-'}
-                                    </span>
-                                  </div>
-                                  <CustomSelect
-                                    name={`inst-status-${inst.id}`}
-                                    value={pendingInstallationChanges[inst.id] || inst.status}
-                                    onChange={(newStatus) => {
-                                      setPendingInstallationChanges(prev => ({ ...prev, [inst.id]: newStatus }));
-                                    }}
-                                    options={[
-                                      { value: 'Pending', label: 'Pending' },
-                                      { value: 'Completed', label: 'Completed' }
-                                    ]}
-                                    className="!w-auto !min-w-[110px]"
-                                  />
-                                </div>
-                                {/* Details Row */}
-                                <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-slate-500">
-                                  <span>แจ้งโดย: <span className="text-slate-400">{inst.requestedBy || '-'}</span> • {formatDateTime(inst.requestedAt)}</span>
-                                  {inst.modifiedBy && (
-                                    <span>แก้ไขโดย: <span className="text-slate-400">{inst.modifiedBy}</span> • {formatDateTime(inst.modifiedAt)}</span>
-                                  )}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        );
-                      })()}
-                    </div>
-                  )}
-                </div>
-              </form>
-            </div >
-            <div className="p-6 border-t border-white/5 bg-[#1e293b]/50 backdrop-blur-sm shrink-0">
-              <div className="flex gap-3">
-                <button type="button" onClick={() => { setModalOpen(false); setPendingInstallationChanges({}); }} className="btn btn-ghost flex-1">ยกเลิก</button>
-                <button type="submit" form="save-customer-form" className="btn btn-primary flex-1">บันทึก</button>
-              </div>
-            </div>
-          </ModalWrapper >
-
-          {/* Issue Modal and Delete Confirm remain similar but with updated attachments handling */}
-          {
-            isIssueModalOpen && (
-              <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
-                <div className="absolute inset-0 bg-black/80 backdrop-blur-md" />
-                <div className="glass-card w-full max-w-2xl max-h-[90vh] flex flex-col relative shadow-2xl border-indigo-500/20">
-                  <div className="p-6 border-b border-white/5 flex justify-between items-center">
-                    <h2 className="text-xl font-bold text-white">{editingIssue ? "Edit Issue" : "New Issue"}</h2>
-                    <button onClick={() => setIssueModalOpen(false)}><X /></button>
-                  </div>
-
-                  {/* Status Indicator Bar - Only show when editing */}
-                  {editingIssue && (
-                    <div className="px-6 py-4 bg-white/[0.02] border-b border-white/5">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-slate-400">Status:</span>
-
-                        {/* Clickable Status Flow Buttons - Forward Only */}
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            disabled={editingIssue.status !== "แจ้งเคส"}
-                            onClick={() => setModalIssueStatus("แจ้งเคส")}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${modalIssueStatus === "แจ้งเคส"
-                              ? "bg-amber-500 text-white shadow-lg shadow-amber-500/30 scale-105"
-                              : editingIssue.status !== "แจ้งเคส"
-                                ? "bg-slate-700/50 text-slate-500 cursor-not-allowed border border-slate-600/20"
-                                : "bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20"
-                              }`}
-                          >
-                            แจ้งเคส
-                          </button>
-
-                          <span className="text-slate-600">→</span>
-
-                          <button
-                            type="button"
-                            disabled={editingIssue.status === "เสร็จสิ้น"}
-                            onClick={() => setModalIssueStatus("กำลังดำเนินการ")}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${modalIssueStatus === "กำลังดำเนินการ"
-                              ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/30 scale-105"
-                              : editingIssue.status === "เสร็จสิ้น"
-                                ? "bg-slate-700/50 text-slate-500 cursor-not-allowed border border-slate-600/20"
-                                : "bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 border border-indigo-500/20"
-                              }`}
-                          >
-                            กำลังดำเนินการ
-                          </button>
-
-                          <span className="text-slate-600">→</span>
-
-                          <button
-                            type="button"
-                            onClick={() => setModalIssueStatus("เสร็จสิ้น")}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${modalIssueStatus === "เสร็จสิ้น"
-                              ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 scale-105"
-                              : "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20"
-                              }`}
-                          >
-                            เสร็จสิ้น
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex-1 overflow-y-auto p-6">
-                    <form id="issue-form" onSubmit={handleSaveIssue} className="space-y-4">
-                      <div className="space-y-1">
-                        <div className="flex items-center justify-between">
-                          <label className="text-xs font-medium text-slate-400">Customer</label>
-                          {(() => {
-                            const customer = customers.find(c => c.id === selectedCustomerId);
-                            if (customer?.subdomain) {
-                              return (
-                                <a
-                                  href={customer.subdomain.startsWith('http') ? customer.subdomain : `https://${customer.subdomain}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  title="Go to System"
-                                  className="flex items-center gap-1.5 text-[10px] font-bold text-indigo-400 hover:text-indigo-300 transition-colors bg-indigo-500/5 px-2 py-0.5 rounded-md border border-indigo-500/10"
-                                >
-                                  <ExternalLink className="w-3 h-3" />
-                                  <span className="truncate max-w-[150px]">{customer.subdomain.replace(/^https?:\/\//, '')}</span>
-                                </a>
-                              );
-                            }
-                            return null;
-                          })()}
-                        </div>
-                        <SearchableCustomerSelect customers={customers} value={selectedCustomerId} onChange={(id, name) => { setSelectedCustomerId(id); setSelectedCustomerName(name); }} />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-xs font-medium text-slate-400">Subject</label>
-                        <input name="title" defaultValue={editingIssue?.title} className="input-field" required />
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                          <label className="text-xs font-medium text-slate-400">Issue Type</label>
-                          <CustomSelect
-                            name="type"
-                            defaultValue={editingIssue?.type || "Bug Report"}
-                            options={[
-                              { value: "Bug Report", label: "Bug Report" },
-                              { value: "Data Request", label: "Data Request" },
-                              { value: "System Modification", label: "System Modification" },
-                              { value: "New Requirement", label: "New Requirement" }
-                            ]}
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-xs font-medium text-slate-400">Severity</label>
-                          <CustomSelect
-                            name="severity"
-                            defaultValue={editingIssue?.severity || "Low"}
-                            options={[
-                              { value: "Low", label: "Low" },
-                              { value: "Medium", label: "Medium" },
-                              { value: "High", label: "High" },
-                              { value: "Critical", label: "Critical" }
-                            ]}
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-xs font-medium text-slate-400">Description</label>
-                        <textarea name="description" defaultValue={editingIssue?.description} className="input-field min-h-[100px] text-xs py-3 resize-none" />
-                      </div>
-
-                      {/* File Attachments */}
-                      <div className="space-y-2">
-                        <label className="text-xs font-medium text-slate-400">Attachments</label>
-
-                        {/* Upload Zone */}
-                        <div
-                          className="border-2 border-dashed border-white/10 rounded-xl p-4 text-center hover:border-indigo-500/50 hover:bg-indigo-500/5 transition-all cursor-pointer"
-                          onClick={() => document.getElementById('file-input')?.click()}
-                        >
-                          <input
-                            id="file-input"
-                            type="file"
-                            multiple
-                            accept="image/*"
-                            className="hidden"
-                            onChange={(e) => {
-                              const files = e.target.files;
-                              if (files) {
-                                Array.from(files).forEach(file => {
-                                  if (!file.type.startsWith('image/')) {
-                                    setToast({ message: `ไฟล์ ${file.name} ต้องเป็นรูปภาพเท่านั้น`, type: "error" });
-                                    return;
-                                  }
-                                  if (file.size > 2 * 1024 * 1024) {
-                                    setToast({ message: `ไฟล์ ${file.name} ใหญ่เกิน 2MB`, type: "error" });
-                                    return;
-                                  }
-                                  const reader = new FileReader();
-                                  reader.onload = () => {
-                                    setSelectedFiles(prev => [...prev, {
-                                      name: file.name,
-                                      type: file.type,
-                                      size: file.size,
-                                      data: reader.result as string
-                                    }]);
-                                  };
-                                  reader.readAsDataURL(file);
-                                });
-                              }
-                              e.target.value = '';
-                            }}
-                          />
-                          <div className="flex flex-col items-center gap-2">
-                            <div className="w-10 h-10 rounded-full bg-indigo-500/10 flex items-center justify-center">
-                              <Paperclip className="w-5 h-5 text-indigo-400" />
-                            </div>
-                            <div>
-                              <p className="text-xs text-slate-300">คลิกเพื่อเลือกรูปภาพหรือลากไฟล์มาวาง</p>
-                              <p className="text-[10px] text-slate-500 mt-1">รองรับ: รูปภาพเท่านั้น (สูงสุด 2MB ต่อไฟล์)</p>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* File Preview List */}
-                        {selectedFiles.length > 0 && (
-                          <div className="space-y-2 mt-3">
-                            {selectedFiles.map((file, idx) => (
-                              <div key={idx} className="flex items-center gap-3 p-2 bg-white/5 rounded-lg border border-white/10">
-                                {/* Thumbnail for images */}
-                                {file.type.startsWith('image/') ? (
-                                  <img
-                                    src={file.data}
-                                    alt={file.name}
-                                    className="w-10 h-10 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity border border-white/10"
-                                    onClick={() => setPreviewImage(file.data)}
-                                  />
-                                ) : (
-                                  <div className="w-10 h-10 bg-slate-700 rounded flex items-center justify-center text-[10px] font-bold text-slate-400">
-                                    {file.name.split('.').pop()?.toUpperCase()}
-                                  </div>
-                                )}
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-xs text-slate-300 truncate">{file.name}</p>
-                                  <p className="text-[10px] text-slate-500">{(file.size / 1024).toFixed(1)} KB</p>
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={() => setSelectedFiles(prev => prev.filter((_, i) => i !== idx))}
-                                  className="p-1.5 hover:bg-rose-500/20 rounded-lg transition-colors"
-                                >
-                                  <X className="w-4 h-4 text-rose-400" />
-                                </button>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </form>
-                  </div>
-                  <div className="p-6 border-t border-white/5 flex gap-2">
-                    <button onClick={() => setIssueModalOpen(false)} className="btn btn-ghost flex-1">Cancel</button>
-                    <button form="issue-form" type="submit" className="btn btn-primary flex-1">Save</button>
-                  </div>
-                </div>
-              </div>
-            )
-          }
+          {/* Issue Modal */}
+          <IssueModal
+            isOpen={isIssueModalOpen}
+            onClose={() => setIssueModalOpen(false)}
+            editingIssue={editingIssue}
+            customers={customers}
+            selectedCustomerId={selectedCustomerId}
+            setSelectedCustomerId={setSelectedCustomerId}
+            selectedCustomerName={selectedCustomerName}
+            setSelectedCustomerName={setSelectedCustomerName}
+            selectedFiles={selectedFiles}
+            setSelectedFiles={setSelectedFiles}
+            modalIssueStatus={modalIssueStatus}
+            setModalIssueStatus={setModalIssueStatus}
+            onSave={handleSaveIssue}
+            setToast={setToast}
+            setPreviewImage={setPreviewImage}
+          />
 
           {
             deleteConfirm && (
@@ -2112,149 +1438,14 @@ export default function CRMPage() {
           }
 
           {/* Lead Modal */}
-          {
-            isLeadModalOpen && (
-              <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setLeadModalOpen(false)} />
-                <div className="glass-card w-full max-w-2xl max-h-[90vh] flex flex-col relative shadow-2xl">
-                  <div className="p-6 border-b border-white/5 flex items-center justify-between shrink-0">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400">
-                        <Plus className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <h2 className="text-xl font-bold text-white">{editingLead ? "แก้ไขข้อมูลลีด" : "เพิ่มลีดใหม่"}</h2>
-                        <p className="text-xs text-slate-400">กรอกข้อมูลลีดให้ครบถ้วนเพื่อใช้ในการติดตาม</p>
-                      </div>
-                    </div>
-                    <button onClick={() => setLeadModalOpen(false)} className="p-2 hover:bg-white/5 rounded-lg text-slate-400 hover:text-white transition-colors">
-                      <X className="w-5 h-5" />
-                    </button>
-                  </div>
-
-                  <div className="overflow-y-auto p-6 custom-scrollbar flex-1">
-                    <form id="lead-form" onSubmit={handleSaveLead} className="grid grid-cols-2 gap-6">
-                      <div className="space-y-1.5 col-span-2 md:col-span-1">
-                        <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">เลขที่ลีด (Lead Number)</label>
-                        <input
-                          name="leadNumber"
-                          defaultValue={editingLead?.leadNumber || `L${Date.now().toString().slice(-6)}`}
-                          className="input-field text-sm font-bold text-indigo-400"
-                          required
-                          placeholder="L000000"
-                        />
-                      </div>
-
-                      <div className="space-y-1.5 col-span-2 md:col-span-1">
-                        <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">Product</label>
-                        <CustomSelect
-                          name="product"
-                          defaultValue={editingLead?.product || "Dr.Ease"}
-                          options={[
-                            { value: "Dr.Ease", label: "Dr.Ease" },
-                            { value: "Ease POS", label: "Ease POS" },
-                          ]}
-                        />
-                      </div>
-
-                      <div className="space-y-1.5 col-span-2">
-                        <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">ชื่อลูกค้า / คลินิก / ร้าน</label>
-                        <input
-                          name="customerName"
-                          defaultValue={editingLead?.customerName}
-                          className="input-field text-sm font-semibold"
-                          required
-                          placeholder="ระบุชื่อลูกค้า"
-                        />
-                      </div>
-
-                      <div className="space-y-1.5 col-span-2 md:col-span-1">
-                        <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">เบอร์โทรศัพท์</label>
-                        <input
-                          name="phone"
-                          defaultValue={editingLead?.phone}
-                          className="input-field text-sm font-mono"
-                          required
-                          placeholder="08X-XXXXXXX"
-                        />
-                      </div>
-
-                      <div className="space-y-1.5 col-span-2 md:col-span-1">
-                        <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">เซลล์ผู้ดูแล (Sales)</label>
-                        <CustomSelect
-                          name="salesName"
-                          defaultValue={editingLead?.salesName || "Aoey"}
-                          options={[
-                            { value: "Aoey", label: "Aoey" },
-                            { value: "Yo", label: "Yo" },
-                          ]}
-                        />
-                      </div>
-
-                      <div className="space-y-1.5 col-span-2 md:col-span-1">
-                        <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">ที่มาลีด (Lead Source)</label>
-                        <CustomSelect
-                          name="source"
-                          defaultValue={editingLead?.source || "ยิงแอด"}
-                          options={[
-                            { value: "ยิงแอด", label: "ยิงแอด" },
-                            { value: "เซลล์หา", label: "เซลล์หา" },
-                            { value: "พาร์ทเนอร์", label: "พาร์ทเนอร์" },
-                            { value: "บริษัทหา", label: "บริษัทหา" },
-                          ]}
-                        />
-                      </div>
-
-                      <div className="space-y-1.5 col-span-2 md:col-span-1">
-                        <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">วันที่รับลีด (Received Date)</label>
-                        <CustomDatePicker
-                          value={modalLeadDate}
-                          onChange={setModalLeadDate}
-                          placeholder="เลือกวันที่รับลีด"
-                          className="w-full"
-                        />
-                        <input type="hidden" name="receivedDate" value={modalLeadDate} />
-                      </div>
-
-                      <div className="space-y-1.5 col-span-2 md:col-span-1">
-                        <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">ประเภทลีด (Lead Type)</label>
-                        <CustomSelect
-                          name="leadType"
-                          defaultValue={editingLead?.leadType || "LINE"}
-                          options={[
-                            { value: "LINE", label: "LINE" },
-                            { value: "Facebook", label: "Facebook" },
-                            { value: "Call", label: "Call" },
-                            { value: "ลีดจากสัมนา", label: "ลีดจากสัมนา" },
-                            { value: "ลูกค้าเก่า ต่อสัญญา", label: "ลูกค้าเก่า ต่อสัญญา" },
-                            { value: "ขบายสัญญาเพิ่ม", label: "ขบายสัญญาเพิ่ม" },
-                            { value: "ลีดซ้ำ", label: "ลีดซ้ำ" },
-                          ]}
-                        />
-                      </div>
-
-                      <div className="space-y-1.5 col-span-2">
-                        <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">หมายเหตุ (Notes)</label>
-                        <textarea
-                          name="notes"
-                          defaultValue={editingLead?.notes}
-                          className="input-field text-sm min-h-[100px] resize-none py-3"
-                          placeholder="เพิ่มเติม..."
-                        />
-                      </div>
-                    </form>
-                  </div>
-
-                  <div className="p-6 border-t border-white/5 flex gap-3 shrink-0">
-                    <button type="button" onClick={() => setLeadModalOpen(false)} className="flex-1 btn btn-ghost py-3 rounded-xl font-bold">Cancel</button>
-                    <button form="lead-form" type="submit" className="flex-1 btn btn-primary py-3 rounded-xl font-bold shadow-xl shadow-indigo-500/20 active:scale-95 transition-transform">
-                      {editingLead ? "Save Changes" : "Create Lead"}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )
-          }
+          <LeadModal
+            isOpen={isLeadModalOpen}
+            onClose={() => setLeadModalOpen(false)}
+            editingLead={editingLead}
+            modalLeadDate={modalLeadDate}
+            setModalLeadDate={setModalLeadDate}
+            onSave={handleSaveLead}
+          />
 
           {/* Delete Confirmation Modal for Activity & Leads */}
           {

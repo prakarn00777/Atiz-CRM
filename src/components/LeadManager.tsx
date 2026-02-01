@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { Search, Edit2, Trash2, Filter, Clock, MoreVertical, Plus, User, Phone, Tag, Briefcase, MessageSquare } from "lucide-react";
 import CustomSelect from "./CustomSelect";
@@ -14,7 +14,7 @@ interface LeadManagerProps {
     onAdd: () => void;
 }
 
-export default function LeadManager({ leads, onEdit, onDelete, onAdd }: LeadManagerProps) {
+const LeadManager = React.memo(function LeadManager({ leads, onEdit, onDelete, onAdd }: LeadManagerProps) {
     const [searchTerm, setSearchTerm] = useState("");
     const [productFilter, setProductFilter] = useState("all");
     const [sourceFilter, setSourceFilter] = useState("all");
@@ -343,4 +343,6 @@ export default function LeadManager({ leads, onEdit, onDelete, onAdd }: LeadMana
             </div>
         </div>
     );
-}
+});
+
+export default LeadManager;

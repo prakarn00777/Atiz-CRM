@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useMemo, useState, useEffect } from "react";
+import React, { useRef, useMemo, useState, useEffect } from "react";
 import {
     Users, Activity as ActivityIcon, Layers, Zap, Clock, AlertCircle,
     DollarSign, BarChart3, LineChart,
@@ -133,7 +133,7 @@ const parseLocalISO = (isoStr: string) => {
     return new Date(isoStr);
 };
 
-export default function Dashboard({ customers, installations, issues, activities, leads, googleSheetLeads = [], googleSheetDemos = [], newSalesData = [], businessMetrics, user, onViewChange }: DashboardProps) {
+const Dashboard = React.memo(function Dashboard({ customers, installations, issues, activities, leads, googleSheetLeads = [], googleSheetDemos = [], newSalesData = [], businessMetrics, user, onViewChange }: DashboardProps) {
     const dashboardRef = useRef<HTMLDivElement>(null);
     const [activeTab, setActiveTab] = useState<'cs' | 'business'>('cs');
     const [timeRange, setTimeRange] = useState<'1w' | '1m' | '3m' | '6m' | '1y' | 'custom'>('1w');
@@ -1227,4 +1227,6 @@ export default function Dashboard({ customers, installations, issues, activities
             )}
         </div>
     );
-}
+});
+
+export default Dashboard;

@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { createPortal } from "react-dom";
-import { Search, Edit2, Trash2, Plus, AlertCircle, AlertTriangle, Info, CheckCircle2, Clock, Play, Paperclip, MoreVertical } from "lucide-react";
+import React, { useState } from "react";
+import { Search, Plus, AlertCircle } from "lucide-react";
 import CustomSelect from "./CustomSelect";
 import CustomDatePicker from "./CustomDatePicker";
 import { Customer, Issue } from "@/types";
+import IssueRow from "./rows/IssueRow";
 
 interface IssueManagerProps {
     issues: Issue[];
@@ -15,48 +15,12 @@ interface IssueManagerProps {
     onDelete: (id: number) => void;
 }
 
-export default function IssueManager({ issues, customers: _customers, onAdd, onEdit, onDelete }: IssueManagerProps) {
+const IssueManager = React.memo(function IssueManager({ issues, customers: _customers, onAdd, onEdit, onDelete }: IssueManagerProps) {
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
     const [severityFilter, setSeverityFilter] = useState("all");
     const [dateRange, setDateRange] = useState({ start: "", end: "" });
     const [currentPage, setCurrentPage] = useState(1);
-    const [activeMenu, setActiveMenu] = useState<number | null>(null);
-    const [menuPosition, setMenuPosition] = useState<{ top: number, left: number } | null>(null);
-    const [mounted, setMounted] = useState(false);
-
-    useEffect(() => {
-        setMounted(true);
-    }, []);
-
-    useEffect(() => {
-        const handleClose = () => {
-            setActiveMenu(null);
-            setMenuPosition(null);
-        };
-
-        if (activeMenu !== null) {
-            window.addEventListener('click', handleClose);
-            window.addEventListener('scroll', handleClose, true);
-        }
-
-        return () => {
-            window.removeEventListener('click', handleClose);
-            window.removeEventListener('scroll', handleClose, true);
-        };
-    }, [activeMenu]);
-
-    const handleMenuToggle = (e: React.MouseEvent, id: number) => {
-        e.stopPropagation();
-        const rect = e.currentTarget.getBoundingClientRect();
-        if (activeMenu === id) {
-            setActiveMenu(null);
-            setMenuPosition(null);
-        } else {
-            setActiveMenu(id);
-            setMenuPosition({ top: rect.bottom, left: rect.right });
-        }
-    };
 
     const filteredIssues = issues.filter(issue => {
         const matchesSearch =
@@ -94,44 +58,6 @@ export default function IssueManager({ issues, customers: _customers, onAdd, onE
         (currentPage - 1) * itemsPerPage,
         currentPage * itemsPerPage
     );
-
-    const getSeverityColor = (severity: string) => {
-        switch (severity) {
-            case "Critical": return "text-rose-400 bg-rose-500/10";
-            case "High": return "text-orange-400 bg-orange-500/10";
-            case "Medium": return "text-amber-400 bg-amber-500/10";
-            case "Low": return "text-emerald-400 bg-emerald-500/10";
-            default: return "text-slate-400 bg-slate-500/10";
-        }
-    };
-
-    const getSeverityIcon = (severity: string) => {
-        switch (severity) {
-            case "Critical": return <AlertCircle className="w-3.5 h-3.5" />;
-            case "High": return <AlertTriangle className="w-3.5 h-3.5" />;
-            case "Medium": return <AlertTriangle className="w-3.5 h-3.5" />;
-            case "Low": return <Info className="w-3.5 h-3.5" />;
-            default: return <Info className="w-3.5 h-3.5" />;
-        }
-    };
-
-    const getStatusColor = (status: string) => {
-        switch (status) {
-            case "เสร็จสิ้น": return "text-emerald-400 bg-emerald-500/10";
-            case "กำลังดำเนินการ": return "text-indigo-400 bg-indigo-500/10";
-            case "แจ้งเคส": return "text-amber-400 bg-amber-500/10";
-            default: return "text-slate-400 bg-slate-500/10";
-        }
-    };
-
-    const getStatusIcon = (status: string) => {
-        switch (status) {
-            case "เสร็จสิ้น": return <CheckCircle2 className="w-3.5 h-3.5" />;
-            case "กำลังดำเนินการ": return <Play className="w-3.5 h-3.5" />;
-            case "แจ้งเคส": return <Clock className="w-3.5 h-3.5" />;
-            default: return <Clock className="w-3.5 h-3.5" />;
-        }
-    };
 
     return (
         <div className="space-y-6">
@@ -224,105 +150,13 @@ export default function IssueManager({ issues, customers: _customers, onAdd, onE
                         <tbody className="divide-y divide-border-light">
                             {paginatedIssues.length > 0 ? (
                                 paginatedIssues.map((issue, index) => (
-                                    <tr key={issue.id || issue.caseNumber} className="group hover:bg-bg-hover transition-colors h-14">
-                                        <td className="px-4 py-3 text-center">
-                                            <span className="text-xs text-text-muted opacity-60">{(currentPage - 1) * itemsPerPage + index + 1}</span>
-                                        </td>
-                                        <td className="px-4 py-3 text-center">
-                                            <span className="text-xs font-mono text-text-muted">
-                                                {issue.caseNumber}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-3 text-left">
-                                            <div className="flex items-center justify-start gap-2">
-                                                <div className="font-normal text-text-main text-xs truncate max-w-[450px]" title={issue.title}>
-                                                    {issue.title}
-                                                </div>
-                                                {issue.attachments && (typeof issue.attachments === 'string' ? issue.attachments.length > 2 : issue.attachments.length > 0) && (
-                                                    <Paperclip className="w-3 h-3 text-text-muted opacity-50 flex-shrink-0" />
-                                                )}
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3 text-center">
-                                            <div className="flex flex-col items-center max-h-[2.5rem] overflow-hidden">
-                                                <span className="text-xs text-text-main font-medium line-clamp-1">{issue.customerName}</span>
-                                                {issue.branchName && (
-                                                    <span className="text-[10px] text-text-muted opacity-70 italic line-clamp-1">สาขา: {issue.branchName}</span>
-                                                )}
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3 text-center">
-                                            <div className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-bold ${getSeverityColor(issue.severity)}`}>
-                                                {getSeverityIcon(issue.severity)}
-                                                {issue.severity}
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3 text-center">
-                                            <div className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-bold whitespace-nowrap ${getStatusColor(issue.status)}`}>
-                                                {getStatusIcon(issue.status)}
-                                                {issue.status}
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3 text-center">
-                                            <span className="text-xs text-text-muted whitespace-nowrap">{issue.type}</span>
-                                        </td>
-                                        <td className="px-4 py-3 text-center">
-                                            {issue.modifiedBy ? (
-                                                <div className="flex flex-col items-center">
-                                                    <span className="text-xs font-medium text-text-main">{issue.modifiedBy}</span>
-                                                    <span className="text-[10px] text-text-muted opacity-60">
-                                                        {new Date(issue.modifiedAt!).toLocaleString('th-TH', {
-                                                            month: 'short',
-                                                            day: 'numeric',
-                                                            hour: '2-digit',
-                                                            minute: '2-digit'
-                                                        })}
-                                                    </span>
-                                                </div>
-                                            ) : (
-                                                <span className="text-xs text-slate-600">-</span>
-                                            )}
-                                        </td>
-                                        <td className="px-4 py-3 text-center">
-                                            <div className="flex justify-center">
-                                                <button
-                                                    onClick={(e) => handleMenuToggle(e, issue.id)}
-                                                    className={`p-2 rounded-lg transition-colors ${activeMenu === issue.id ? 'bg-indigo-500/20 text-indigo-500 dark:text-white' : 'hover:bg-bg-hover text-text-muted hover:text-text-main'}`}
-                                                >
-                                                    <MoreVertical className="w-4 h-4" />
-                                                </button>
-
-                                                {mounted && activeMenu === issue.id && menuPosition && createPortal(
-                                                    <div
-                                                        style={{
-                                                            position: 'fixed',
-                                                            top: `${menuPosition.top + 8}px`,
-                                                            left: `${menuPosition.left - 144}px`,
-                                                        }}
-                                                        className="z-[9999] w-36 py-1.5 bg-[#1e293b] border border-white/10 rounded-xl shadow-2xl animate-in fade-in zoom-in duration-150 origin-top-right"
-                                                        onClick={(e) => e.stopPropagation()}
-                                                    >
-                                                        <button
-                                                            onClick={() => { onEdit(issue); setActiveMenu(null); }}
-                                                            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-300 hover:bg-white/5 hover:text-white transition-colors"
-                                                        >
-                                                            <Edit2 className="w-3.5 h-3.5" />
-                                                            แก้ไขข้อมูล
-                                                        </button>
-                                                        <div className="my-1 border-t border-white/5" />
-                                                        <button
-                                                            onClick={() => { onDelete(issue.id); setActiveMenu(null); }}
-                                                            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-rose-400 hover:bg-rose-500/10 transition-colors"
-                                                        >
-                                                            <Trash2 className="w-3.5 h-3.5" />
-                                                            ลบรายการ
-                                                        </button>
-                                                    </div>,
-                                                    document.body
-                                                )}
-                                            </div>
-                                        </td>
-                                    </tr>
+                                    <IssueRow
+                                        key={issue.id || issue.caseNumber}
+                                        issue={issue}
+                                        rowNumber={(currentPage - 1) * itemsPerPage + index + 1}
+                                        onEdit={onEdit}
+                                        onDelete={onDelete}
+                                    />
                                 ))
                             ) : (
                                 <tr>
@@ -448,4 +282,6 @@ export default function IssueManager({ issues, customers: _customers, onAdd, onE
             </div>
         </div>
     );
-}
+});
+
+export default IssueManager;

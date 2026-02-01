@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { Search, Phone, Calendar, CheckCircle2, Clock, AlertTriangle, ChevronRight } from "lucide-react";
 import { Customer, FollowUpStatus } from "@/types";
 
@@ -21,7 +21,7 @@ interface FollowUpPlanManagerProps {
     onUpdateStatus?: (roundId: number, status: FollowUpStatus) => void;
 }
 
-export default function FollowUpPlanManager({ customers, onUpdateStatus }: FollowUpPlanManagerProps) {
+const FollowUpPlanManager = React.memo(function FollowUpPlanManager({ customers, onUpdateStatus }: FollowUpPlanManagerProps) {
     const [searchTerm, setSearchTerm] = useState("");
     const [activeTab, setActiveTab] = useState<"today" | "upcoming" | "overdue" | "all">("today");
     const [currentPage, setCurrentPage] = useState(1);
@@ -384,4 +384,6 @@ export default function FollowUpPlanManager({ customers, onUpdateStatus }: Follo
             </div>
         </div>
     );
-}
+});
+
+export default FollowUpPlanManager;
