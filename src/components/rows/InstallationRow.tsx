@@ -47,13 +47,18 @@ const InstallationRow = React.memo(function InstallationRow({
 
     const handleClickOutside = () => setIsMenuOpen(false);
     const handleScroll = () => setIsMenuOpen(false);
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsMenuOpen(false);
+    };
 
     document.addEventListener("click", handleClickOutside);
     document.addEventListener("scroll", handleScroll, true);
+    document.addEventListener("keydown", handleEscape);
 
     return () => {
       document.removeEventListener("click", handleClickOutside);
       document.removeEventListener("scroll", handleScroll, true);
+      document.removeEventListener("keydown", handleEscape);
     };
   }, [isMenuOpen]);
 
@@ -162,13 +167,16 @@ const InstallationRow = React.memo(function InstallationRow({
         <div className="flex justify-end gap-2 relative">
           <button
             onClick={handleMenuToggle}
-            className={`p-2 rounded-lg transition-colors ${
+            aria-label="เปิดเมนูตัวเลือก"
+            aria-expanded={isMenuOpen}
+            aria-haspopup="menu"
+            className={`p-2.5 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center ${
               isMenuOpen
                 ? "bg-indigo-500/20 text-indigo-500 dark:text-white"
                 : "hover:bg-bg-hover text-text-muted hover:text-text-main"
             }`}
           >
-            <MoreVertical className="w-4 h-4" />
+            <MoreVertical className="w-5 h-5" aria-hidden="true" />
           </button>
 
           {mounted &&
@@ -176,19 +184,22 @@ const InstallationRow = React.memo(function InstallationRow({
             menuPosition &&
             createPortal(
               <div
+                role="menu"
+                aria-label="ตัวเลือกการจัดการงานติดตั้ง"
                 style={{
                   position: "fixed",
                   top: `${menuPosition.top + 8}px`,
                   left: `${menuPosition.left - 144}px`,
                 }}
-                className="z-[9999] w-40 py-1.5 bg-card-bg border border-border rounded-xl shadow-2xl animate-in fade-in zoom-in duration-150 origin-top-right backdrop-blur-xl"
+                className="z-[9999] w-48 py-2 bg-card-bg border border-border rounded-xl shadow-2xl animate-in fade-in zoom-in duration-150 origin-top-right backdrop-blur-xl"
                 onClick={(e) => e.stopPropagation()}
               >
                 <button
+                  role="menuitem"
                   onClick={handleSelect}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-text-main hover:bg-bg-hover transition-colors"
+                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-text-main hover:bg-bg-hover transition-colors"
                 >
-                  <Edit2 className="w-3.5 h-3.5" />
+                  <Edit2 className="w-4 h-4" aria-hidden="true" />
                   แก้ไขรายละเอียด
                 </button>
               </div>,

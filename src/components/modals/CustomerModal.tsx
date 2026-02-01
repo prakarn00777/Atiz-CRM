@@ -99,14 +99,24 @@ const CustomerModal = React.memo(function CustomerModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="customer-modal-title"
+      onKeyDown={(e) => e.key === "Escape" && onClose()}
+    >
+      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
       <div className="glass-card w-full max-w-4xl max-h-[90vh] flex flex-col relative shadow-2xl border-white/10">
         {/* Header */}
         <div className="p-6 border-b border-white/5 flex items-center justify-between shrink-0">
-          <h2 className="text-xl font-bold">{editingCustomer ? "แก้ไขข้อมูลลูกค้า" : "เพิ่มข้อมูลลูกค้า"}</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors p-1 hover:bg-white/5 rounded-lg">
-            <X />
+          <h2 id="customer-modal-title" className="text-xl font-bold">{editingCustomer ? "แก้ไขข้อมูลลูกค้า" : "เพิ่มข้อมูลลูกค้า"}</h2>
+          <button
+            onClick={onClose}
+            aria-label="ปิดหน้าต่าง"
+            className="text-slate-400 hover:text-white transition-colors p-2 hover:bg-white/5 rounded-lg"
+          >
+            <X aria-hidden="true" />
           </button>
         </div>
 
@@ -162,18 +172,23 @@ const CustomerModal = React.memo(function CustomerModal({
                   )}
 
                   <div className="space-y-1 col-span-2">
-                    <label className="text-xs font-medium text-slate-400">ชื่อคลินิก/ร้าน</label>
+                    <label className="text-xs font-medium text-slate-400">
+                      ชื่อคลินิก/ร้าน <span className="text-rose-400">*</span>
+                    </label>
                     <input
                       name="name"
                       defaultValue={editingCustomer?.name}
                       className="input-field"
                       placeholder="กรอกชื่อคลินิกหรือร้าน..."
                       required
+                      aria-required="true"
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs font-medium text-slate-400">Subdomain / Link</label>
-                    <input name="subdomain" defaultValue={editingCustomer?.subdomain} className="input-field" required />
+                    <label className="text-xs font-medium text-slate-400">
+                      Subdomain / Link <span className="text-rose-400">*</span>
+                    </label>
+                    <input name="subdomain" defaultValue={editingCustomer?.subdomain} className="input-field" required aria-required="true" />
                   </div>
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-slate-400">ประเภทระบบ</label>

@@ -69,13 +69,18 @@ const IssueRow = React.memo(function IssueRow({
 
     const handleClickOutside = () => setIsMenuOpen(false);
     const handleScroll = () => setIsMenuOpen(false);
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsMenuOpen(false);
+    };
 
     document.addEventListener("click", handleClickOutside);
     document.addEventListener("scroll", handleScroll, true);
+    document.addEventListener("keydown", handleEscape);
 
     return () => {
       document.removeEventListener("click", handleClickOutside);
       document.removeEventListener("scroll", handleScroll, true);
+      document.removeEventListener("keydown", handleEscape);
     };
   }, [isMenuOpen]);
 
@@ -160,13 +165,16 @@ const IssueRow = React.memo(function IssueRow({
         <div className="flex justify-center">
           <button
             onClick={handleMenuToggle}
-            className={`p-2 rounded-lg transition-colors ${
+            aria-label="เปิดเมนูตัวเลือก"
+            aria-expanded={isMenuOpen}
+            aria-haspopup="menu"
+            className={`p-2.5 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center ${
               isMenuOpen
                 ? "bg-indigo-500/20 text-indigo-500 dark:text-white"
                 : "hover:bg-bg-hover text-text-muted hover:text-text-main"
             }`}
           >
-            <MoreVertical className="w-4 h-4" />
+            <MoreVertical className="w-5 h-5" aria-hidden="true" />
           </button>
 
           {mounted &&
@@ -174,27 +182,31 @@ const IssueRow = React.memo(function IssueRow({
             menuPosition &&
             createPortal(
               <div
+                role="menu"
+                aria-label="ตัวเลือกการจัดการเคส"
                 style={{
                   position: "fixed",
                   top: `${menuPosition.top + 8}px`,
                   left: `${menuPosition.left - 144}px`,
                 }}
-                className="z-[9999] w-36 py-1.5 bg-[#1e293b] border border-white/10 rounded-xl shadow-2xl animate-in fade-in zoom-in duration-150 origin-top-right"
+                className="z-[9999] w-44 py-2 bg-[#1e293b] border border-white/10 rounded-xl shadow-2xl animate-in fade-in zoom-in duration-150 origin-top-right"
                 onClick={(e) => e.stopPropagation()}
               >
                 <button
+                  role="menuitem"
                   onClick={handleEdit}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-300 hover:bg-white/5 hover:text-white transition-colors"
+                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-300 hover:bg-white/5 hover:text-white transition-colors"
                 >
-                  <Edit2 className="w-3.5 h-3.5" />
+                  <Edit2 className="w-4 h-4" aria-hidden="true" />
                   แก้ไขข้อมูล
                 </button>
-                <div className="my-1 border-t border-white/5" />
+                <div className="my-1 border-t border-white/5" role="separator" />
                 <button
+                  role="menuitem"
                   onClick={handleDelete}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-rose-400 hover:bg-rose-500/10 transition-colors"
+                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-rose-400 hover:bg-rose-500/10 transition-colors"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
+                  <Trash2 className="w-4 h-4" aria-hidden="true" />
                   ลบรายการ
                 </button>
               </div>,

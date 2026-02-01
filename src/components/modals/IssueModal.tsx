@@ -46,15 +46,21 @@ const IssueModal = React.memo(function IssueModal({
   const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
 
   return (
-    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={onClose} />
+    <div
+      className="fixed inset-0 z-[150] flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="issue-modal-title"
+      onKeyDown={(e) => e.key === "Escape" && onClose()}
+    >
+      <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={onClose} aria-hidden="true" />
       <div className="glass-card w-full max-w-2xl max-h-[90vh] flex flex-col relative shadow-2xl border-indigo-500/20">
         <div className="p-6 border-b border-white/5 flex justify-between items-center">
-          <h2 className="text-xl font-bold text-white">
+          <h2 id="issue-modal-title" className="text-xl font-bold text-white">
             {editingIssue ? "Edit Issue" : "New Issue"}
           </h2>
-          <button onClick={onClose}>
-            <X />
+          <button onClick={onClose} aria-label="ปิดหน้าต่าง" className="p-2 hover:bg-white/5 rounded-lg transition-colors">
+            <X aria-hidden="true" />
           </button>
         </div>
 
@@ -147,12 +153,15 @@ const IssueModal = React.memo(function IssueModal({
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-medium text-slate-400">Subject</label>
+              <label className="text-xs font-medium text-slate-400">
+                Subject <span className="text-rose-400">*</span>
+              </label>
               <input
                 name="title"
                 defaultValue={editingIssue?.title}
                 className="input-field"
                 required
+                aria-required="true"
               />
             </div>
 
@@ -278,9 +287,10 @@ const IssueModal = React.memo(function IssueModal({
                       <button
                         type="button"
                         onClick={() => setSelectedFiles((prev) => prev.filter((_, i) => i !== idx))}
+                        aria-label={`ลบไฟล์ ${file.name}`}
                         className="p-1.5 hover:bg-rose-500/20 rounded-lg transition-colors"
                       >
-                        <X className="w-4 h-4 text-rose-400" />
+                        <X className="w-4 h-4 text-rose-400" aria-hidden="true" />
                       </button>
                     </div>
                   ))}

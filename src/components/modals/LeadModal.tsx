@@ -26,16 +26,22 @@ const LeadModal = React.memo(function LeadModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="lead-modal-title"
+      onKeyDown={(e) => e.key === "Escape" && onClose()}
+    >
+      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
       <div className="glass-card w-full max-w-2xl max-h-[90vh] flex flex-col relative shadow-2xl">
         <div className="p-6 border-b border-white/5 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400">
+            <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400" aria-hidden="true">
               <Plus className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-white">
+              <h2 id="lead-modal-title" className="text-xl font-bold text-white">
                 {editingLead ? "แก้ไขข้อมูลลีด" : "เพิ่มลีดใหม่"}
               </h2>
               <p className="text-xs text-slate-400">กรอกข้อมูลลีดให้ครบถ้วนเพื่อใช้ในการติดตาม</p>
@@ -43,9 +49,10 @@ const LeadModal = React.memo(function LeadModal({
           </div>
           <button
             onClick={onClose}
+            aria-label="ปิดหน้าต่าง"
             className="p-2 hover:bg-white/5 rounded-lg text-slate-400 hover:text-white transition-colors"
           >
-            <X className="w-5 h-5" />
+            <X className="w-5 h-5" aria-hidden="true" />
           </button>
         </div>
 
@@ -53,13 +60,14 @@ const LeadModal = React.memo(function LeadModal({
           <form id="lead-form" onSubmit={onSave} className="grid grid-cols-2 gap-6">
             <div className="space-y-1.5 col-span-2 md:col-span-1">
               <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                เลขที่ลีด (Lead Number)
+                เลขที่ลีด (Lead Number) <span className="text-rose-400">*</span>
               </label>
               <input
                 name="leadNumber"
                 defaultValue={editingLead?.leadNumber || `L${Date.now().toString().slice(-6)}`}
                 className="input-field text-sm font-bold text-indigo-400"
                 required
+                aria-required="true"
                 placeholder="L000000"
               />
             </div>
@@ -78,24 +86,28 @@ const LeadModal = React.memo(function LeadModal({
 
             <div className="space-y-1.5 col-span-2">
               <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                ชื่อลูกค้า / คลินิก / ร้าน
+                ชื่อลูกค้า / คลินิก / ร้าน <span className="text-rose-400">*</span>
               </label>
               <input
                 name="customerName"
                 defaultValue={editingLead?.customerName}
                 className="input-field text-sm font-semibold"
                 required
+                aria-required="true"
                 placeholder="ระบุชื่อลูกค้า"
               />
             </div>
 
             <div className="space-y-1.5 col-span-2 md:col-span-1">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">เบอร์โทรศัพท์</label>
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                เบอร์โทรศัพท์ <span className="text-rose-400">*</span>
+              </label>
               <input
                 name="phone"
                 defaultValue={editingLead?.phone}
                 className="input-field text-sm font-mono"
                 required
+                aria-required="true"
                 placeholder="08X-XXXXXXX"
               />
             </div>
