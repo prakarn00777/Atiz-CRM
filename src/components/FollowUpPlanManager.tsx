@@ -41,8 +41,9 @@ const FollowUpPlanManager = React.memo(function FollowUpPlanManager({ customers,
     const [isLoadingHistory, setIsLoadingHistory] = useState(false);
     const [historyPage, setHistoryPage] = useState(1);
 
-    // Track recently completed items for fade-out animation
-    const [recentlyCompleted, setRecentlyCompleted] = useState<Map<number, number>>(new Map());
+    // Track completed items: recentlyCompleted for fade animation, hiddenItems for permanent hide
+    const [recentlyCompleted, setRecentlyCompleted] = useState<Set<number>>(new Set());
+    const [hiddenItems, setHiddenItems] = useState<Set<number>>(new Set());
 
     // Fetch history when tab changes to history
     useEffect(() => {
@@ -50,18 +51,6 @@ const FollowUpPlanManager = React.memo(function FollowUpPlanManager({ customers,
             fetchHistory();
         }
     }, [activeTab]);
-
-    // Force re-render after 3 seconds to hide completed items
-    const [, forceUpdate] = useState(0);
-    useEffect(() => {
-        if (recentlyCompleted.size === 0) return;
-
-        const timer = setTimeout(() => {
-            forceUpdate(n => n + 1); // Trigger re-render to apply filter
-        }, 3000);
-
-        return () => clearTimeout(timer);
-    }, [recentlyCompleted]);
 
     const fetchHistory = async () => {
         setIsLoadingHistory(true);
@@ -103,12 +92,18 @@ const FollowUpPlanManager = React.memo(function FollowUpPlanManager({ customers,
             // Notify parent component
             onUpdateStatus?.(selectedItem.id, "Completed", feedback);
 
-            // Add to recently completed for fade-out animation
-            setRecentlyCompleted(prev => {
-                const next = new Map(prev);
-                next.set(selectedItem.id, Date.now());
-                return next;
-            });
+            // Add to recently completed for fade-out animation, then hide after delay
+            setRecentlyCompleted(prev => new Set(prev).add(selectedItem.id));
+
+            // After 2 seconds, move to hidden items
+            setTimeout(() => {
+                setRecentlyCompleted(prev => {
+                    const next = new Set(prev);
+                    next.delete(selectedItem.id);
+                    return next;
+                });
+                setHiddenItems(prev => new Set(prev).add(selectedItem.id));
+            }, 2000);
 
             // Refresh history if on history tab
             if (activeTab === "history") {
@@ -460,7 +455,7 @@ const FollowUpPlanManager = React.memo(function FollowUpPlanManager({ customers,
                         <tbody className="divide-y divide-border-light">
                             {paginatedQueue.length > 0 ? (
                                 paginatedQueue
-                                    .filter(item => !recentlyCompleted.has(item.id) || Date.now() - (recentlyCompleted.get(item.id) || 0) < 3000)
+                                    .filter(item => !hiddenItems.has(item.id))
                                     .map((item, index) => {
                                         const isCompleted = recentlyCompleted.has(item.id);
                                         return (

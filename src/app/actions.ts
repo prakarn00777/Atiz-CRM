@@ -1217,3 +1217,54 @@ export async function saveFollowUpLog(logData: Partial<FollowUpLog>): Promise<Ap
         return handleDbError(err, "saveFollowUpLog");
     }
 }
+
+export async function updateFollowUpLog(id: number, logData: Partial<FollowUpLog>): Promise<ApiResponse<FollowUpLog>> {
+    try {
+        const dbData: Record<string, any> = {};
+
+        if (logData.feedback !== undefined) dbData.feedback = logData.feedback;
+        if (logData.csOwner !== undefined) dbData.cs_owner = logData.csOwner;
+        if (logData.completedAt !== undefined) dbData.completed_at = logData.completedAt;
+
+        const { data, error } = await db
+            .from('follow_up_logs')
+            .update(dbData)
+            .eq('id', id)
+            .select();
+
+        if (error) throw error;
+
+        const result = data?.[0];
+        if (!result) {
+            return createError("No data returned from database", 'DATABASE_ERROR');
+        }
+
+        const updatedLog: FollowUpLog = {
+            id: Number(result.id),
+            customerId: Number(result.customer_id),
+            customerName: String(result.customer_name),
+            branchName: result.branch_name ? String(result.branch_name) : undefined,
+            csOwner: String(result.cs_owner),
+            round: Number(result.round) as FollowUpLog['round'],
+            dueDate: String(result.due_date),
+            completedAt: String(result.completed_at),
+            feedback: result.feedback ? String(result.feedback) : undefined,
+            createdBy: result.created_by ? String(result.created_by) : undefined,
+            createdAt: result.created_at ? String(result.created_at) : undefined,
+        };
+
+        return createSuccess(updatedLog);
+    } catch (err) {
+        return handleDbError(err, "updateFollowUpLog");
+    }
+}
+
+export async function deleteFollowUpLog(id: number): Promise<ApiResponse<{ deleted: boolean }>> {
+    try {
+        const { error } = await db.from('follow_up_logs').delete().eq('id', id);
+        if (error) throw error;
+        return createSuccess({ deleted: true });
+    } catch (err) {
+        return handleDbError(err, "deleteFollowUpLog");
+    }
+}

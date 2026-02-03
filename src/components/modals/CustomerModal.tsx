@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { X, Plus, Trash2, MapPin, Clock, CheckCircle2, AlertCircle, Layers, History, Loader2 } from "lucide-react";
+import { X, Plus, Trash2, MapPin, Clock, CheckCircle2, AlertCircle, Layers, History, Loader2, Edit2, Check } from "lucide-react";
 import CustomSelect from "@/components/CustomSelect";
 import CustomDatePicker from "@/components/CustomDatePicker";
 import { Customer, Branch, Installation, UsageStatus, FollowUpLog } from "@/types";
-import { getFollowUpLogs } from "@/app/actions";
+import { getFollowUpLogs, updateFollowUpLog, deleteFollowUpLog } from "@/app/actions";
 
 interface CustomerModalProps {
   isOpen: boolean;
@@ -49,6 +49,11 @@ const CustomerModal = React.memo(function CustomerModal({
   // Follow-up history state
   const [followUpLogs, setFollowUpLogs] = useState<FollowUpLog[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [editingLogId, setEditingLogId] = useState<number | null>(null);
+  const [editingFeedback, setEditingFeedback] = useState("");
+  // Pending changes - will be applied when user clicks "บันทึก"
+  const [pendingDeleteIds, setPendingDeleteIds] = useState<Set<number>>(new Set());
+  const [pendingEdits, setPendingEdits] = useState<Map<number, string>>(new Map());
 
   // Fetch follow-up history when tab changes or customer changes
   useEffect(() => {
@@ -68,6 +73,75 @@ const CustomerModal = React.memo(function CustomerModal({
     } finally {
       setIsLoadingHistory(false);
     }
+  };
+
+  const handleEditLog = (log: FollowUpLog) => {
+    setEditingLogId(log.id);
+    // Use pending edit if exists, otherwise use original
+    setEditingFeedback(pendingEdits.get(log.id) ?? log.feedback ?? "");
+  };
+
+  const handleCancelEdit = () => {
+    setEditingLogId(null);
+    setEditingFeedback("");
+  };
+
+  const handleSaveLogEdit = (logId: number) => {
+    // Save to pending edits (will be applied when modal saves)
+    setPendingEdits(prev => new Map(prev).set(logId, editingFeedback));
+    setEditingLogId(null);
+    setEditingFeedback("");
+  };
+
+  const handleMarkDeleteLog = (logId: number) => {
+    // Mark for deletion (will be applied when modal saves)
+    setPendingDeleteIds(prev => new Set(prev).add(logId));
+  };
+
+  const handleUndoDelete = (logId: number) => {
+    setPendingDeleteIds(prev => {
+      const next = new Set(prev);
+      next.delete(logId);
+      return next;
+    });
+  };
+
+  // Reset pending changes when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setPendingDeleteIds(new Set());
+      setPendingEdits(new Map());
+      setEditingLogId(null);
+      setEditingFeedback("");
+    }
+  }, [isOpen]);
+
+  // Apply pending changes when form is saved
+  const handleFormSave = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    try {
+      // Apply pending deletes
+      for (const id of pendingDeleteIds) {
+        await deleteFollowUpLog(id);
+      }
+
+      // Apply pending edits
+      for (const [id, feedback] of pendingEdits) {
+        if (!pendingDeleteIds.has(id)) {
+          await updateFollowUpLog(id, { feedback });
+        }
+      }
+
+      // Clear pending changes
+      setPendingDeleteIds(new Set());
+      setPendingEdits(new Map());
+    } catch (error) {
+      console.error("Error saving follow-up changes:", error);
+    }
+
+    // Call original onSave
+    onSave(e);
   };
 
   if (!isOpen) return null;
@@ -184,7 +258,7 @@ const CustomerModal = React.memo(function CustomerModal({
 
         {/* Content */}
         <div className="overflow-y-auto p-6 custom-scrollbar flex-1 min-h-[500px]">
-          <form id="save-customer-form" onSubmit={onSave}>
+          <form id="save-customer-form" onSubmit={handleFormSave}>
             <div className="space-y-6">
               {/* General Tab */}
               <div className={activeTab === 'general' ? 'block' : 'hidden'}>
@@ -490,7 +564,9 @@ const CustomerModal = React.memo(function CustomerModal({
                     </div>
                   ) : (
                     <div className="space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
-                      {followUpLogs.map((log) => (
+                      {followUpLogs.filter(log => !pendingDeleteIds.has(log.id)).map((log) => {
+                        const displayFeedback = pendingEdits.has(log.id) ? pendingEdits.get(log.id) : log.feedback;
+                        return (
                         <div key={log.id} className="bg-bg-hover rounded-xl p-3 border border-border-light hover:border-purple-500/30 transition-colors">
                           <div className="flex items-center justify-between gap-3 mb-2">
                             <div className="flex items-center gap-2">
@@ -503,15 +579,64 @@ const CustomerModal = React.memo(function CustomerModal({
                                 </span>
                               )}
                             </div>
-                            <span className="text-[10px] text-text-muted">
-                              {(() => {
-                                const d = new Date(log.completedAt);
-                                return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-                              })()}
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] text-text-muted">
+                                {(() => {
+                                  const d = new Date(log.completedAt);
+                                  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+                                })()}
+                              </span>
+                              {editingLogId !== log.id && (
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleEditLog(log)}
+                                    className="p-1 rounded hover:bg-purple-500/20 text-text-muted hover:text-purple-400 transition-colors"
+                                    title="แก้ไข feedback"
+                                  >
+                                    <Edit2 className="w-3 h-3" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleMarkDeleteLog(log.id)}
+                                    className="p-1 rounded hover:bg-rose-500/20 text-text-muted hover:text-rose-400 transition-colors"
+                                    title="ลบรายการ"
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                           </div>
-                          {log.feedback ? (
-                            <p className="text-xs text-text-muted leading-relaxed">{log.feedback}</p>
+                          {editingLogId === log.id ? (
+                            <div className="space-y-2">
+                              <textarea
+                                value={editingFeedback}
+                                onChange={(e) => setEditingFeedback(e.target.value)}
+                                className="input-field w-full text-xs min-h-[60px] resize-none"
+                                placeholder="กรอก feedback..."
+                                autoFocus
+                              />
+                              <div className="flex items-center justify-end gap-2">
+                                <button
+                                  type="button"
+                                  onClick={handleCancelEdit}
+                                  className="px-2 py-1 text-[10px] rounded bg-slate-600/50 text-text-muted hover:bg-slate-600 transition-colors"
+                                >
+                                  ยกเลิก
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleSaveLogEdit(log.id)}
+                                  className="px-2 py-1 text-[10px] rounded bg-purple-500/20 text-purple-400 hover:bg-purple-500/40 transition-colors flex items-center gap-1"
+                                >
+                                  <Check className="w-3 h-3" />
+                                  ตกลง
+                                </button>
+                              </div>
+                            </div>
+                          ) : displayFeedback ? (
+                            <p className="text-xs text-text-muted leading-relaxed">{displayFeedback}</p>
                           ) : (
                             <p className="text-xs text-text-muted opacity-40 italic">ไม่มี feedback</p>
                           )}
@@ -521,7 +646,8 @@ const CustomerModal = React.memo(function CustomerModal({
                             </div>
                           )}
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
