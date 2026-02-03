@@ -494,7 +494,6 @@ export default function CRMPage() {
       usageStatus: modalUsageStatus,
       installationStatus: editingCustomer ? editingCustomer.installationStatus : "Pending",
       clientCode: formData.get("clientCode") as string || (editingCustomer ? editingCustomer.clientCode : undefined),
-      csOwner: formData.get("csOwner") as string,
       salesName: formData.get("salesName") as string,
       contractStart: formData.get("contractStart") as string,
       contractEnd: formData.get("contractEnd") as string,

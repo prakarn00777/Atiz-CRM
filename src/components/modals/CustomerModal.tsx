@@ -73,12 +73,11 @@ const CustomerModal = React.memo(function CustomerModal({
   if (!isOpen) return null;
 
   const handleAddBranch = () => {
-    const mainCsOwner = (document.getElementsByName('csOwner')[0] as HTMLSelectElement)?.value || editingCustomer?.csOwner || "";
     const newBranch: Branch = {
       name: "",
       isMain: false,
       status: "Pending",
-      csOwner: mainCsOwner
+      csOwner: ""
     };
     setBranchInputs([...branchInputs, newBranch]);
     setActiveBranchIndex(branchInputs.length);
@@ -250,17 +249,6 @@ const CustomerModal = React.memo(function CustomerModal({
                     <CustomSelect name="package" defaultValue={editingCustomer?.package || "Standard"} options={[{ value: "Starter", label: "Starter" }, { value: "Standard", label: "Standard" }, { value: "Elite", label: "Elite" }]} />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs font-medium text-text-muted">CS Owner (ผู้ดูแลหลัก)</label>
-                    <CustomSelect
-                      name="csOwner"
-                      defaultValue={editingCustomer?.csOwner || ""}
-                      options={[
-                        { value: "", label: "ไม่ระบุ" },
-                        ...users.map(u => ({ value: u.name, label: u.name }))
-                      ]}
-                    />
-                  </div>
-                  <div className="space-y-1">
                     <label className="text-xs font-medium text-text-muted">ชื่อเซลล์ (Sales Name)</label>
                     <input name="salesName" defaultValue={editingCustomer?.salesName} className="input-field" placeholder="ระบุชื่อเซลล์..." />
                   </div>
@@ -395,13 +383,13 @@ const CustomerModal = React.memo(function CustomerModal({
                               />
                             </div>
                             <div className="space-y-1.5">
-                              <label className="text-xs font-medium text-text-muted">CS Owner (สาขา)</label>
+                              <label className="text-xs font-medium text-text-muted">CS Owner</label>
                               <CustomSelect
                                 name={`branchCsOwner-${activeBranchIndex}`}
                                 defaultValue={branchInputs[activeBranchIndex].csOwner || ""}
                                 onChange={(val) => handleBranchCsOwnerChange(val)}
                                 options={[
-                                  { value: "", label: "ใช้ตามลูกค้าหลัก" },
+                                  { value: "", label: "ไม่ระบุ" },
                                   ...users.map(u => ({ value: u.name, label: u.name }))
                                 ]}
                               />
