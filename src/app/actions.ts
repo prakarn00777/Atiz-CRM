@@ -138,7 +138,7 @@ export async function getCustomers(params?: PaginationParams): Promise<Customer[
         try {
             const { data: branchesData } = await db
                 .from('branches')
-                .select('id, customer_id, name, is_main, status, address, contract_start');
+                .select('id, customer_id, name, is_main, status, address, contract_start, cs_owner');
 
             if (branchesData) {
                 branchesData.forEach(b => {
@@ -175,7 +175,8 @@ export async function getCustomers(params?: PaginationParams): Promise<Customer[
                 isMain: Boolean(b.is_main),
                 status: b.status as any,
                 address: b.address,
-                contractStart: b.contract_start
+                contractStart: b.contract_start,
+                csOwner: b.cs_owner ? String(b.cs_owner) : undefined
             }))
         })) as Customer[];
     } catch (err) {
@@ -599,7 +600,8 @@ export async function saveCustomer(customerData: Partial<Customer>): Promise<Api
                         is_main: b.isMain,
                         status: b.status,
                         address: b.address,
-                        contract_start: b.contractStart
+                        contract_start: b.contractStart,
+                        cs_owner: b.csOwner || null
                     };
                     // Only include ID if it's not a temporary/new one
                     if (b.id && !isTemporaryId(b.id)) {
@@ -619,7 +621,7 @@ export async function saveCustomer(customerData: Partial<Customer>): Promise<Api
         // Fetch the customer again with branches to return complete data
         const { data: finalData, error: finalError } = await db
             .from('customers')
-            .select('*, branches(id, name, is_main, status, address, contract_start)')
+            .select('*, branches(id, name, is_main, status, address, contract_start, cs_owner)')
             .eq('id', customerId)
             .maybeSingle();
 
