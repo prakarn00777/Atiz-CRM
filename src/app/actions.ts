@@ -128,7 +128,7 @@ export async function getCustomers(params?: PaginationParams): Promise<Customer[
                 contract_start, contract_end, cs_owner, contact_name, contact_phone,
                 sales_name, note,
                 installation_status, created_by, created_at, modified_by, modified_at,
-                branches (id, name, is_main, status, address, contract_start, cs_owner)
+                branches (id, name, is_main, status, address, contract_start)
             `)
             .order(sortBy, { ascending: sortOrder });
 
@@ -186,8 +186,7 @@ export async function getCustomers(params?: PaginationParams): Promise<Customer[
                 isMain: Boolean(b.is_main),
                 status: b.status as any,
                 address: b.address,
-                contractStart: b.contract_start,
-                csOwner: b.cs_owner ? String(b.cs_owner) : undefined
+                contractStart: b.contract_start
             }))
         })) as Customer[];
     } catch (err) {
@@ -632,7 +631,7 @@ export async function saveCustomer(customerData: Partial<Customer>): Promise<Api
         // Fetch the customer again with branches to return complete data
         const { data: finalData, error: finalError } = await db
             .from('customers')
-            .select('*, branches(*)')
+            .select('*, branches(id, name, is_main, status, address, contract_start)')
             .eq('id', customerId)
             .maybeSingle();
 
