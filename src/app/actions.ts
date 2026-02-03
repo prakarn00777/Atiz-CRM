@@ -120,47 +120,36 @@ export async function getCustomers(params?: PaginationParams): Promise<Customer[
         const sortBy = params?.sortBy || 'id';
         const sortOrder = params?.sortOrder === 'asc';
 
-        // First try with branches join
-        let query = db
+        // Simple query - no joins
+        const { data, error } = await db
             .from('customers')
-            .select(`
-                id, name, client_code, subdomain, product_type, package, usage_status,
-                contract_start, contract_end, cs_owner, contact_name, contact_phone,
-                sales_name, note,
-                installation_status, created_by, created_at, modified_by, modified_at,
-                branches (id, name, is_main, status, address, contract_start)
-            `)
+            .select('*')
             .order(sortBy, { ascending: sortOrder });
 
-        if (params?.limit) {
-            const { limit, offset } = getPaginationParams(params);
-            query = query.range(offset, offset + limit - 1);
-        }
-
-        let { data, error } = await query;
-
-        // Fallback: if branches join fails, fetch customers without branches
         if (error) {
-            console.warn("[getCustomers] Branches join failed, fetching without branches:", error.message);
-            const fallbackQuery = db
-                .from('customers')
-                .select(`
-                    id, name, client_code, subdomain, product_type, package, usage_status,
-                    contract_start, contract_end, cs_owner, contact_name, contact_phone,
-                    sales_name, note,
-                    installation_status, created_by, created_at, modified_by, modified_at
-                `)
-                .order(sortBy, { ascending: sortOrder });
-
-            const fallbackResult = await fallbackQuery;
-            if (fallbackResult.error) {
-                console.error("[getCustomers] Fallback also failed:", fallbackResult.error);
-                return [];
-            }
-            data = fallbackResult.data?.map(row => ({ ...row, branches: [] })) || [];
+            console.error("[getCustomers] Database error:", error.message, error.code);
+            return [];
         }
 
         console.log(`[getCustomers] Success: fetched ${data?.length || 0} customers`);
+
+        // Fetch branches separately
+        let branchesMap: Record<number, any[]> = {};
+        try {
+            const { data: branchesData } = await db
+                .from('branches')
+                .select('id, customer_id, name, is_main, status, address, contract_start');
+
+            if (branchesData) {
+                branchesData.forEach(b => {
+                    const cid = b.customer_id;
+                    if (!branchesMap[cid]) branchesMap[cid] = [];
+                    branchesMap[cid].push(b);
+                });
+            }
+        } catch (branchErr) {
+            console.warn("[getCustomers] Failed to fetch branches:", branchErr);
+        }
 
         return (data || []).map(row => ({
             id: Number(row.id),
@@ -168,7 +157,7 @@ export async function getCustomers(params?: PaginationParams): Promise<Customer[
             clientCode: row.client_code ? String(row.client_code) : undefined,
             subdomain: row.subdomain ? String(row.subdomain) : undefined,
             productType: (row.product_type as ProductType) || "Dr.Ease",
-            package: String(row.package),
+            package: String(row.package || 'Standard'),
             usageStatus: (row.usage_status as UsageStatus) || "Active",
             contractStart: row.contract_start ? String(row.contract_start) : undefined,
             contractEnd: row.contract_end ? String(row.contract_end) : undefined,
@@ -180,7 +169,7 @@ export async function getCustomers(params?: PaginationParams): Promise<Customer[
             installationStatus: row.installation_status ? String(row.installation_status) : undefined,
             modifiedBy: row.modified_by ? String(row.modified_by) : undefined,
             modifiedAt: row.modified_at ? String(row.modified_at) : undefined,
-            branches: (row.branches as any[] || []).map(b => ({
+            branches: (branchesMap[row.id] || []).map(b => ({
                 id: Number(b.id),
                 name: String(b.name),
                 isMain: Boolean(b.is_main),
@@ -191,7 +180,6 @@ export async function getCustomers(params?: PaginationParams): Promise<Customer[
         })) as Customer[];
     } catch (err) {
         console.error("[getCustomers] Critical error:", err);
-        log.error("Critical error in getCustomers:", err);
         return [];
     }
 }
