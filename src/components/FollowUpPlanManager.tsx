@@ -41,16 +41,39 @@ const FollowUpPlanManager = React.memo(function FollowUpPlanManager({ customers,
     const [isLoadingHistory, setIsLoadingHistory] = useState(false);
     const [historyPage, setHistoryPage] = useState(1);
 
-    // Track completed items: recentlyCompleted for fade animation, hiddenItems for permanent hide
+    // Track completed items: recentlyCompleted for fade animation
     const [recentlyCompleted, setRecentlyCompleted] = useState<Set<number>>(new Set());
-    const [hiddenItems, setHiddenItems] = useState<Set<number>>(new Set());
 
-    // Fetch history when tab changes to history
+    // Completed logs key set - tracks which customer+branch+round combos are done
+    const [completedLogKeys, setCompletedLogKeys] = useState<Set<string>>(new Set());
+
+    // Fetch all follow-up logs on mount to filter out completed items
+    useEffect(() => {
+        fetchAllLogs();
+    }, []);
+
+    // Also fetch when tab changes to history
     useEffect(() => {
         if (activeTab === "history") {
             fetchHistory();
         }
     }, [activeTab]);
+
+    const fetchAllLogs = async () => {
+        try {
+            const logs = await getFollowUpLogs();
+            setFollowUpLogs(logs);
+            // Build set of completed keys: "customerId-branchName-round"
+            const keys = new Set<string>();
+            logs.forEach(log => {
+                const key = `${log.customerId}-${log.branchName || ''}-${log.round}`;
+                keys.add(key);
+            });
+            setCompletedLogKeys(keys);
+        } catch (error) {
+            console.error("Error fetching follow-up logs:", error);
+        }
+    };
 
     const fetchHistory = async () => {
         setIsLoadingHistory(true);
@@ -92,17 +115,20 @@ const FollowUpPlanManager = React.memo(function FollowUpPlanManager({ customers,
             // Notify parent component
             onUpdateStatus?.(selectedItem.id, "Completed", feedback);
 
-            // Add to recently completed for fade-out animation, then hide after delay
+            // Add to completedLogKeys so it persists after refresh
+            const logKey = `${selectedItem.customerId}-${selectedItem.branchName}-${selectedItem.round}`;
+            setCompletedLogKeys(prev => new Set(prev).add(logKey));
+
+            // Add to recently completed for fade-out animation
             setRecentlyCompleted(prev => new Set(prev).add(selectedItem.id));
 
-            // After 2 seconds, move to hidden items
+            // After 2 seconds, remove from recentlyCompleted (item already filtered by completedLogKeys)
             setTimeout(() => {
                 setRecentlyCompleted(prev => {
                     const next = new Set(prev);
                     next.delete(selectedItem.id);
                     return next;
                 });
-                setHiddenItems(prev => new Set(prev).add(selectedItem.id));
             }, 2000);
 
             // Refresh history if on history tab
@@ -455,7 +481,11 @@ const FollowUpPlanManager = React.memo(function FollowUpPlanManager({ customers,
                         <tbody className="divide-y divide-border-light">
                             {paginatedQueue.length > 0 ? (
                                 paginatedQueue
-                                    .filter(item => !hiddenItems.has(item.id))
+                                    .filter(item => {
+                                        // Hide if already completed in DB
+                                        const logKey = `${item.customerId}-${item.branchName}-${item.round}`;
+                                        return !completedLogKeys.has(logKey);
+                                    })
                                     .map((item, index) => {
                                         const isCompleted = recentlyCompleted.has(item.id);
                                         return (
