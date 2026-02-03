@@ -1142,7 +1142,7 @@ export async function getFollowUpLogs(customerId?: number): Promise<FollowUpLog[
     try {
         let query = db
             .from('follow_up_logs')
-            .select('id, customer_id, customer_name, branch_name, cs_owner, round, due_date, completed_at, feedback, created_by, created_at')
+            .select('id, customer_id, customer_name, branch_name, cs_owner, round, due_date, completed_at, feedback, outcome, created_by, created_at')
             .order('created_at', { ascending: false });
 
         if (customerId) {
@@ -1166,6 +1166,7 @@ export async function getFollowUpLogs(customerId?: number): Promise<FollowUpLog[
             dueDate: String(row.due_date),
             completedAt: String(row.completed_at),
             feedback: row.feedback ? String(row.feedback) : undefined,
+            outcome: row.outcome ? String(row.outcome) as FollowUpLog['outcome'] : 'completed',
             createdBy: row.created_by ? String(row.created_by) : undefined,
             createdAt: row.created_at ? String(row.created_at) : undefined,
         }));
@@ -1186,6 +1187,7 @@ export async function saveFollowUpLog(logData: Partial<FollowUpLog>): Promise<Ap
             due_date: logData.dueDate,
             completed_at: logData.completedAt || new Date().toISOString(),
             feedback: logData.feedback,
+            outcome: logData.outcome || 'completed',
             created_by: logData.createdBy,
             created_at: new Date().toISOString(),
         };
@@ -1208,6 +1210,7 @@ export async function saveFollowUpLog(logData: Partial<FollowUpLog>): Promise<Ap
             dueDate: String(result.due_date),
             completedAt: String(result.completed_at),
             feedback: result.feedback ? String(result.feedback) : undefined,
+            outcome: result.outcome ? String(result.outcome) as FollowUpLog['outcome'] : 'completed',
             createdBy: result.created_by ? String(result.created_by) : undefined,
             createdAt: result.created_at ? String(result.created_at) : undefined,
         };
@@ -1225,6 +1228,7 @@ export async function updateFollowUpLog(id: number, logData: Partial<FollowUpLog
         if (logData.feedback !== undefined) dbData.feedback = logData.feedback;
         if (logData.csOwner !== undefined) dbData.cs_owner = logData.csOwner;
         if (logData.completedAt !== undefined) dbData.completed_at = logData.completedAt;
+        if (logData.outcome !== undefined) dbData.outcome = logData.outcome;
 
         const { data, error } = await db
             .from('follow_up_logs')
@@ -1249,6 +1253,7 @@ export async function updateFollowUpLog(id: number, logData: Partial<FollowUpLog
             dueDate: String(result.due_date),
             completedAt: String(result.completed_at),
             feedback: result.feedback ? String(result.feedback) : undefined,
+            outcome: result.outcome ? String(result.outcome) as FollowUpLog['outcome'] : 'completed',
             createdBy: result.created_by ? String(result.created_by) : undefined,
             createdAt: result.created_at ? String(result.created_at) : undefined,
         };

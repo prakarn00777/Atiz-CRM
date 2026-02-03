@@ -279,6 +279,7 @@ export interface BusinessMetrics {
 }
 
 export type FollowUpStatus = "Pending" | "Calling" | "Completed" | "Overdue";
+export type FollowUpOutcome = "completed" | "no_answer" | "callback_later";
 
 export interface FollowUpRound {
     id: number;
@@ -304,6 +305,7 @@ export interface FollowUpLog {
     dueDate: string;
     completedAt: string;
     feedback?: string;
+    outcome?: FollowUpOutcome;  // 'completed' | 'no_answer' | 'callback_later'
     createdBy?: string;
     createdAt?: string;
 }

@@ -9,7 +9,7 @@
   --text-main: #f8fafc;
   --text-muted: #94a3b8;
   --input-bg: rgba(30, 41, 59, 0.5);
-  --glass-blur: blur(12px);
+  --glass-blur: blur(8px);
   --border: rgba(255, 255, 255, 0.1);
   --border-light: rgba(255, 255, 255, 0.05);
   --bg-hover: rgba(255, 255, 255, 0.05);
@@ -73,10 +73,7 @@
   backdrop-filter: var(--glass-blur);
   border: 1px solid var(--border);
   border-radius: 1rem;
-  box-shadow:
-    0 4px 6px -1px rgba(0, 0, 0, 0.1),
-    0 2px 4px -1px rgba(0, 0, 0, 0.06),
-    inset 0 1px 0 0 var(--border-light);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
 @utility btn {

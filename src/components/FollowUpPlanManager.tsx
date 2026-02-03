@@ -2,7 +2,8 @@
 
 import React, { useState, useMemo, useEffect } from "react";
 import { Search, Calendar, CheckCircle2, Clock, AlertTriangle, ChevronRight, X, MessageSquare, History, Loader2 } from "lucide-react";
-import { Customer, FollowUpStatus, FollowUpLog } from "@/types";
+import { Customer, FollowUpStatus, FollowUpLog, FollowUpOutcome } from "@/types";
+import { Phone } from "lucide-react";
 import { getFollowUpLogs } from "@/app/actions";
 
 // Extended FollowUpRound with contractStart
@@ -25,8 +26,17 @@ interface FollowUpPlanManagerProps {
 }
 
 const FollowUpPlanManager = React.memo(function FollowUpPlanManager({ customers, onUpdateStatus, onSaveLog }: FollowUpPlanManagerProps) {
+    const [searchInput, setSearchInput] = useState("");
     const [searchTerm, setSearchTerm] = useState("");
     const [activeTab, setActiveTab] = useState<"today" | "upcoming" | "overdue" | "all" | "history">("today");
+
+    // Debounce search input - only update searchTerm after 300ms of no typing
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setSearchTerm(searchInput);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [searchInput]);
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
 
@@ -34,7 +44,11 @@ const FollowUpPlanManager = React.memo(function FollowUpPlanManager({ customers,
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedItem, setSelectedItem] = useState<FollowUpRound | null>(null);
     const [feedback, setFeedback] = useState("");
+    const [selectedOutcome, setSelectedOutcome] = useState<FollowUpOutcome>("completed");
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Track call attempts per customer/branch/round
+    const [callAttempts, setCallAttempts] = useState<Map<string, number>>(new Map());
 
     // History State
     const [followUpLogs, setFollowUpLogs] = useState<FollowUpLog[]>([]);
@@ -63,13 +77,27 @@ const FollowUpPlanManager = React.memo(function FollowUpPlanManager({ customers,
         try {
             const logs = await getFollowUpLogs();
             setFollowUpLogs(logs);
-            // Build set of completed keys: "customerId-branchName-round"
+
+            // Build set of completed keys (only outcome='completed')
             const keys = new Set<string>();
+            // Count call attempts per customer/branch/round
+            const attempts = new Map<string, number>();
+
             logs.forEach(log => {
                 const key = `${log.customerId}-${log.branchName || ''}-${log.round}`;
-                keys.add(key);
+                const outcome = log.outcome || 'completed';
+
+                if (outcome === 'completed') {
+                    // Only hide items that are truly completed
+                    keys.add(key);
+                } else {
+                    // Count non-completed attempts (no_answer, callback_later)
+                    attempts.set(key, (attempts.get(key) || 0) + 1);
+                }
             });
+
             setCompletedLogKeys(keys);
+            setCallAttempts(attempts);
         } catch (error) {
             console.error("Error fetching follow-up logs:", error);
         }
@@ -90,6 +118,7 @@ const FollowUpPlanManager = React.memo(function FollowUpPlanManager({ customers,
     const handleMarkDoneClick = (item: FollowUpRound) => {
         setSelectedItem(item);
         setFeedback("");
+        setSelectedOutcome("completed");
         setIsModalOpen(true);
     };
 
@@ -109,27 +138,38 @@ const FollowUpPlanManager = React.memo(function FollowUpPlanManager({ customers,
                     dueDate: selectedItem.dueDate,
                     completedAt: new Date().toISOString(),
                     feedback: feedback || undefined,
+                    outcome: selectedOutcome,
                 });
             }
 
-            // Notify parent component
-            onUpdateStatus?.(selectedItem.id, "Completed", feedback);
-
-            // Add to completedLogKeys so it persists after refresh
             const logKey = `${selectedItem.customerId}-${selectedItem.branchName}-${selectedItem.round}`;
-            setCompletedLogKeys(prev => new Set(prev).add(logKey));
 
-            // Add to recently completed for fade-out animation
-            setRecentlyCompleted(prev => new Set(prev).add(selectedItem.id));
+            if (selectedOutcome === 'completed') {
+                // Notify parent component only if completed
+                onUpdateStatus?.(selectedItem.id, "Completed", feedback);
 
-            // After 2 seconds, remove from recentlyCompleted (item already filtered by completedLogKeys)
-            setTimeout(() => {
-                setRecentlyCompleted(prev => {
-                    const next = new Set(prev);
-                    next.delete(selectedItem.id);
+                // Add to completedLogKeys so it persists after refresh
+                setCompletedLogKeys(prev => new Set(prev).add(logKey));
+
+                // Add to recently completed for fade-out animation
+                setRecentlyCompleted(prev => new Set(prev).add(selectedItem.id));
+
+                // After 2 seconds, remove from recentlyCompleted
+                setTimeout(() => {
+                    setRecentlyCompleted(prev => {
+                        const next = new Set(prev);
+                        next.delete(selectedItem.id);
+                        return next;
+                    });
+                }, 2000);
+            } else {
+                // Not completed - increment call attempts
+                setCallAttempts(prev => {
+                    const next = new Map(prev);
+                    next.set(logKey, (prev.get(logKey) || 0) + 1);
                     return next;
                 });
-            }, 2000);
+            }
 
             // Refresh history if on history tab
             if (activeTab === "history") {
@@ -142,6 +182,7 @@ const FollowUpPlanManager = React.memo(function FollowUpPlanManager({ customers,
             setIsModalOpen(false);
             setSelectedItem(null);
             setFeedback("");
+            setSelectedOutcome("completed");
         }
     };
 
@@ -226,11 +267,13 @@ const FollowUpPlanManager = React.memo(function FollowUpPlanManager({ customers,
         return queue.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
     }, [customers]);
 
+    // Reset page when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [activeTab, searchTerm]);
+
     const filteredQueue = useMemo(() => {
         const milestones = [7, 14, 30, 60, 90];
-
-        // Reset page when filters change
-        setCurrentPage(1);
 
         const filtered = followUpQueue.filter(item => {
             const daysUsed = getDaysUsed(item.contractStart);
@@ -336,8 +379,8 @@ const FollowUpPlanManager = React.memo(function FollowUpPlanManager({ customers,
                         <input
                             type="text"
                             placeholder="ค้นหาชื่อลูกค้าหรือสาขา..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
+                            value={searchInput}
+                            onChange={(e) => setSearchInput(e.target.value)}
                             className="input-field pl-10 w-full"
                         />
                     </div>
@@ -369,6 +412,7 @@ const FollowUpPlanManager = React.memo(function FollowUpPlanManager({ customers,
                                             <th className="px-3 py-3 font-semibold">Customer</th>
                                             <th className="px-3 py-3 font-semibold">Owner</th>
                                             <th className="px-3 py-3 font-semibold text-center">Round</th>
+                                            <th className="px-3 py-3 font-semibold text-center">ผลการโทร</th>
                                             <th className="px-3 py-3 font-semibold">วันที่โทร</th>
                                             <th className="px-3 py-3 font-semibold">Feedback</th>
                                         </tr>
@@ -406,6 +450,33 @@ const FollowUpPlanManager = React.memo(function FollowUpPlanManager({ customers,
                                                     <span className="text-xs font-medium text-purple-600 dark:text-purple-300/70">
                                                         Day {log.round}
                                                     </span>
+                                                </td>
+                                                <td className="px-3 py-3 text-center">
+                                                    {(() => {
+                                                        const outcome = log.outcome || 'completed';
+                                                        if (outcome === 'completed') {
+                                                            return (
+                                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
+                                                                    <CheckCircle2 className="w-3 h-3" />
+                                                                    ติดต่อได้
+                                                                </span>
+                                                            );
+                                                        } else if (outcome === 'no_answer') {
+                                                            return (
+                                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-500/15 text-amber-400 border border-amber-500/20">
+                                                                    <Phone className="w-3 h-3" />
+                                                                    ไม่รับสาย
+                                                                </span>
+                                                            );
+                                                        } else {
+                                                            return (
+                                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-indigo-500/15 text-indigo-400 border border-indigo-500/20">
+                                                                    <Clock className="w-3 h-3" />
+                                                                    นัดโทรกลับ
+                                                                </span>
+                                                            );
+                                                        }
+                                                    })()}
                                                 </td>
                                                 <td className="px-3 py-3">
                                                     <span className="text-xs text-text-main">
@@ -482,12 +553,14 @@ const FollowUpPlanManager = React.memo(function FollowUpPlanManager({ customers,
                             {paginatedQueue.length > 0 ? (
                                 paginatedQueue
                                     .filter(item => {
-                                        // Hide if already completed in DB
+                                        // Hide if already completed in DB (outcome='completed')
                                         const logKey = `${item.customerId}-${item.branchName}-${item.round}`;
                                         return !completedLogKeys.has(logKey);
                                     })
                                     .map((item, index) => {
                                         const isCompleted = recentlyCompleted.has(item.id);
+                                        const logKey = `${item.customerId}-${item.branchName}-${item.round}`;
+                                        const attempts = callAttempts.get(logKey) || 0;
                                         return (
                                             <tr
                                                 key={item.id}
@@ -567,17 +640,25 @@ const FollowUpPlanManager = React.memo(function FollowUpPlanManager({ customers,
                                             </div>
                                         </td>
                                         <td className="px-3 py-3 text-right">
-                                            {!isCompleted && (
-                                                <button
-                                                    onClick={() => handleMarkDoneClick(item)}
-                                                    className="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-300/70 hover:bg-emerald-500 hover:text-white text-xs font-medium transition-all border border-emerald-500/20 hover:border-emerald-500"
-                                                >
-                                                    Mark Done
-                                                </button>
-                                            )}
-                                            {isCompleted && (
-                                                <span className="text-xs text-emerald-500 font-medium">Done!</span>
-                                            )}
+                                            <div className="flex items-center justify-end gap-2">
+                                                {attempts > 0 && (
+                                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-500/15 text-amber-400 border border-amber-500/20 flex items-center gap-1">
+                                                        <Phone className="w-3 h-3" />
+                                                        {attempts}
+                                                    </span>
+                                                )}
+                                                {!isCompleted && (
+                                                    <button
+                                                        onClick={() => handleMarkDoneClick(item)}
+                                                        className="px-2.5 py-1 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-300/70 hover:bg-indigo-500 hover:text-white text-xs font-medium transition-all border border-indigo-500/20 hover:border-indigo-500"
+                                                    >
+                                                        บันทึก
+                                                    </button>
+                                                )}
+                                                {isCompleted && (
+                                                    <span className="text-xs text-emerald-500 font-medium">Done!</span>
+                                                )}
+                                            </div>
                                         </td>
                                     </tr>
                                         );
@@ -727,13 +808,57 @@ const FollowUpPlanManager = React.memo(function FollowUpPlanManager({ customers,
 
                         <div className="mb-4">
                             <label className="block text-xs font-medium text-text-muted mb-2">
+                                ผลการโทร
+                            </label>
+                            <div className="grid grid-cols-3 gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setSelectedOutcome("completed")}
+                                    className={`px-3 py-2.5 rounded-lg text-xs font-medium transition-all border ${
+                                        selectedOutcome === "completed"
+                                            ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/50"
+                                            : "bg-bg-hover text-text-muted border-border-light hover:border-emerald-500/30"
+                                    }`}
+                                >
+                                    <CheckCircle2 className="w-4 h-4 mx-auto mb-1" />
+                                    ติดต่อได้
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setSelectedOutcome("no_answer")}
+                                    className={`px-3 py-2.5 rounded-lg text-xs font-medium transition-all border ${
+                                        selectedOutcome === "no_answer"
+                                            ? "bg-amber-500/20 text-amber-400 border-amber-500/50"
+                                            : "bg-bg-hover text-text-muted border-border-light hover:border-amber-500/30"
+                                    }`}
+                                >
+                                    <Phone className="w-4 h-4 mx-auto mb-1" />
+                                    ไม่รับสาย
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setSelectedOutcome("callback_later")}
+                                    className={`px-3 py-2.5 rounded-lg text-xs font-medium transition-all border ${
+                                        selectedOutcome === "callback_later"
+                                            ? "bg-indigo-500/20 text-indigo-400 border-indigo-500/50"
+                                            : "bg-bg-hover text-text-muted border-border-light hover:border-indigo-500/30"
+                                    }`}
+                                >
+                                    <Clock className="w-4 h-4 mx-auto mb-1" />
+                                    นัดโทรกลับ
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="mb-4">
+                            <label className="block text-xs font-medium text-text-muted mb-2">
                                 รายละเอียด Feedback <span className="text-text-muted/50">(ไม่บังคับ)</span>
                             </label>
                             <textarea
                                 value={feedback}
                                 onChange={(e) => setFeedback(e.target.value)}
                                 placeholder="เช่น ลูกค้าพอใจกับระบบ, มีปัญหาเรื่อง..., ต้องการฟีเจอร์เพิ่มเติม..."
-                                className="input-field w-full h-28 resize-none py-3"
+                                className="input-field w-full h-24 resize-none py-3"
                             />
                         </div>
 
@@ -747,10 +872,18 @@ const FollowUpPlanManager = React.memo(function FollowUpPlanManager({ customers,
                             <button
                                 onClick={handleSubmitFeedback}
                                 disabled={isSubmitting}
-                                className="flex-1 px-4 py-2.5 rounded-lg text-sm font-medium bg-emerald-500 hover:bg-emerald-600 text-white transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium text-white transition-all disabled:opacity-50 flex items-center justify-center gap-2 ${
+                                    selectedOutcome === "completed"
+                                        ? "bg-emerald-500 hover:bg-emerald-600"
+                                        : selectedOutcome === "no_answer"
+                                            ? "bg-amber-500 hover:bg-amber-600"
+                                            : "bg-indigo-500 hover:bg-indigo-600"
+                                }`}
                             >
-                                <CheckCircle2 className="w-4 h-4" />
-                                {isSubmitting ? "กำลังบันทึก..." : "Mark Done"}
+                                {selectedOutcome === "completed" && <CheckCircle2 className="w-4 h-4" />}
+                                {selectedOutcome === "no_answer" && <Phone className="w-4 h-4" />}
+                                {selectedOutcome === "callback_later" && <Clock className="w-4 h-4" />}
+                                {isSubmitting ? "กำลังบันทึก..." : "บันทึก"}
                             </button>
                         </div>
                     </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Search, Filter, Users } from "lucide-react";
 import CustomSelect from "./CustomSelect";
 import { Customer } from "@/types";
@@ -13,26 +13,41 @@ interface CustomerTableProps {
 }
 
 const CustomerTable = React.memo(function CustomerTable({ customers, onEdit, onDelete }: CustomerTableProps) {
+    const [searchInput, setSearchInput] = useState("");
     const [searchTerm, setSearchTerm] = useState("");
     const [usageStatusFilter, setUsageStatusFilter] = useState("all");
+
+    // Debounce search input - only update searchTerm after 300ms of no typing
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setSearchTerm(searchInput);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [searchInput]);
     const [installationStatusFilter, setInstallationStatusFilter] = useState("all");
     const [packageFilter, setPackageFilter] = useState("all");
     const [productFilter, setProductFilter] = useState<"all" | "Dr.Ease" | "EasePos">("all");
 
-    const filteredCustomers = customers.filter((c) => {
-        const matchesSearch =
-            (c.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (c.subdomain || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-            `DE${c.id.toString().padStart(4, "0")}`.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesUsageStatus = usageStatusFilter === "all" || c.usageStatus === usageStatusFilter;
-        const matchesInstallationStatus = installationStatusFilter === "all" || c.installationStatus === installationStatusFilter;
-        const matchesPackage = packageFilter === "all" || c.package === packageFilter;
-        const matchesProduct = productFilter === "all" || c.productType === productFilter;
+    // Memoize filter and sort for performance
+    const filteredCustomers = useMemo(() => {
+        const searchLower = searchTerm.toLowerCase();
+        return customers.filter((c) => {
+            const matchesSearch =
+                (c.name || "").toLowerCase().includes(searchLower) ||
+                (c.subdomain || "").toLowerCase().includes(searchLower) ||
+                `DE${c.id.toString().padStart(4, "0")}`.toLowerCase().includes(searchLower);
+            const matchesUsageStatus = usageStatusFilter === "all" || c.usageStatus === usageStatusFilter;
+            const matchesInstallationStatus = installationStatusFilter === "all" || c.installationStatus === installationStatusFilter;
+            const matchesPackage = packageFilter === "all" || c.package === packageFilter;
+            const matchesProduct = productFilter === "all" || c.productType === productFilter;
 
-        return matchesSearch && matchesUsageStatus && matchesInstallationStatus && matchesPackage && matchesProduct;
-    });
+            return matchesSearch && matchesUsageStatus && matchesInstallationStatus && matchesPackage && matchesProduct;
+        });
+    }, [customers, searchTerm, usageStatusFilter, installationStatusFilter, packageFilter, productFilter]);
 
-    const sortedCustomers = [...filteredCustomers].sort((a, b) => b.id - a.id);
+    const sortedCustomers = useMemo(() => {
+        return [...filteredCustomers].sort((a, b) => b.id - a.id);
+    }, [filteredCustomers]);
 
     const itemsPerPage = 10;
     const [currentPage, setCurrentPage] = useState(1);
@@ -55,8 +70,8 @@ const CustomerTable = React.memo(function CustomerTable({ customers, onEdit, onD
                         <input
                             type="text"
                             placeholder="Search..."
-                            value={searchTerm}
-                            onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                            value={searchInput}
+                            onChange={(e) => { setSearchInput(e.target.value); setCurrentPage(1); }}
                             className="input-field pl-10 w-full"
                         />
                     </div>
