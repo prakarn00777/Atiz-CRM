@@ -618,16 +618,22 @@ export async function saveCustomer(customerData: Partial<Customer>): Promise<Api
             // We don't fail the whole customer save, but log it
         }
 
-        // Fetch the customer again with branches to return complete data
+        // Fetch the customer again to return complete data
         const { data: finalData, error: finalError } = await db
             .from('customers')
-            .select('*, branches(id, name, is_main, status, address, contract_start, cs_owner)')
+            .select('*')
             .eq('id', customerId)
             .maybeSingle();
 
         if (finalError || !finalData) {
             return createSuccess(result as Customer); // Fallback to partial data
         }
+
+        // Fetch branches separately
+        const { data: branchesData } = await db
+            .from('branches')
+            .select('id, name, is_main, status, address, contract_start, cs_owner')
+            .eq('customer_id', customerId);
 
         // Map back to Customer type
         const savedCustomer: Customer = {
@@ -640,13 +646,14 @@ export async function saveCustomer(customerData: Partial<Customer>): Promise<Api
             package: finalData.package,
             usageStatus: finalData.usage_status as UsageStatus,
             installationStatus: finalData.installation_status as InstallationStatus,
-            branches: (finalData.branches as any[] || []).map(b => ({
+            branches: (branchesData || []).map(b => ({
                 id: Number(b.id),
                 name: String(b.name),
                 isMain: Boolean(b.is_main),
                 status: b.status as any,
                 address: b.address,
-                contractStart: b.contract_start
+                contractStart: b.contract_start,
+                csOwner: b.cs_owner ? String(b.cs_owner) : undefined
             }))
         } as Customer;
 
