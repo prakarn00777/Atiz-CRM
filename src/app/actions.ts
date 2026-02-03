@@ -14,6 +14,7 @@ import bcrypt from "bcryptjs";
 const isDev = process.env.NODE_ENV === 'development';
 const log = {
     debug: (...args: unknown[]) => isDev && console.log('[DEBUG]', ...args),
+    info: (...args: unknown[]) => isDev && console.log('[INFO]', ...args),
     error: (...args: unknown[]) => console.error('[ERROR]', ...args),
 };
 
