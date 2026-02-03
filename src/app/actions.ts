@@ -120,7 +120,7 @@ export async function getCustomers(params?: PaginationParams): Promise<Customer[
         const sortBy = params?.sortBy || 'id';
         const sortOrder = params?.sortOrder === 'asc';
 
-        // Build query - fetch all if no limit specified, otherwise use pagination
+        // First try with branches join
         let query = db
             .from('customers')
             .select(`
@@ -128,22 +128,36 @@ export async function getCustomers(params?: PaginationParams): Promise<Customer[
                 contract_start, contract_end, cs_owner, contact_name, contact_phone,
                 sales_name, note,
                 installation_status, created_by, created_at, modified_by, modified_at,
-                branches (*)
+                branches (id, name, is_main, status, address, contract_start, cs_owner)
             `)
             .order(sortBy, { ascending: sortOrder });
 
-        // Only apply range if limit is explicitly specified
         if (params?.limit) {
             const { limit, offset } = getPaginationParams(params);
             query = query.range(offset, offset + limit - 1);
         }
 
-        const { data, error } = await query;
+        let { data, error } = await query;
 
+        // Fallback: if branches join fails, fetch customers without branches
         if (error) {
-            console.error("[getCustomers] Database error:", error.message, error.code, error.details);
-            log.error("Error fetching customers:", error);
-            return [];
+            console.warn("[getCustomers] Branches join failed, fetching without branches:", error.message);
+            const fallbackQuery = db
+                .from('customers')
+                .select(`
+                    id, name, client_code, subdomain, product_type, package, usage_status,
+                    contract_start, contract_end, cs_owner, contact_name, contact_phone,
+                    sales_name, note,
+                    installation_status, created_by, created_at, modified_by, modified_at
+                `)
+                .order(sortBy, { ascending: sortOrder });
+
+            const fallbackResult = await fallbackQuery;
+            if (fallbackResult.error) {
+                console.error("[getCustomers] Fallback also failed:", fallbackResult.error);
+                return [];
+            }
+            data = fallbackResult.data?.map(row => ({ ...row, branches: [] })) || [];
         }
 
         console.log(`[getCustomers] Success: fetched ${data?.length || 0} customers`);
@@ -177,6 +191,7 @@ export async function getCustomers(params?: PaginationParams): Promise<Customer[
             }))
         })) as Customer[];
     } catch (err) {
+        console.error("[getCustomers] Critical error:", err);
         log.error("Critical error in getCustomers:", err);
         return [];
     }
