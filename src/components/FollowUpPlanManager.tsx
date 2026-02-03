@@ -51,21 +51,13 @@ const FollowUpPlanManager = React.memo(function FollowUpPlanManager({ customers,
         }
     }, [activeTab]);
 
-    // Auto-remove recently completed items after 3 seconds
+    // Force re-render after 3 seconds to hide completed items
+    const [, forceUpdate] = useState(0);
     useEffect(() => {
         if (recentlyCompleted.size === 0) return;
 
         const timer = setTimeout(() => {
-            const now = Date.now();
-            setRecentlyCompleted(prev => {
-                const next = new Map(prev);
-                for (const [id, timestamp] of prev) {
-                    if (now - timestamp >= 3000) {
-                        next.delete(id);
-                    }
-                }
-                return next;
-            });
+            forceUpdate(n => n + 1); // Trigger re-render to apply filter
         }, 3000);
 
         return () => clearTimeout(timer);
