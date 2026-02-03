@@ -220,6 +220,17 @@ export interface NewSalesRecord {
     amount: number;     // ยอด
 }
 
+// Renewals from Google Sheets (Sheet7)
+export interface RenewalsRecord {
+    id: string;
+    index: string;              // ลำดับ
+    month: string;              // เดือน
+    year: string;               // ปี
+    renewedAmount: number;      // ยอดต่อสัญญา
+    notRenewedAmount: number;   // ไม่ต่อสัญญา
+    pendingAmount: number;      // รอคำตอบจากลูกค้า
+}
+
 // ============================================
 // User & Role Types
 // ============================================
@@ -280,4 +291,19 @@ export interface FollowUpRound {
     status: FollowUpStatus;
     completedAt?: string;
     notes?: string;
+}
+
+// Follow-up Log for tracking history
+export interface FollowUpLog {
+    id: number;
+    customerId: number;
+    customerName: string;
+    branchName?: string;
+    csOwner: string;
+    round: 7 | 14 | 30 | 60 | 90;
+    dueDate: string;
+    completedAt: string;
+    feedback?: string;
+    createdBy?: string;
+    createdAt?: string;
 }

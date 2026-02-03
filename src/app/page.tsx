@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import Sidebar from "@/components/Sidebar";
 import CustomerTable from "@/components/CustomerTable";
+import { CustomerTableSkeleton, DashboardSkeleton } from "@/components/Skeleton";
 import { X, Plus, Trash2, AlertTriangle, Paperclip, History as HistoryIcon, Download, ExternalLink } from "lucide-react";
 import CustomSelect from "@/components/CustomSelect";
 import UserManager from "@/components/UserManager";
@@ -18,12 +19,13 @@ import NotificationBell from "@/components/NotificationBell";
 import GoogleSheetLeadManager from "@/components/GoogleSheetLeadManager";
 import DemoManager from "@/components/DemoManager";
 import SalesManager from "@/components/SalesManager";
+import RenewalsManager from "@/components/RenewalsManager";
 import FollowUpPlanManager from "@/components/FollowUpPlanManager";
 import CustomDatePicker from "@/components/CustomDatePicker";
 import CustomerModal from "@/components/modals/CustomerModal";
 import IssueModal from "@/components/modals/IssueModal";
 import LeadModal from "@/components/modals/LeadModal";
-import { Customer, Branch, Installation, Issue, UsageStatus, Activity as CSActivity, ActivityType, SentimentType, Lead, GoogleSheetLead, MasterDemoLead, BusinessMetrics, NewSalesRecord } from "@/types";
+import { Customer, Branch, Installation, Issue, UsageStatus, Activity as CSActivity, ActivityType, SentimentType, Lead, GoogleSheetLead, MasterDemoLead, BusinessMetrics, NewSalesRecord, RenewalsRecord } from "@/types";
 import { useNotification } from "@/components/NotificationProvider";
 import { db } from "@/lib/db";
 import {
@@ -31,7 +33,7 @@ import {
   getUsers, saveUser, deleteUser, getRoles, saveRole, deleteRole, loginUser,
   saveIssue, deleteIssue, saveCustomer, deleteCustomer, saveInstallation, updateInstallationStatus,
   getActivities, saveActivity, deleteActivity,
-  getLeads, saveLead, deleteLead, getBusinessMetrics
+  getLeads, saveLead, deleteLead, getBusinessMetrics, saveFollowUpLog
 } from "./actions";
 
 export default function CRMPage() {
@@ -40,6 +42,7 @@ export default function CRMPage() {
     return localStorage.getItem("crm_last_view_v2") || "dashboard";
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isModalOpen, setModalOpen] = useState(false);
   const [isIssueModalOpen, setIssueModalOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
@@ -101,9 +104,11 @@ export default function CRMPage() {
   const [googleSheetLeads, setGoogleSheetLeads] = useState<GoogleSheetLead[]>([]);
   const [googleSheetDemos, setGoogleSheetDemos] = useState<MasterDemoLead[]>([]);
   const [newSalesData, setNewSalesData] = useState<NewSalesRecord[]>([]);
+  const [renewalsData, setRenewalsData] = useState<RenewalsRecord[]>([]);
   const [isGoogleSheetLeadsLoading, setGoogleSheetLeadsLoading] = useState(true);
   const [isGoogleSheetDemosLoading, setGoogleSheetDemosLoading] = useState(true);
   const [isNewSalesLoading, setNewSalesLoading] = useState(true);
+  const [isRenewalsLoading, setRenewalsLoading] = useState(true);
   const [businessMetrics, setBusinessMetrics] = useState<BusinessMetrics | undefined>(undefined);
   const [isLeadModalOpen, setLeadModalOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
@@ -116,7 +121,7 @@ export default function CRMPage() {
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
 
   const [showInstallationModal, setShowInstallationModal] = useState(false);
-  const [activeCustomerTab, setActiveCustomerTab] = useState<'general' | 'branches' | 'installations'>('general');
+  const [activeCustomerTab, setActiveCustomerTab] = useState<'general' | 'branches' | 'installations' | 'followup-history'>('general');
 
 
   // Branch states
@@ -187,6 +192,8 @@ export default function CRMPage() {
       localStorage.setItem("crm_leads_v2", JSON.stringify(lData));
     } catch (err) {
       console.error("Background fetch failed:", err);
+    } finally {
+      setIsInitialLoading(false);
     }
   }, []);
 
@@ -247,11 +254,27 @@ export default function CRMPage() {
     }
   }, []);
 
+  const fetchRenewalsData = useCallback(async () => {
+    try {
+      setRenewalsLoading(true);
+      const response = await fetch('/api/renewals');
+      const result = await response.json();
+      if (result.success) {
+        setRenewalsData(result.data);
+      }
+    } catch (error: any) {
+      console.error('Error fetching Renewals data:', error);
+    } finally {
+      setRenewalsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchGoogleSheetLeads();
     fetchGoogleSheetDemos();
     fetchNewSalesData();
-  }, [fetchGoogleSheetLeads, fetchGoogleSheetDemos, fetchNewSalesData]);
+    fetchRenewalsData();
+  }, [fetchGoogleSheetLeads, fetchGoogleSheetDemos, fetchNewSalesData, fetchRenewalsData]);
 
   useEffect(() => {
     if (mounted) {
@@ -1053,24 +1076,24 @@ export default function CRMPage() {
             userRole={{ ...roles.find(r => r.id === user?.role), role: user?.role }}
             onQuickAction={handleQuickAction}
           />
-          <main className={`flex-1 relative bg-gradient-to-br from-bg-pure via-bg-dark to-bg-pure animate-in fade-in duration-300 ${currentView === 'dashboard' ? 'overflow-hidden' : 'overflow-auto'}`}>
-            <div className={`p-4 lg:p-8 max-w-[1600px] mx-auto relative z-10 ${currentView === 'dashboard' ? 'h-full flex flex-col' : ''}`}>
+          <main className={`flex-1 relative bg-gradient-to-br from-bg-pure via-bg-dark to-bg-pure animate-in fade-in duration-300 overflow-auto`}>
+            <div className={`p-4 lg:p-8 max-w-[1600px] mx-auto relative z-10 ${currentView === 'dashboard' ? 'min-h-full flex flex-col' : ''}`}>
               <div className="absolute top-4 lg:top-8 right-4 lg:right-8 z-[100] flex items-center gap-3">
-                {notificationPermission !== "granted" && (
-                  <button
-                    onClick={async () => {
-                      const granted = await requestPermission();
-                      if (granted) setNotificationPermission("granted");
-                    }}
-                    className="flex items-center gap-2 px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 rounded-lg text-amber-500 text-[10px] font-bold transition-all animate-pulse"
-                  >
-                    <AlertTriangle className="w-3.5 h-3.5" />
-                    ENABLE NOTIFICATIONS
-                  </button>
-                )}
                 <NotificationBell />
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all cursor-pointer group">
+                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold shadow-lg shadow-indigo-500/20">
+                    {user?.name?.charAt(0).toUpperCase() || '?'}
+                  </div>
+                  <div className="hidden sm:block">
+                    <p className="text-xs font-bold text-white leading-tight">{user?.name || 'User'}</p>
+                    <p className="text-[10px] text-slate-400 leading-tight">{roles.find(r => r.id === user?.role)?.name || 'Member'}</p>
+                  </div>
+                </div>
               </div>
               {currentView === "dashboard" ? (
+                isInitialLoading && customers.length === 0 ? (
+                  <DashboardSkeleton />
+                ) : (
                 <Dashboard
                   customers={customers}
                   installations={installations}
@@ -1080,13 +1103,27 @@ export default function CRMPage() {
                   googleSheetLeads={googleSheetLeads}
                   googleSheetDemos={googleSheetDemos}
                   newSalesData={newSalesData}
+                  renewalsData={renewalsData}
                   businessMetrics={businessMetrics}
                   user={user}
                   onViewChange={setView}
                 />
+                )
               ) : currentView === "customers" ? (
+                isInitialLoading && customers.length === 0 ? (
+                  <CustomerTableSkeleton />
+                ) : (
                 <CustomerTable
                   customers={customers}
+                  onAdd={() => {
+                    setEditingCustomer(null);
+                    setBranchInputs([{ name: "สำนักงานใหญ่", isMain: true, address: "", status: "Pending" }]);
+                    setModalUsageStatus("Active");
+                    setActiveBranchIndex(0);
+                    setActiveCustomerTab('general');
+                    setPendingInstallationChanges({});
+                    setModalOpen(true);
+                  }}
                   onEdit={(c) => {
                     setEditingCustomer(c);
                     const branches = c.branches && c.branches.length > 0
@@ -1105,6 +1142,7 @@ export default function CRMPage() {
                   }}
                   onImport={handleImportCSV}
                 />
+                )
               ) : currentView === "user_management" ? (
                 <UserManager users={users} roles={roles} onSave={handleSaveUser} onDelete={handleDeleteUser} />
               ) : currentView === "role_management" ? (
@@ -1160,11 +1198,33 @@ export default function CRMPage() {
                   isLoading={isNewSalesLoading}
                   onRefresh={fetchNewSalesData}
                 />
+              ) : currentView === "renewals" ? (
+                <RenewalsManager
+                  renewals={renewalsData}
+                  isLoading={isRenewalsLoading}
+                  onRefresh={fetchRenewalsData}
+                />
               ) : currentView === "cs_followup" ? (
                 <FollowUpPlanManager
                   customers={customers}
-                  onUpdateStatus={(id, status) => {
-                    setToast({ message: "อัปเดตสถานะการติดตามเรียบร้อยแล้ว", type: "success" });
+                  onUpdateStatus={(id, status, feedback) => {
+                    console.log("Follow-up completed:", { id, status, feedback });
+                    setToast({
+                      message: feedback
+                        ? `บันทึก feedback เรียบร้อย: "${feedback.substring(0, 30)}${feedback.length > 30 ? '...' : ''}"`
+                        : "อัปเดตสถานะการติดตามเรียบร้อยแล้ว",
+                      type: "success"
+                    });
+                  }}
+                  onSaveLog={async (logData) => {
+                    try {
+                      const result = await saveFollowUpLog(logData);
+                      if (!result.success) {
+                        console.error("Error saving follow-up log:", result.error);
+                      }
+                    } catch (error) {
+                      console.error("Error saving follow-up log:", error);
+                    }
                   }}
                 />
               ) : null}

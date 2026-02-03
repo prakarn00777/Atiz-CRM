@@ -19,15 +19,15 @@
 }
 
 [data-theme='light'] {
-  --bg-dark: #f8fafc;
-  --bg-pure: #ffffff;
-  --card-bg: rgba(255, 255, 255, 0.8);
+  --bg-dark: #e2e8f0;
+  --bg-pure: #f1f5f9;
+  --card-bg: rgba(255, 255, 255, 0.9);
   --text-main: #0f172a;
   --text-muted: #64748b;
-  --border: rgba(0, 0, 0, 0.08);
-  --border-light: rgba(0, 0, 0, 0.04);
-  --bg-hover: rgba(0, 0, 0, 0.03);
-  --input-bg: rgba(255, 255, 255, 0.9);
+  --border: rgba(0, 0, 0, 0.1);
+  --border-light: rgba(0, 0, 0, 0.05);
+  --bg-hover: rgba(0, 0, 0, 0.04);
+  --input-bg: rgba(255, 255, 255, 0.95);
 }
 
 @layer base {
@@ -39,6 +39,7 @@
   body {
     background-color: var(--bg-dark);
     color: var(--text-main);
+    font-family: var(--font-geist-sans), var(--font-thai), system-ui, sans-serif;
     @apply antialiased;
   }
 
@@ -75,7 +76,7 @@
   box-shadow:
     0 4px 6px -1px rgba(0, 0, 0, 0.1),
     0 2px 4px -1px rgba(0, 0, 0, 0.06),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+    inset 0 1px 0 0 var(--border-light);
 }
 
 @utility btn {
@@ -118,7 +119,7 @@
 
   .custom-scrollbar {
     scrollbar-width: thin;
-    scrollbar-color: rgba(99, 102, 241, 0.3) rgba(255, 255, 255, 0.05);
+    scrollbar-color: rgba(99, 102, 241, 0.3) var(--bg-hover);
     scroll-behavior: auto;
   }
 }
@@ -128,7 +129,7 @@
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--bg-hover);
   border-radius: 10px;
 }
 
@@ -140,6 +141,22 @@
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(99, 102, 241, 0.5);
+}
+
+[data-theme='light'] .custom-scrollbar {
+  scrollbar-color: rgba(99, 102, 241, 0.4) rgba(0, 0, 0, 0.05);
+}
+
+[data-theme='light'] .custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+[data-theme='light'] .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(99, 102, 241, 0.4);
+}
+
+[data-theme='light'] .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(99, 102, 241, 0.6);
 }
 
 .no-scrollbar {

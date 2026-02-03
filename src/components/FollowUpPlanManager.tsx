@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
-import { Search, Calendar, CheckCircle2, Clock, AlertTriangle, ChevronRight } from "lucide-react";
-import { Customer, FollowUpStatus } from "@/types";
+import React, { useState, useMemo, useEffect } from "react";
+import { Search, Calendar, CheckCircle2, Clock, AlertTriangle, ChevronRight, X, MessageSquare, History, Loader2 } from "lucide-react";
+import { Customer, FollowUpStatus, FollowUpLog } from "@/types";
+import { getFollowUpLogs } from "@/app/actions";
 
 // Extended FollowUpRound with contractStart
 interface FollowUpRound {
@@ -19,14 +20,87 @@ interface FollowUpRound {
 
 interface FollowUpPlanManagerProps {
     customers: Customer[];
-    onUpdateStatus?: (roundId: number, status: FollowUpStatus) => void;
+    onUpdateStatus?: (roundId: number, status: FollowUpStatus, feedback?: string) => void;
+    onSaveLog?: (log: Omit<FollowUpLog, 'id' | 'createdAt'>) => Promise<void>;
 }
 
-const FollowUpPlanManager = React.memo(function FollowUpPlanManager({ customers, onUpdateStatus }: FollowUpPlanManagerProps) {
+const FollowUpPlanManager = React.memo(function FollowUpPlanManager({ customers, onUpdateStatus, onSaveLog }: FollowUpPlanManagerProps) {
     const [searchTerm, setSearchTerm] = useState("");
-    const [activeTab, setActiveTab] = useState<"today" | "upcoming" | "overdue" | "all">("today");
+    const [activeTab, setActiveTab] = useState<"today" | "upcoming" | "overdue" | "all" | "history">("today");
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
+
+    // Feedback Modal State
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedItem, setSelectedItem] = useState<FollowUpRound | null>(null);
+    const [feedback, setFeedback] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // History State
+    const [followUpLogs, setFollowUpLogs] = useState<FollowUpLog[]>([]);
+    const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+    const [historyPage, setHistoryPage] = useState(1);
+
+    // Fetch history when tab changes to history
+    useEffect(() => {
+        if (activeTab === "history") {
+            fetchHistory();
+        }
+    }, [activeTab]);
+
+    const fetchHistory = async () => {
+        setIsLoadingHistory(true);
+        try {
+            const logs = await getFollowUpLogs();
+            setFollowUpLogs(logs);
+        } catch (error) {
+            console.error("Error fetching follow-up logs:", error);
+        } finally {
+            setIsLoadingHistory(false);
+        }
+    };
+
+    const handleMarkDoneClick = (item: FollowUpRound) => {
+        setSelectedItem(item);
+        setFeedback("");
+        setIsModalOpen(true);
+    };
+
+    const handleSubmitFeedback = async () => {
+        if (!selectedItem) return;
+        setIsSubmitting(true);
+
+        try {
+            // Save to database via onSaveLog callback
+            if (onSaveLog) {
+                await onSaveLog({
+                    customerId: selectedItem.customerId,
+                    customerName: selectedItem.customerName,
+                    branchName: selectedItem.branchName,
+                    csOwner: selectedItem.csOwner,
+                    round: selectedItem.round,
+                    dueDate: selectedItem.dueDate,
+                    completedAt: new Date().toISOString(),
+                    feedback: feedback || undefined,
+                });
+            }
+
+            // Notify parent component
+            onUpdateStatus?.(selectedItem.id, "Completed", feedback);
+
+            // Refresh history if on history tab
+            if (activeTab === "history") {
+                fetchHistory();
+            }
+        } catch (error) {
+            console.error("Error saving follow-up log:", error);
+        } finally {
+            setIsSubmitting(false);
+            setIsModalOpen(false);
+            setSelectedItem(null);
+            setFeedback("");
+        }
+    };
 
     // Helper to determine round based on days used
     const getRoundFromDaysUsed = (daysUsed: number): 7 | 14 | 30 | 60 | 90 => {
@@ -201,6 +275,14 @@ const FollowUpPlanManager = React.memo(function FollowUpPlanManager({ customers,
                     >
                         All Plan
                     </button>
+                    <div className="w-px h-5 bg-border-light" />
+                    <button
+                        onClick={() => setActiveTab("history")}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${activeTab === 'history' ? 'bg-purple-500/20 text-purple-600 dark:text-purple-300 border border-purple-500/30' : 'text-text-muted hover:text-text-main hover:bg-bg-hover'}`}
+                    >
+                        <History className="w-3.5 h-3.5" />
+                        History
+                    </button>
                 </div>
             </div>
 
@@ -223,6 +305,121 @@ const FollowUpPlanManager = React.memo(function FollowUpPlanManager({ customers,
             </div>
 
             <div className="glass-card overflow-hidden border-indigo-500/5 min-h-[500px]">
+                {activeTab === "history" ? (
+                    // History View
+                    <div className="overflow-x-auto">
+                        {isLoadingHistory ? (
+                            <div className="flex items-center justify-center py-20">
+                                <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />
+                            </div>
+                        ) : followUpLogs.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-20 opacity-30">
+                                <History className="w-10 h-10 text-text-muted mb-2" />
+                                <p className="text-xs text-text-muted">ยังไม่มีประวัติการติดตาม</p>
+                            </div>
+                        ) : (
+                            <>
+                                <table className="w-full text-left border-collapse">
+                                    <thead className="sticky top-0 z-10 bg-card-bg shadow-sm backdrop-blur-xl">
+                                        <tr className="bg-bg-hover text-text-muted text-xs uppercase tracking-wider border-b border-border-light">
+                                            <th className="px-3 py-3 font-semibold w-[4%] text-center">No.</th>
+                                            <th className="px-3 py-3 font-semibold">Customer</th>
+                                            <th className="px-3 py-3 font-semibold">Owner</th>
+                                            <th className="px-3 py-3 font-semibold text-center">Round</th>
+                                            <th className="px-3 py-3 font-semibold">วันที่โทร</th>
+                                            <th className="px-3 py-3 font-semibold">Feedback</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-border-light">
+                                        {followUpLogs
+                                            .slice((historyPage - 1) * itemsPerPage, historyPage * itemsPerPage)
+                                            .map((log, index) => (
+                                            <tr key={log.id} className="group hover:bg-bg-hover transition-colors h-14">
+                                                <td className="px-3 py-3 text-center">
+                                                    <span className="text-xs text-text-muted opacity-60">
+                                                        {(historyPage - 1) * itemsPerPage + index + 1}
+                                                    </span>
+                                                </td>
+                                                <td className="px-3 py-3">
+                                                    <div className="flex flex-col">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-xs text-text-main truncate max-w-[140px]" title={log.customerName}>
+                                                                {log.customerName}
+                                                            </span>
+                                                            {log.branchName && (
+                                                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-bg-hover text-text-muted border border-border-light">
+                                                                    {log.branchName}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-3 py-3">
+                                                    <span className="text-xs text-text-muted">
+                                                        {log.csOwner || "-"}
+                                                    </span>
+                                                </td>
+                                                <td className="px-3 py-3 text-center">
+                                                    <span className="text-xs font-medium text-purple-600 dark:text-purple-300/70">
+                                                        Day {log.round}
+                                                    </span>
+                                                </td>
+                                                <td className="px-3 py-3">
+                                                    <span className="text-xs text-text-main">
+                                                        {(() => {
+                                                            const d = new Date(log.completedAt);
+                                                            return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+                                                        })()}
+                                                    </span>
+                                                </td>
+                                                <td className="px-3 py-3">
+                                                    {log.feedback ? (
+                                                        <span className="text-xs text-text-muted line-clamp-2" title={log.feedback}>
+                                                            {log.feedback}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-xs text-text-muted opacity-40">-</span>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+
+                                {/* History Pagination */}
+                                {followUpLogs.length > itemsPerPage && (
+                                    <div className="px-3 py-3 bg-bg-hover border-t border-border-light">
+                                        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                                            <span className="text-xs text-text-muted">
+                                                {(historyPage - 1) * itemsPerPage + 1}–{Math.min(historyPage * itemsPerPage, followUpLogs.length)} จาก {followUpLogs.length} รายการ
+                                            </span>
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    onClick={() => setHistoryPage(p => Math.max(1, p - 1))}
+                                                    disabled={historyPage === 1}
+                                                    className="px-3 h-8 rounded-lg flex items-center gap-1.5 hover:bg-bg-hover disabled:opacity-30 transition-all text-text-main text-xs font-medium"
+                                                >
+                                                    ก่อนหน้า
+                                                </button>
+                                                <span className="px-3 py-1.5 text-xs text-text-muted">
+                                                    หน้า {historyPage} / {Math.ceil(followUpLogs.length / itemsPerPage)}
+                                                </span>
+                                                <button
+                                                    onClick={() => setHistoryPage(p => Math.min(Math.ceil(followUpLogs.length / itemsPerPage), p + 1))}
+                                                    disabled={historyPage >= Math.ceil(followUpLogs.length / itemsPerPage)}
+                                                    className="px-3 h-8 rounded-lg flex items-center gap-1.5 hover:bg-bg-hover disabled:opacity-30 transition-all text-text-main text-xs font-medium"
+                                                >
+                                                    ถัดไป
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </>
+                        )}
+                    </div>
+                ) : (
+                <>
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead className="sticky top-0 z-10 bg-card-bg shadow-sm backdrop-blur-xl">
@@ -313,7 +510,7 @@ const FollowUpPlanManager = React.memo(function FollowUpPlanManager({ customers,
                                         </td>
                                         <td className="px-3 py-3 text-right">
                                             <button
-                                                onClick={() => onUpdateStatus?.(item.id, "Completed")}
+                                                onClick={() => handleMarkDoneClick(item)}
                                                 className="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-300/70 hover:bg-emerald-500 hover:text-white text-xs font-medium transition-all border border-emerald-500/20 hover:border-emerald-500"
                                             >
                                                 Mark Done
@@ -427,7 +624,74 @@ const FollowUpPlanManager = React.memo(function FollowUpPlanManager({ customers,
                         </div>
                     </div>
                 )}
+                </>
+                )}
             </div>
+
+            {/* Feedback Modal */}
+            {isModalOpen && selectedItem && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setIsModalOpen(false)} />
+                    <div className="relative glass-card w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
+                        <button
+                            onClick={() => setIsModalOpen(false)}
+                            className="absolute top-4 right-4 p-1 rounded-lg hover:bg-bg-hover text-text-muted hover:text-text-main transition-colors"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="p-2 rounded-lg bg-emerald-500/20">
+                                <MessageSquare className="w-5 h-5 text-emerald-500" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-semibold text-text-main">บันทึก Feedback</h3>
+                                <p className="text-xs text-text-muted">กรอกรายละเอียดการติดตามลูกค้า</p>
+                            </div>
+                        </div>
+
+                        <div className="mb-4 p-3 rounded-lg bg-bg-hover border border-border-light">
+                            <div className="flex items-center justify-between mb-1">
+                                <span className="text-xs text-text-muted">ลูกค้า</span>
+                                <span className="text-xs font-medium text-indigo-500">Day {selectedItem.round}</span>
+                            </div>
+                            <p className="text-sm font-medium text-text-main">{selectedItem.customerName}</p>
+                            {selectedItem.branchName && (
+                                <p className="text-xs text-text-muted mt-0.5">สาขา: {selectedItem.branchName}</p>
+                            )}
+                        </div>
+
+                        <div className="mb-4">
+                            <label className="block text-xs font-medium text-text-muted mb-2">
+                                รายละเอียด Feedback <span className="text-text-muted/50">(ไม่บังคับ)</span>
+                            </label>
+                            <textarea
+                                value={feedback}
+                                onChange={(e) => setFeedback(e.target.value)}
+                                placeholder="เช่น ลูกค้าพอใจกับระบบ, มีปัญหาเรื่อง..., ต้องการฟีเจอร์เพิ่มเติม..."
+                                className="input-field w-full h-28 resize-none py-3"
+                            />
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={() => setIsModalOpen(false)}
+                                className="flex-1 px-4 py-2.5 rounded-lg text-sm font-medium text-text-muted hover:text-text-main hover:bg-bg-hover border border-border transition-all"
+                            >
+                                ยกเลิก
+                            </button>
+                            <button
+                                onClick={handleSubmitFeedback}
+                                disabled={isSubmitting}
+                                className="flex-1 px-4 py-2.5 rounded-lg text-sm font-medium bg-emerald-500 hover:bg-emerald-600 text-white transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                            >
+                                <CheckCircle2 className="w-4 h-4" />
+                                {isSubmitting ? "กำลังบันทึก..." : "Mark Done"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 });

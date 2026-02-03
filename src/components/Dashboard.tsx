@@ -5,7 +5,7 @@ import {
     Users, Activity as ActivityIcon, Layers, Zap, Clock, AlertCircle,
     DollarSign, BarChart3, LineChart,
     Briefcase, TrendingUp, Monitor,
-    Tv, Pause, RefreshCw, Info
+    Tv, Pause, RefreshCw, Info, Repeat, CreditCard, Calendar
 } from "lucide-react";
 
 // Animated Number Component - counts up from 0 to target value
@@ -89,7 +89,7 @@ import {
     XAxis, YAxis, CartesianGrid, Tooltip, Legend
 } from 'recharts';
 import ParticlesBackground from "./ParticlesBackground";
-import type { Customer, Installation, Issue, Lead, Activity as CSActivity, GoogleSheetLead, MasterDemoLead, BusinessMetrics, NewSalesRecord } from "@/types";
+import type { Customer, Installation, Issue, Lead, Activity as CSActivity, GoogleSheetLead, MasterDemoLead, BusinessMetrics, NewSalesRecord, RenewalsRecord } from "@/types";
 
 import SegmentedControl from "./SegmentedControl";
 import CustomSelect from "./CustomSelect";
@@ -104,6 +104,7 @@ interface DashboardProps {
     googleSheetLeads?: GoogleSheetLead[];
     googleSheetDemos?: MasterDemoLead[];
     newSalesData?: NewSalesRecord[];
+    renewalsData?: RenewalsRecord[];
     businessMetrics?: BusinessMetrics;
     user: any;
     onViewChange: (view: string) => void;
@@ -133,7 +134,7 @@ const parseLocalISO = (isoStr: string) => {
     return new Date(isoStr);
 };
 
-const Dashboard = React.memo(function Dashboard({ customers, installations, issues, activities, leads, googleSheetLeads = [], googleSheetDemos = [], newSalesData = [], businessMetrics, user, onViewChange }: DashboardProps) {
+const Dashboard = React.memo(function Dashboard({ customers, installations, issues, activities, leads, googleSheetLeads = [], googleSheetDemos = [], newSalesData = [], renewalsData = [], businessMetrics, user, onViewChange }: DashboardProps) {
     const dashboardRef = useRef<HTMLDivElement>(null);
     const [activeTab, setActiveTab] = useState<'cs' | 'business'>('cs');
     const [timeRange, setTimeRange] = useState<'1w' | '1m' | '3m' | '6m' | '1y' | 'custom'>('1w');
@@ -274,7 +275,7 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
                     ({wowPercent >= 0 ? "+" : "-"}{Math.abs(wowPercent).toFixed(1)}%)
                 </span>
                 <div className="relative group/tooltip">
-                    <div className="p-0.5 rounded-full bg-white/5 text-slate-400 hover:text-white transition-colors cursor-help">
+                    <div className="p-0.5 rounded-full bg-bg-hover text-text-muted hover:text-text-main transition-colors cursor-help">
                         <Info className="w-3 h-3" />
                     </div>
 
@@ -297,7 +298,7 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
                     ({demosWoWPercent >= 0 ? "+" : "-"}{Math.abs(demosWoWPercent).toFixed(1)}%)
                 </span>
                 <div className="relative group/tooltip">
-                    <div className="p-0.5 rounded-full bg-white/5 text-slate-400 hover:text-white transition-colors cursor-help">
+                    <div className="p-0.5 rounded-full bg-bg-hover text-text-muted hover:text-text-main transition-colors cursor-help">
                         <Info className="w-3 h-3" />
                     </div>
 
@@ -347,12 +348,36 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
 
         // Use calculated sales or fallback to businessMetrics
         const newSales = currentMonthSales > 0 ? currentMonthSales : (businessMetrics?.newSales ?? 0);
-        const renewal = businessMetrics?.renewal ?? 0;
+
+        // Calculate Renewals from Sheet7
+        const currentMonthRenewals = renewalsData
+            .filter(r => {
+                const rMonth = thaiMonthMap[r.month];
+                const rYear = r.year;
+                return rMonth === currentMonth && rYear === currentBuddhistYear;
+            })
+            .reduce((sum, r) => sum + (r.renewedAmount || 0), 0);
+
+        const prevMonthRenewals = renewalsData
+            .filter(r => {
+                const rMonth = thaiMonthMap[r.month];
+                const rYear = r.year;
+                return rMonth === prevMonth && rYear === prevYear;
+            })
+            .reduce((sum, r) => sum + (r.renewedAmount || 0), 0);
+
+        // Use calculated renewals or fallback to businessMetrics
+        const renewal = currentMonthRenewals > 0 ? currentMonthRenewals : (businessMetrics?.renewal ?? 0);
 
         // Calculate Sales MoM %
         let salesMoMPercent = 0;
         if (prevMonthSales > 0) salesMoMPercent = ((currentMonthSales - prevMonthSales) / prevMonthSales) * 100;
         else if (currentMonthSales > 0) salesMoMPercent = 100;
+
+        // Calculate Renewals MoM %
+        let renewalsMoMPercent = 0;
+        if (prevMonthRenewals > 0) renewalsMoMPercent = ((currentMonthRenewals - prevMonthRenewals) / prevMonthRenewals) * 100;
+        else if (currentMonthRenewals > 0) renewalsMoMPercent = 100;
 
         const salesMoMColor = salesMoMPercent >= 0 ? "text-emerald-400" : "text-rose-400";
         const SalesMoMTag = (
@@ -361,12 +386,33 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
                     ({salesMoMPercent >= 0 ? "+" : "-"}{Math.abs(salesMoMPercent).toFixed(1)}%)
                 </span>
                 <div className="relative group/tooltip">
-                    <div className="p-0.5 rounded-full bg-white/5 text-slate-400 hover:text-white transition-colors cursor-help">
+                    <div className="p-0.5 rounded-full bg-bg-hover text-text-muted hover:text-text-main transition-colors cursor-help">
                         <Info className="w-3 h-3" />
                     </div>
                     <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-card-bg backdrop-blur-xl border border-border rounded-xl shadow-2xl opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 z-[100] text-[11px] leading-relaxed text-text-muted pointer-events-none">
                         <p className="font-bold text-text-main mb-1">Sales Growth (MoM)</p>
                         <p>รายได้ปิดใหม่เทียบกับเดือนก่อนหน้า:</p>
+                        <div className="mt-2 p-2 bg-black/5 dark:bg-black/30 rounded-lg font-mono text-indigo-500 dark:text-indigo-300">
+                            ((ยอดเดือนนี้ - เดือนก่อน) / เดือนก่อน) x 100
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+
+        const renewalsMoMColor = renewalsMoMPercent >= 0 ? "text-purple-400" : "text-rose-400";
+        const RenewalsMoMTag = (
+            <div className="flex items-center gap-1.5 relative">
+                <span className={`${renewalsMoMColor} flex items-center gap-0.5 whitespace-nowrap text-[14px] font-bold`}>
+                    ({renewalsMoMPercent >= 0 ? "+" : "-"}{Math.abs(renewalsMoMPercent).toFixed(1)}%)
+                </span>
+                <div className="relative group/tooltip">
+                    <div className="p-0.5 rounded-full bg-bg-hover text-text-muted hover:text-text-main transition-colors cursor-help">
+                        <Info className="w-3 h-3" />
+                    </div>
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-card-bg backdrop-blur-xl border border-border rounded-xl shadow-2xl opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 z-[100] text-[11px] leading-relaxed text-text-muted pointer-events-none">
+                        <p className="font-bold text-text-main mb-1">Renewals Growth (MoM)</p>
+                        <p>ยอดต่อสัญญาเทียบกับเดือนก่อนหน้า:</p>
                         <div className="mt-2 p-2 bg-black/5 dark:bg-black/30 rounded-lg font-mono text-indigo-500 dark:text-indigo-300">
                             ((ยอดเดือนนี้ - เดือนก่อน) / เดือนก่อน) x 100
                         </div>
@@ -383,9 +429,9 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
             { id: 'leads', label: "Total Leads – This Week", subLabel: "ผู้สนใจรายสัปดาห์ (Mon-Sun)", numericValue: currentCount, prefix: "", suffix: "", sub: `Dr.Ease: ${dreaseLeads} | Ease: ${easeLeads}`, extraInfo: WoWTag, tooltip: "อัตราการเติบโตเมื่อเทียบกับสัปดาห์ก่อน (WoW): ((จำนวนสัปดาห์นี้-จำนวนสัปดาห์ก่อน) / จำนวนสัปดาห์ก่อน) x 100", icon: Briefcase, color: "text-amber-400", border: "border-amber-500/20", bg: "from-amber-500/10" },
             { id: 'demos', label: "Weekly Demos", subLabel: "การทำ Demo รายสัปดาห์ (Mon-Sun)", numericValue: currentDemos, prefix: "", suffix: "", sub: `เข้าข่ายสัปดาห์ปัจจุบัน`, extraInfo: DemosWoWTag, icon: Monitor, color: "text-blue-400", border: "border-blue-500/20", bg: "from-blue-500/10" },
             { id: 'sales', label: "New Sales", subLabel: `ยอดเงินปิดใหม่ (${currentMonthName} ${currentBuddhistYear.slice(-2)})`, numericValue: newSales, prefix: "฿", suffix: "", sub: prevMonthSales > 0 ? `เดือนก่อน: ฿${prevMonthSales.toLocaleString()}` : "Revenue เดือนนี้", extraInfo: SalesMoMTag, icon: DollarSign, color: "text-emerald-400", border: "border-emerald-500/20", bg: "from-emerald-500/10" },
-            { id: 'renewals', label: "Renewal", subLabel: "ยอดเงินต่อสัญญา", numericValue: renewal, prefix: "฿", suffix: "", sub: "Revenue เดือนนี้", icon: TrendingUp, color: "text-purple-400", border: "border-purple-500/20", bg: "from-purple-500/10" },
+            { id: 'renewals', label: "Renewal", subLabel: `ยอดต่อสัญญา (${currentMonthName} ${currentBuddhistYear.slice(-2)})`, numericValue: renewal, prefix: "฿", suffix: "", sub: prevMonthRenewals > 0 ? `เดือนก่อน: ฿${prevMonthRenewals.toLocaleString()}` : "Revenue เดือนนี้", extraInfo: RenewalsMoMTag, icon: TrendingUp, color: "text-purple-400", border: "border-purple-500/20", bg: "from-purple-500/10" },
         ];
-    }, [googleSheetLeads, googleSheetDemos, activities, businessMetrics, newSalesData]);
+    }, [googleSheetLeads, googleSheetDemos, activities, businessMetrics, newSalesData, renewalsData]);
 
     const dateRange = useMemo(() => {
         let startDate: Date;
@@ -424,8 +470,8 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
         const { startDate, endDate } = dateRange;
 
         const daysDiff = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)));
-        // Always group by month for sales metric
-        const groupBy = selectedMetric === 'sales' ? 'month' : (daysDiff > 400 ? 'month' : (daysDiff > 45 ? 'week' : 'day'));
+        // Always group by month for sales and renewals metrics
+        const groupBy = (selectedMetric === 'sales' || selectedMetric === 'renewals') ? 'month' : (daysDiff > 400 ? 'month' : (daysDiff > 45 ? 'week' : 'day'));
 
         const normalizeDate = (dateVal: string | undefined) => {
             const d = parseSheetDate(dateVal);
@@ -462,6 +508,17 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
                 .reduce((sum, s) => sum + (s.amount || 0), 0);
         };
 
+        // Helper to get renewals for a specific month/year
+        const getRenewalsForMonth = (gregorianYear: number, month: number) => {
+            const buddhistYear = String(gregorianYear + 543);
+            return renewalsData
+                .filter(r => {
+                    const rMonth = thaiMonthMap[r.month];
+                    return rMonth === month && r.year === buddhistYear;
+                })
+                .reduce((sum, r) => sum + (r.renewedAmount || 0), 0);
+        };
+
         if (groupBy === 'month') {
             const monthlyData: { [key: string]: any } = {};
             const current = new Date(startDate);
@@ -475,9 +532,10 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
                 const salesAmount = salesFilter === 'all'
                     ? getSalesForMonth(current.getFullYear(), current.getMonth() + 1)
                     : (filteredSalesAoey + filteredSalesYo);
+                const renewalsAmount = getRenewalsForMonth(current.getFullYear(), current.getMonth() + 1);
                 monthlyData[key] = {
                     drease: 0, ease: 0, leads: 0, demos: 0, demosAoey: 0, demosYo: 0,
-                    sales: salesAmount, salesAoey: filteredSalesAoey, salesYo: filteredSalesYo, renewals: 0
+                    sales: salesAmount, salesAoey: filteredSalesAoey, salesYo: filteredSalesYo, renewals: renewalsAmount
                 };
                 current.setMonth(current.getMonth() + 1);
             }
@@ -549,10 +607,12 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
             const monthlySales = getSalesForMonth(date.getFullYear(), date.getMonth() + 1);
             const monthlySalesAoey = getSalesForMonthBySalesperson(date.getFullYear(), date.getMonth() + 1, 'เอย');
             const monthlySalesYo = getSalesForMonthBySalesperson(date.getFullYear(), date.getMonth() + 1, 'โย');
+            const monthlyRenewals = getRenewalsForMonth(date.getFullYear(), date.getMonth() + 1);
             const daysInMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
             const dailySalesEstimate = Math.round(monthlySales / daysInMonth);
             const dailySalesAoey = Math.round(monthlySalesAoey / daysInMonth);
             const dailySalesYo = Math.round(monthlySalesYo / daysInMonth);
+            const dailyRenewalsEstimate = Math.round(monthlyRenewals / daysInMonth);
 
             return {
                 name: `${date.getDate()} ${days[date.getDay()]}`,
@@ -566,10 +626,10 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
                 sales: dailySalesEstimate,
                 salesAoey: dailySalesAoey,
                 salesYo: dailySalesYo,
-                renewals: 0,
+                renewals: dailyRenewalsEstimate,
             };
         });
-    }, [dateRange, googleSheetLeads, googleSheetDemos, activities, productFilter, salesFilter, newSalesData, selectedMetric]);
+    }, [dateRange, googleSheetLeads, googleSheetDemos, activities, productFilter, salesFilter, newSalesData, selectedMetric, renewalsData]);
 
     const graphTotals = useMemo(() => {
         return dynamicGraphData.reduce((acc, curr) => {
@@ -646,7 +706,7 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
     }, [dynamicGraphData]);
 
     return (
-        <div ref={dashboardRef} className={`animate-in fade-in zoom-in-95 duration-500 relative custom-scrollbar flex flex-col pt-2 ${isFullscreen ? `p-8 bg-bg-pure h-screen w-screen overflow-hidden gap-4` : 'h-full overflow-hidden space-y-4'}`}>
+        <div ref={dashboardRef} className={`animate-in fade-in zoom-in-95 duration-500 relative custom-scrollbar flex flex-col pt-2 ${isFullscreen ? `p-8 bg-bg-pure h-screen w-screen overflow-hidden gap-4` : 'h-full overflow-y-auto space-y-4'}`}>
             <ParticlesBackground className="absolute inset-0 z-0" />
             <style>{iconAnimationStyles}</style>
 
@@ -689,7 +749,7 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
                     {!isFullscreen && (
                         <div className="flex items-center gap-2">
                             <div className="flex bg-bg-hover p-1 rounded-xl border border-border mr-2">
-                                <button onClick={() => setIsAutoCycle(!isAutoCycle)} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${isAutoCycle ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'text-slate-400 hover:text-white'}`}>
+                                <button onClick={() => setIsAutoCycle(!isAutoCycle)} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${isAutoCycle ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'text-text-muted hover:text-text-main'}`}>
                                     {isAutoCycle ? <Pause className="w-3 h-3" /> : <RefreshCw className="w-3 h-3" />}
                                     {isAutoCycle ? 'AUTO-ON' : 'Cycle Off'}
                                 </button>
@@ -711,46 +771,229 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
             </div>
 
             {activeTab === 'cs' && (
-                <div className="relative z-10 animate-in slide-in-from-left-4 duration-500 flex flex-col min-h-0 flex-1 space-y-6">
+                <div className="relative z-10 animate-in slide-in-from-left-4 duration-500 flex flex-col min-h-0 flex-1 space-y-5">
+                    {/* Enhanced Stat Cards */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 flex-shrink-0">
                         {csStats.map((stat, i) => (
-                            <div key={i} className={`glass-card p-4 border transition-all hover:-translate-y-1 ${stat.border} dark:${stat.border}`}>
-                                <div className={`absolute inset-0 bg-gradient-to-br ${stat.bg} to-transparent opacity-30`} />
-                                <div className="relative flex flex-col gap-2">
-                                    <div className={`p-1.5 w-fit rounded-lg bg-bg-hover ${stat.color}`}>
-                                        <stat.icon className="w-4 h-4" style={{ animation: `iconFloat${i} 3s ease-in-out infinite, continuousFloat 5s ease-in-out infinite` }} />
+                            <div
+                                key={i}
+                                className={`group/stat glass-card p-5 border transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl cursor-pointer ${stat.border} dark:${stat.border}`}
+                                style={{
+                                    boxShadow: `0 0 30px ${stat.color.includes('emerald') ? 'rgba(16, 185, 129, 0.1)' : stat.color.includes('blue') ? 'rgba(59, 130, 246, 0.1)' : stat.color.includes('rose') ? 'rgba(244, 63, 94, 0.1)' : 'rgba(99, 102, 241, 0.1)'}`
+                                }}
+                            >
+                                <div className={`absolute inset-0 bg-gradient-to-br ${stat.bg} to-transparent opacity-40 group-hover/stat:opacity-60 transition-opacity duration-300`} />
+                                <div className="relative flex flex-col gap-3">
+                                    <div className="flex items-center justify-between">
+                                        <div className={`p-2.5 w-fit rounded-xl ${stat.color} transition-all duration-300 group-hover/stat:scale-110`}
+                                             style={{
+                                                 background: stat.color.includes('emerald') ? 'rgba(16, 185, 129, 0.15)' : stat.color.includes('blue') ? 'rgba(59, 130, 246, 0.15)' : stat.color.includes('rose') ? 'rgba(244, 63, 94, 0.15)' : 'rgba(99, 102, 241, 0.15)',
+                                                 boxShadow: `0 0 20px ${stat.color.includes('emerald') ? 'rgba(16, 185, 129, 0.3)' : stat.color.includes('blue') ? 'rgba(59, 130, 246, 0.3)' : stat.color.includes('rose') ? 'rgba(244, 63, 94, 0.3)' : 'rgba(99, 102, 241, 0.3)'}`
+                                             }}>
+                                            <stat.icon className="w-5 h-5" style={{ animation: `iconFloat${i} 3s ease-in-out infinite, continuousFloat 5s ease-in-out infinite` }} />
+                                        </div>
+                                        <div className="flex items-center gap-1 opacity-0 group-hover/stat:opacity-100 transition-opacity">
+                                            <div className={`w-1.5 h-1.5 rounded-full ${stat.color.replace('text-', 'bg-')} animate-pulse`} />
+                                            <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider">Live</span>
+                                        </div>
                                     </div>
                                     <div>
-                                        <p className="text-text-muted text-sm uppercase font-bold tracking-widest">{stat.label}</p>
-                                        <p className="text-indigo-400/80 text-xs font-bold -mt-0.5 mb-1">{stat.subLabel}</p>
-                                        <h3 className="text-3xl font-bold text-text-main tracking-tighter leading-none">{stat.value}</h3>
-                                        <p className="text-text-muted text-xs font-bold mt-1 line-clamp-1">{stat.sub}</p>
+                                        <p className="text-text-muted text-xs uppercase font-bold tracking-widest">{stat.label}</p>
+                                        <p className={`${stat.color} opacity-80 text-[10px] font-bold -mt-0.5 mb-2`}>{stat.subLabel}</p>
+                                        <h3 className="text-4xl font-black text-text-main tracking-tighter leading-none">
+                                            <AnimatedNumber value={stat.value} duration={1200} />
+                                        </h3>
+                                        <p className="text-text-muted text-[10px] font-bold mt-2 line-clamp-1 opacity-70">{stat.sub}</p>
                                     </div>
                                 </div>
                             </div>
                         ))}
                     </div>
 
-                    <div className="grid grid-cols-1 gap-6 flex-1 min-h-0">
-                        <div className="glass-card p-6 border-border flex flex-col min-h-0">
-                            <h3 className="text-text-main font-bold flex items-center gap-2 flex-shrink-0">
-                                <ActivityIcon className="w-4 h-4 text-indigo-400" />
-                                Recent Support Activity
-                            </h3>
-                            <p className="text-text-muted opacity-60 text-[10px] font-bold uppercase tracking-widest mb-4 flex-shrink-0">กิจกรรมการซัพพอร์ตล่าสุด</p>
-                            <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 min-h-0 space-y-4">
-                                {issues.slice(0, 5).map((issue, i) => (
-                                    <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-indigo-500/5 border border-indigo-500/10 hover:border-indigo-500/30 transition-all cursor-pointer">
-                                        <div className={`w-2 h-2 rounded-full ${issue.status === 'เสร็จสิ้น' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-xs font-semibold text-text-main truncate hover:text-indigo-300 transition-colors">{issue.title}</p>
-                                            <p className="text-[10px] text-text-muted">{issue.customerName} • {issue.status}</p>
+                    {/* Two Column Layout */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 flex-1 min-h-0">
+                        {/* Recent Issues - Main Column */}
+                        <div className="lg:col-span-2 glass-card p-6 border-border flex flex-col min-h-0">
+                            <div className="flex items-center justify-between mb-4 flex-shrink-0">
+                                <div>
+                                    <h3 className="text-text-main font-bold flex items-center gap-2">
+                                        <div className="p-1.5 rounded-lg bg-rose-500/10">
+                                            <AlertCircle className="w-4 h-4 text-rose-400" />
                                         </div>
-                                        <div className="text-[10px] text-text-muted font-mono">
-                                            {issue.createdAt?.split('T')[0]}
+                                        Active Issues
+                                    </h3>
+                                    <p className="text-text-muted opacity-60 text-[10px] font-bold uppercase tracking-widest mt-1">ปัญหาที่ต้องดำเนินการ</p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <div className="px-3 py-1.5 rounded-lg bg-rose-500/10 border border-rose-500/20">
+                                        <span className="text-rose-400 text-sm font-bold">{issues.filter(i => i.status !== 'เสร็จสิ้น').length}</span>
+                                        <span className="text-text-muted text-xs ml-1">pending</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 min-h-0 space-y-3">
+                                {issues.filter(i => i.status !== 'เสร็จสิ้น').slice(0, 6).map((issue, i) => (
+                                    <div
+                                        key={i}
+                                        className="group/issue flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r from-bg-hover to-transparent border border-border-light hover:border-indigo-500/30 hover:from-indigo-500/5 transition-all duration-300 cursor-pointer"
+                                    >
+                                        <div className="relative">
+                                            <div className={`w-3 h-3 rounded-full ${issue.status === 'เสร็จสิ้น' ? 'bg-emerald-500' : issue.status === 'กำลังดำเนินการ' ? 'bg-amber-500' : 'bg-rose-500'}`} />
+                                            <div className={`absolute inset-0 w-3 h-3 rounded-full ${issue.status === 'เสร็จสิ้น' ? 'bg-emerald-500' : issue.status === 'กำลังดำเนินการ' ? 'bg-amber-500' : 'bg-rose-500'} animate-ping opacity-30`} />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-semibold text-text-main truncate group-hover/issue:text-indigo-300 transition-colors">{issue.title}</p>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <span className="text-[10px] text-text-muted font-medium">{issue.customerName}</span>
+                                                <span className="text-text-muted opacity-30">•</span>
+                                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                                    issue.status === 'เสร็จสิ้น' ? 'bg-emerald-500/10 text-emerald-400' :
+                                                    issue.status === 'กำลังดำเนินการ' ? 'bg-amber-500/10 text-amber-400' :
+                                                    'bg-rose-500/10 text-rose-400'
+                                                }`}>{issue.status}</span>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="text-[10px] text-text-muted font-mono opacity-70">
+                                                {issue.createdAt?.split('T')[0]}
+                                            </div>
+                                            {issue.subdomain && (
+                                                <a
+                                                    href={`https://${issue.subdomain}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="text-[9px] text-indigo-400 hover:underline"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                >
+                                                    {issue.subdomain}
+                                                </a>
+                                            )}
                                         </div>
                                     </div>
                                 ))}
+                                {issues.filter(i => i.status !== 'เสร็จสิ้น').length === 0 && (
+                                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                                        <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center mb-4">
+                                            <Zap className="w-8 h-8 text-emerald-400" />
+                                        </div>
+                                        <p className="text-text-main font-bold">All Clear!</p>
+                                        <p className="text-text-muted text-sm">ไม่มีปัญหาที่ต้องดำเนินการ</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Quick Stats Sidebar */}
+                        <div className="glass-card p-6 border-border flex flex-col min-h-0">
+                            <h3 className="text-text-main font-bold flex items-center gap-2 flex-shrink-0">
+                                <div className="p-1.5 rounded-lg bg-indigo-500/10">
+                                    <BarChart3 className="w-4 h-4 text-indigo-400" />
+                                </div>
+                                Quick Stats
+                            </h3>
+                            <p className="text-text-muted opacity-60 text-[10px] font-bold uppercase tracking-widest mb-5 flex-shrink-0">สถิติภาพรวม</p>
+
+                            <div className="flex-1 space-y-5 overflow-y-auto custom-scrollbar">
+                                {/* Customer Distribution */}
+                                <div className="p-4 rounded-xl bg-bg-hover border border-border-light">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <span className="text-[10px] text-text-muted uppercase font-bold tracking-widest">Usage Distribution</span>
+                                        <span className="text-xs text-text-main font-bold">{customers.length} total</span>
+                                    </div>
+                                    <div className="space-y-3">
+                                        <div>
+                                            <div className="flex justify-between text-[10px] mb-1">
+                                                <span className="text-emerald-400 font-bold">Active</span>
+                                                <span className="text-text-muted">{customers.filter(c => c.usageStatus === 'Active').length}</span>
+                                            </div>
+                                            <div className="h-2 bg-bg-pure rounded-full overflow-hidden">
+                                                <div
+                                                    className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full transition-all duration-1000"
+                                                    style={{ width: `${(customers.filter(c => c.usageStatus === 'Active').length / customers.length) * 100}%` }}
+                                                />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div className="flex justify-between text-[10px] mb-1">
+                                                <span className="text-indigo-400 font-bold">Training</span>
+                                                <span className="text-text-muted">{customers.filter(c => c.usageStatus === 'Training').length}</span>
+                                            </div>
+                                            <div className="h-2 bg-bg-pure rounded-full overflow-hidden">
+                                                <div
+                                                    className="h-full bg-gradient-to-r from-indigo-500 to-indigo-400 rounded-full transition-all duration-1000"
+                                                    style={{ width: `${(customers.filter(c => c.usageStatus === 'Training').length / customers.length) * 100}%` }}
+                                                />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div className="flex justify-between text-[10px] mb-1">
+                                                <span className="text-amber-400 font-bold">Pending</span>
+                                                <span className="text-text-muted">{customers.filter(c => c.usageStatus === 'Pending').length}</span>
+                                            </div>
+                                            <div className="h-2 bg-bg-pure rounded-full overflow-hidden">
+                                                <div
+                                                    className="h-full bg-gradient-to-r from-amber-500 to-amber-400 rounded-full transition-all duration-1000"
+                                                    style={{ width: `${(customers.filter(c => c.usageStatus === 'Pending').length / customers.length) * 100}%` }}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Installation Progress */}
+                                <div className="p-4 rounded-xl bg-gradient-to-br from-blue-500/10 to-transparent border border-blue-500/20">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="text-[10px] text-text-muted uppercase font-bold tracking-widest">Installation Rate</span>
+                                    </div>
+                                    <div className="flex items-end gap-3">
+                                        <span className="text-3xl font-black text-blue-400">
+                                            {Math.round((installations.filter(i => i.status === 'Completed').length / Math.max(installations.length, 1)) * 100)}%
+                                        </span>
+                                        <span className="text-text-muted text-xs mb-1">completed</span>
+                                    </div>
+                                    <div className="mt-3 h-2 bg-bg-pure rounded-full overflow-hidden">
+                                        <div
+                                            className="h-full bg-gradient-to-r from-blue-500 to-cyan-400 rounded-full"
+                                            style={{ width: `${(installations.filter(i => i.status === 'Completed').length / Math.max(installations.length, 1)) * 100}%` }}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Issue Resolution */}
+                                <div className="p-4 rounded-xl bg-gradient-to-br from-emerald-500/10 to-transparent border border-emerald-500/20">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="text-[10px] text-text-muted uppercase font-bold tracking-widest">Issue Resolution</span>
+                                    </div>
+                                    <div className="flex items-end gap-3">
+                                        <span className="text-3xl font-black text-emerald-400">
+                                            {Math.round((issues.filter(i => i.status === 'เสร็จสิ้น').length / Math.max(issues.length, 1)) * 100)}%
+                                        </span>
+                                        <span className="text-text-muted text-xs mb-1">resolved</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 mt-3">
+                                        <div className="flex-1 h-2 bg-bg-pure rounded-full overflow-hidden">
+                                            <div
+                                                className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full"
+                                                style={{ width: `${(issues.filter(i => i.status === 'เสร็จสิ้น').length / Math.max(issues.length, 1)) * 100}%` }}
+                                            />
+                                        </div>
+                                        <span className="text-[10px] text-emerald-400 font-bold">{issues.filter(i => i.status === 'เสร็จสิ้น').length}/{issues.length}</span>
+                                    </div>
+                                </div>
+
+                                {/* Recent Activity */}
+                                <div className="p-4 rounded-xl bg-bg-hover border border-border-light">
+                                    <span className="text-[10px] text-text-muted uppercase font-bold tracking-widest">Recent Activity</span>
+                                    <div className="mt-3 space-y-2">
+                                        {activities.slice(0, 3).map((activity, i) => (
+                                            <div key={i} className="flex items-center gap-2 text-xs">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
+                                                <span className="text-text-main truncate flex-1">{activity.customerName}</span>
+                                                <span className="text-text-muted text-[10px]">{activity.activityType}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -802,10 +1045,10 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 flex-1 min-h-0 overflow-hidden">
-                        <div className="lg:col-span-2 glass-card p-6 border-white/5 flex flex-col min-h-0">
+                        <div className="lg:col-span-2 glass-card p-6 border-border-light flex flex-col min-h-0">
                             <div className="flex items-center justify-between mb-2">
                                 <div className="flex flex-col">
-                                    <h3 className="text-white font-bold flex items-center gap-2">
+                                    <h3 className="text-text-main text-sm font-semibold flex items-center gap-2">
                                         <LineChart className="w-4 h-4 text-indigo-400" />
                                         {timeRange === '1w' ? 'Weekly' : timeRange === '1m' ? 'Monthly' : timeRange === '3m' ? '3 Months' : timeRange === '6m' ? '6 Months' : timeRange === '1y' ? 'Yearly' : 'Custom'} {
                                             selectedMetric === 'leads' ? 'Leads Performance' :
@@ -813,7 +1056,7 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
                                                     selectedMetric === 'sales' ? 'Sales Revenue Trend' : 'Renewal Revenue Trend'
                                         }
                                     </h3>
-                                    <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">
+                                    <p className="text-text-muted text-[10px]">
                                         {selectedMetric === 'sales'
                                             ? `ยอดขายรายเดือน ${timeRange === '1m' ? '1 เดือนย้อนหลัง' : timeRange === '3m' ? '3 เดือนย้อนหลัง' : timeRange === '6m' ? '6 เดือนย้อนหลัง' : '1 ปีย้อนหลัง'}`
                                             : `อัตราการเติบโตของ Lead และ Demo ${timeRange === '1w' ? 'รายสัปดาห์' : 'ช่วงเวลาที่กำหนด'}`
@@ -906,15 +1149,15 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
                             </div>
 
                             <div className="flex flex-col md:flex-row gap-8 flex-1 min-h-0 mt-2">
-                                <div className="flex flex-col gap-6 pr-8 border-r border-white/5 min-w-[220px] py-2">
+                                <div className="flex flex-col gap-6 pr-8 border-r border-border-light min-w-[220px] py-2">
                                     <div className="flex flex-col">
                                         <div className="flex items-center gap-1.5 mb-2">
                                             <div className={`w-3 h-3 rounded-full ${selectedMetric === 'leads' ? 'bg-indigo-400 shadow-[0_0_10px_#818cf8]' : selectedMetric === 'demos' ? 'bg-blue-400 shadow-[0_0_10px_#3b82f6]' : selectedMetric === 'sales' ? 'bg-emerald-400 shadow-[0_0_10px_#10b981]' : 'bg-purple-400 shadow-[0_0_10px_#c084fc]'}`} />
-                                            <span className="text-white text-xs uppercase font-black tracking-widest">
+                                            <span className="text-text-main text-xs uppercase font-black tracking-widest">
                                                 {selectedMetric === 'leads' ? 'Total Leads' : selectedMetric === 'demos' ? 'Total' : selectedMetric === 'sales' ? 'Total Sales' : 'Renewal Total'}
                                             </span>
                                         </div>
-                                        <p className="text-white text-4xl font-bold tracking-tighter tabular-nums leading-none mb-4">
+                                        <p className="text-text-main text-4xl font-bold tracking-tighter tabular-nums leading-none mb-4">
                                             {selectedMetric === 'leads'
                                                 ? (graphTotals.drease + graphTotals.ease).toLocaleString()
                                                 : selectedMetric === 'demos'
@@ -926,14 +1169,14 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
                                         </p>
 
                                         {selectedMetric === 'leads' ? (
-                                            <div className="relative flex flex-col gap-4 ml-1.5 pl-5 border-l border-white/10">
+                                            <div className="relative flex flex-col gap-4 ml-1.5 pl-5 border-l border-border">
                                                 <div className="flex flex-col relative">
                                                     <div className="absolute -left-5 top-2 w-4 h-px bg-white/10" />
                                                     <div className="flex items-center gap-1.5 mb-1">
                                                         <div className="w-2 h-2 rounded-full bg-[#7053E1] shadow-[0_0_8px_#7053E1]" />
                                                         <span className="text-text-muted text-[10px] uppercase font-bold tracking-widest">Lead Dr.ease</span>
                                                     </div>
-                                                    <p className="text-white text-2xl font-bold tracking-tighter tabular-nums leading-none">{graphTotals.drease.toLocaleString()}</p>
+                                                    <p className="text-text-main text-2xl font-bold tracking-tighter tabular-nums leading-none">{graphTotals.drease.toLocaleString()}</p>
                                                 </div>
                                                 <div className="flex flex-col relative">
                                                     <div className="absolute -left-5 top-2 w-4 h-px bg-white/10" />
@@ -941,11 +1184,11 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
                                                         <div className="w-2 h-2 rounded-full bg-[#F76D85] shadow-[0_0_8px_#F76D85]" />
                                                         <span className="text-text-muted text-[10px] uppercase font-bold tracking-widest">Lead EasePOS</span>
                                                     </div>
-                                                    <p className="text-white text-2xl font-bold tracking-tighter tabular-nums leading-none">{graphTotals.ease.toLocaleString()}</p>
+                                                    <p className="text-text-main text-2xl font-bold tracking-tighter tabular-nums leading-none">{graphTotals.ease.toLocaleString()}</p>
                                                 </div>
                                             </div>
                                         ) : selectedMetric === 'demos' ? (
-                                            <div className="relative flex flex-col gap-3 ml-1.5 pl-5 border-l border-white/10">
+                                            <div className="relative flex flex-col gap-3 ml-1.5 pl-5 border-l border-border">
                                                 {/* Demo by Salesperson */}
                                                 <div className="flex flex-col relative">
                                                     <div className="absolute -left-5 top-2 w-4 h-px bg-white/10" />
@@ -954,10 +1197,10 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
                                                         <span className="text-text-muted text-[10px] uppercase font-bold tracking-widest">Aoey</span>
                                                     </div>
                                                     <div className="flex items-baseline gap-2">
-                                                        <p className="text-white text-xl font-bold tracking-tighter tabular-nums leading-none">
+                                                        <p className="text-text-main text-xl font-bold tracking-tighter tabular-nums leading-none">
                                                             {filteredMasterDemos.filter(d => d.salesperson?.includes('Aoey') && d.demoStatus?.includes('Demo แล้ว')).length.toLocaleString()}
                                                         </p>
-                                                        <span className="text-slate-500 text-xs font-bold">
+                                                        <span className="text-text-muted text-xs font-bold">
                                                             / {filteredMasterDemos.filter(d => d.salesperson?.includes('Aoey')).length}
                                                         </span>
                                                     </div>
@@ -969,48 +1212,48 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
                                                         <span className="text-text-muted text-[10px] uppercase font-bold tracking-widest">Yo</span>
                                                     </div>
                                                     <div className="flex items-baseline gap-2">
-                                                        <p className="text-white text-xl font-bold tracking-tighter tabular-nums leading-none">
+                                                        <p className="text-text-main text-xl font-bold tracking-tighter tabular-nums leading-none">
                                                             {filteredMasterDemos.filter(d => d.salesperson?.includes('Yo') && d.demoStatus?.includes('Demo แล้ว')).length.toLocaleString()}
                                                         </p>
-                                                        <span className="text-slate-500 text-xs font-bold">
+                                                        <span className="text-text-muted text-xs font-bold">
                                                             / {filteredMasterDemos.filter(d => d.salesperson?.includes('Yo')).length}
                                                         </span>
                                                     </div>
                                                 </div>
 
                                                 {/* Demo Status Breakdown */}
-                                                <div className="h-px bg-white/5 w-full my-1" />
-                                                <p className="text-white text-sm uppercase font-bold tracking-widest mb-4">สถานะ Demo</p>
+                                                <div className="h-px bg-bg-hover w-full my-1" />
+                                                <p className="text-text-main text-sm uppercase font-bold tracking-widest mb-4">สถานะ Demo</p>
                                                 <div className="flex flex-col gap-4">
                                                     <div className="flex items-center justify-between">
-                                                        <span className="text-sm text-slate-300 font-medium">Demo แล้ว</span>
+                                                        <span className="text-sm text-text-main/80 font-medium">Demo แล้ว</span>
                                                         <span className="text-lg text-emerald-400 font-bold">
                                                             {filteredMasterDemos.filter(d => d.demoStatus?.includes('Demo แล้ว')).length}
                                                         </span>
                                                     </div>
                                                     <div className="flex items-center justify-between">
-                                                        <span className="text-sm text-slate-300 font-medium">ยังไม่ได้ Demo</span>
+                                                        <span className="text-sm text-text-main/80 font-medium">ยังไม่ได้ Demo</span>
                                                         <span className="text-lg text-amber-400 font-bold">
                                                             {filteredMasterDemos.filter(d => d.demoStatus?.includes('ยังไม่ได้')).length}
                                                         </span>
                                                     </div>
                                                     <div className="flex items-center justify-between">
-                                                        <span className="text-sm text-slate-300 font-medium">ลูกค้าปฏิเสธ</span>
+                                                        <span className="text-sm text-text-main/80 font-medium">ลูกค้าปฏิเสธ</span>
                                                         <span className="text-lg text-rose-400 font-bold">
                                                             {filteredMasterDemos.filter(d => d.demoStatus?.includes('ปฎิเสธ') || d.demoStatus?.includes('ปฏิเสธ')).length}
                                                         </span>
                                                     </div>
                                                     <div className="flex items-center justify-between">
-                                                        <span className="text-sm text-slate-300 font-medium">ไม่ระบุ</span>
-                                                        <span className="text-lg text-slate-500 font-bold">
+                                                        <span className="text-sm text-text-main/80 font-medium">ไม่ระบุ</span>
+                                                        <span className="text-lg text-text-muted font-bold">
                                                             {filteredMasterDemos.filter(d => !d.demoStatus || d.demoStatus.trim() === '').length}
                                                         </span>
                                                     </div>
                                                 </div>
                                             </div>
                                         ) : selectedMetric === 'sales' ? (
-                                            <div className="relative flex flex-col gap-3 ml-1.5 pl-5 border-l border-white/10 max-h-[350px] overflow-y-auto custom-scrollbar">
-                                                <p className="text-white text-[10px] uppercase font-bold tracking-widest mb-1 opacity-70">สรุปยอดรายเดือน</p>
+                                            <div className="relative flex flex-col gap-3 ml-1.5 pl-5 border-l border-border max-h-[350px] overflow-y-auto custom-scrollbar">
+                                                <p className="text-text-main text-[10px] uppercase font-bold tracking-widest mb-1 opacity-70">สรุปยอดรายเดือน</p>
                                                 {[...dynamicGraphData].reverse().map((data, index) => (
                                                     <div key={index} className="flex flex-col relative group/item">
                                                         <div className="absolute -left-5 top-2 w-4 h-px bg-white/10 group-hover/item:bg-emerald-500/50 transition-colors" />
@@ -1018,21 +1261,21 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
                                                             <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]" />
                                                             <span className="text-text-muted text-[10px] uppercase font-bold tracking-widest">{data.name}</span>
                                                         </div>
-                                                        <p className="text-white text-base font-bold tracking-tighter tabular-nums leading-none">
+                                                        <p className="text-text-main text-base font-bold tracking-tighter tabular-nums leading-none">
                                                             ฿{(data.sales || 0).toLocaleString()}
                                                         </p>
                                                     </div>
                                                 ))}
                                                 {dynamicGraphData.length === 0 && (
-                                                    <p className="text-slate-500 text-xs italic">ไม่มีข้อมูลในช่วงเวลานี้</p>
+                                                    <p className="text-text-muted text-xs italic">ไม่มีข้อมูลในช่วงเวลานี้</p>
                                                 )}
                                             </div>
                                         ) : (
-                                            <div className="p-3 rounded-xl bg-white/5 border border-white/5 space-y-2">
+                                            <div className="p-3 rounded-xl bg-bg-hover border border-border-light space-y-2">
                                                 <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest">Period Insights</p>
                                                 <div className="flex items-center gap-2">
                                                     <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
-                                                    <p className="text-white text-[11px] font-bold">Trend is stable</p>
+                                                    <p className="text-text-main text-[11px] font-bold">Trend is stable</p>
                                                 </div>
                                                 <div className="h-1 w-full bg-slate-800 rounded-full overflow-hidden">
                                                     <div className="h-full bg-indigo-500 w-[65%]" />
@@ -1040,13 +1283,13 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
                                             </div>
                                         )}
                                     </div>
-                                    <div className="h-px bg-white/5 w-full" />
+                                    <div className="h-px bg-bg-hover w-full" />
                                     <div className="flex flex-col opacity-60">
                                         <div className="flex items-center gap-1.5 mb-2">
                                             <div className="w-2.5 h-2.5 rounded-full bg-white/20" />
                                             <span className="text-text-muted text-[10px] uppercase font-bold tracking-widest">Global Status</span>
                                         </div>
-                                        <p className="text-slate-400 text-xs font-bold leading-tight uppercase tracking-tighter italic">Live Data Synchronization Active</p>
+                                        <p className="text-text-muted text-xs font-bold leading-tight uppercase tracking-tighter italic">Live Data Synchronization Active</p>
                                     </div>
                                 </div>
 
@@ -1128,19 +1371,19 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
                                                 content={({ active, payload, label }) => {
                                                     if (active && payload && payload.length) {
                                                         return (
-                                                            <div className="bg-slate-900/95 backdrop-blur-xl border border-white/10 p-4 rounded-2xl shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-                                                                <div className="flex items-center gap-2 mb-3 pb-2 border-b border-white/5">
+                                                            <div className="bg-slate-900/95 backdrop-blur-xl border border-border p-4 rounded-2xl shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+                                                                <div className="flex items-center gap-2 mb-3 pb-2 border-b border-border-light">
                                                                     <Clock className="w-3.5 h-3.5 text-indigo-400" />
-                                                                    <span className="text-white font-bold text-xs tracking-tight">{payload[0].payload.fullDate || label}</span>
+                                                                    <span className="text-text-main font-bold text-xs tracking-tight">{payload[0].payload.fullDate || label}</span>
                                                                 </div>
                                                                 <div className="space-y-2.5">
                                                                     {payload.map((entry, index) => (
                                                                         <div key={index} className="flex items-center justify-between gap-8">
                                                                             <div className="flex items-center gap-2.5">
                                                                                 <div className="w-2 rounded-full h-2 shadow-[0_0_8px_rgba(0,0,0,0.5)]" style={{ backgroundColor: entry.color, boxShadow: `0 0 10px ${entry.color}80` }} />
-                                                                                <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">{entry.name}</span>
+                                                                                <span className="text-text-muted text-[10px] font-bold uppercase tracking-wider">{entry.name}</span>
                                                                             </div>
-                                                                            <span className="text-white font-bold text-sm tabular-nums">{entry.value}</span>
+                                                                            <span className="text-text-main font-bold text-sm tabular-nums">{entry.value}</span>
                                                                         </div>
                                                                     ))}
                                                                 </div>
@@ -1174,50 +1417,104 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
                             </div>
                         </div>
 
-                        <div className="glass-card p-6 border-white/5 flex flex-col min-h-0">
-                            <h3 className="text-white font-bold flex items-center gap-2">
+                        <div className="glass-card p-6 border-border-light flex flex-col min-h-0">
+                            <h3 className="text-text-main text-sm font-semibold flex items-center gap-2">
                                 <Monitor className="w-4 h-4 text-emerald-400" />
                                 Growth & Usage Metrics
                             </h3>
-                            <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-4">สถิติการเติบโตและการใช้งาน</p>
-                            <div className={`flex-1 min-h-0 ${isFullscreen ? 'grid grid-rows-4 gap-2' : 'space-y-4 overflow-y-auto custom-scrollbar'}`}>
-                                <div className="p-2.5 rounded-xl bg-white/5 border border-white/15 flex flex-col justify-center">
-                                    <div className="flex justify-between items-start">
-                                        <div>
-                                            <p className="text-text-muted text-[10px] uppercase font-bold tracking-widest">Renewal Rate</p>
-                                            <p className="text-indigo-400/80 text-[9px] font-bold -mt-0.5 mb-1">% ต่อสัญญา</p>
+                            <p className="text-text-muted text-[10px] mb-4">สถิติการเติบโตและการใช้งาน</p>
+                            <div className={`flex-1 min-h-0 ${isFullscreen ? 'grid grid-rows-4 gap-3' : 'space-y-3 overflow-y-auto custom-scrollbar'}`}>
+                                {/* Renewal Rate Card */}
+                                <div className="p-3 rounded-xl bg-gradient-to-br from-purple-500/10 to-transparent border border-purple-500/20 hover:border-purple-500/40 transition-all group">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <div className="flex items-center gap-2.5">
+                                            <div className="p-1.5 rounded-lg bg-purple-500/20 group-hover:bg-purple-500/30 transition-colors">
+                                                <Repeat className="w-4 h-4 text-purple-400" />
+                                            </div>
+                                            <div>
+                                                <p className="text-text-main text-sm font-semibold">Renewal Rate</p>
+                                                <p className="text-purple-400/70 text-[10px]">% ต่อสัญญา</p>
+                                            </div>
                                         </div>
-                                        <span className={`text-indigo-400 font-bold tracking-tight ${isFullscreen ? 'text-xl' : 'text-sm'}`}>{businessMetrics?.renewalRate ?? 50}%</span>
+                                        <span className="text-purple-400 font-bold text-xl tabular-nums">{businessMetrics?.renewalRate ?? 50}%</span>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-3 mt-0.5">
-                                        <div><p className="text-[10px] text-slate-500 uppercase font-bold">Dr.Ease</p><p className="font-bold tracking-tight text-white">55.55%</p></div>
-                                        <div><p className="text-[10px] text-slate-500 uppercase font-bold">Ease</p><p className="font-bold tracking-tight text-white">44.44%</p></div>
+                                    <div className="h-1.5 bg-bg-hover rounded-full overflow-hidden mb-2">
+                                        <div className="h-full bg-gradient-to-r from-purple-500 to-purple-400 rounded-full transition-all" style={{ width: `${businessMetrics?.renewalRate ?? 50}%` }} />
                                     </div>
-                                </div>
-                                <div className="p-2.5 rounded-xl bg-white/5 border border-white/15 flex flex-col justify-center">
-                                    <div className="flex justify-between items-start">
-                                        <div>
-                                            <p className="text-text-muted text-[10px] uppercase font-bold tracking-widest">Merchant Onboard</p>
-                                            <p className="text-indigo-400/80 text-[9px] font-bold -mt-0.5 mb-1">จำนวนการขึ้นระบบ</p>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-bg-hover/50">
+                                            <span className="text-xs text-text-muted">Dr.Ease</span>
+                                            <span className="text-sm font-semibold text-text-main">55.55%</span>
                                         </div>
-                                        <span className={`text-emerald-400 font-bold tracking-tight ${isFullscreen ? 'text-xl' : 'text-sm'}`}>{businessMetrics?.merchantOnboard?.total ?? 561}</span>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-3 mt-0.5">
-                                        <div><p className="text-[10px] text-slate-500 uppercase font-bold">Dr.Ease</p><p className="font-bold tracking-tight text-white">{businessMetrics?.merchantOnboard?.drease ?? 420}</p></div>
-                                        <div><p className="text-[10px] text-slate-500 uppercase font-bold">Ease</p><p className="font-bold tracking-tight text-white">{businessMetrics?.merchantOnboard?.ease ?? 141}</p></div>
+                                        <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-bg-hover/50">
+                                            <span className="text-xs text-text-muted">Ease</span>
+                                            <span className="text-sm font-semibold text-text-main">44.44%</span>
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex flex-col justify-center">
-                                    <p className="text-text-muted text-[10px] uppercase font-bold tracking-widest">Ease Pay Usage</p>
-                                    <p className="text-indigo-400/80 text-[9px] font-bold -mt-0.5 mb-1">จำนวนลูกค้า Ease Pay</p>
-                                    <p className={`font-bold tracking-tight text-white ${isFullscreen ? 'text-xl' : 'text-2xl'}`}>{businessMetrics?.easePayUsage ?? 850}</p>
+
+                                {/* Merchant Onboard Card */}
+                                <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-500/10 to-transparent border border-emerald-500/20 hover:border-emerald-500/40 transition-all group">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <div className="flex items-center gap-2.5">
+                                            <div className="p-1.5 rounded-lg bg-emerald-500/20 group-hover:bg-emerald-500/30 transition-colors">
+                                                <Users className="w-4 h-4 text-emerald-400" />
+                                            </div>
+                                            <div>
+                                                <p className="text-text-main text-sm font-semibold">Merchant Onboard</p>
+                                                <p className="text-emerald-400/70 text-[10px]">จำนวนการขึ้นระบบ</p>
+                                            </div>
+                                        </div>
+                                        <span className="text-emerald-400 font-bold text-xl tabular-nums">{(businessMetrics?.merchantOnboard?.total ?? 561).toLocaleString()}</span>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-bg-hover/50">
+                                            <span className="text-xs text-text-muted">Dr.Ease</span>
+                                            <span className="text-sm font-semibold text-emerald-400">{(businessMetrics?.merchantOnboard?.drease ?? 420).toLocaleString()}</span>
+                                        </div>
+                                        <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-bg-hover/50">
+                                            <span className="text-xs text-text-muted">Ease</span>
+                                            <span className="text-sm font-semibold text-emerald-400">{(businessMetrics?.merchantOnboard?.ease ?? 141).toLocaleString()}</span>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="p-2.5 rounded-xl bg-white/5 border border-white/5 flex flex-col justify-center">
-                                    <p className="text-text-muted text-[10px] uppercase font-bold tracking-widest">Online Booking</p>
-                                    <p className="text-indigo-400/80 text-[9px] font-bold -mt-0.5 mb-1">ระบบจองออนไลน์</p>
-                                    <div className="grid grid-cols-2 gap-3 mt-1">
-                                        <div><p className="text-[9px] text-indigo-400 font-bold">Pages</p><p className="font-bold tracking-tight text-white text-lg">{(businessMetrics?.onlineBooking?.pages ?? 320).toLocaleString()}</p></div>
-                                        <div><p className="text-[9px] text-emerald-400 font-bold">Bookings</p><p className="font-bold tracking-tight text-white text-lg">{(businessMetrics?.onlineBooking?.bookings ?? 1240).toLocaleString()}</p></div>
+
+                                {/* Ease Pay Usage Card */}
+                                <div className="p-3 rounded-xl bg-gradient-to-br from-indigo-500/10 to-transparent border border-indigo-500/20 hover:border-indigo-500/40 transition-all group">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2.5">
+                                            <div className="p-1.5 rounded-lg bg-indigo-500/20 group-hover:bg-indigo-500/30 transition-colors">
+                                                <CreditCard className="w-4 h-4 text-indigo-400" />
+                                            </div>
+                                            <div>
+                                                <p className="text-text-main text-sm font-semibold">Ease Pay Usage</p>
+                                                <p className="text-indigo-400/70 text-[10px]">จำนวนลูกค้า Ease Pay</p>
+                                            </div>
+                                        </div>
+                                        <span className="text-indigo-400 font-bold text-xl tabular-nums">{(businessMetrics?.easePayUsage ?? 850).toLocaleString()}</span>
+                                    </div>
+                                </div>
+
+                                {/* Online Booking Card */}
+                                <div className="p-3 rounded-xl bg-gradient-to-br from-amber-500/10 to-transparent border border-amber-500/20 hover:border-amber-500/40 transition-all group">
+                                    <div className="flex items-center gap-2.5 mb-2">
+                                        <div className="p-1.5 rounded-lg bg-amber-500/20 group-hover:bg-amber-500/30 transition-colors">
+                                            <Calendar className="w-4 h-4 text-amber-400" />
+                                        </div>
+                                        <div>
+                                            <p className="text-text-main text-sm font-semibold">Online Booking</p>
+                                            <p className="text-amber-400/70 text-[10px]">ระบบจองออนไลน์</p>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div className="flex flex-col items-center justify-center px-2.5 py-2 rounded-lg bg-bg-hover/50">
+                                            <span className="text-[10px] text-amber-400 font-medium uppercase tracking-wider">Pages</span>
+                                            <span className="text-lg font-bold text-text-main tabular-nums">{(businessMetrics?.onlineBooking?.pages ?? 320).toLocaleString()}</span>
+                                        </div>
+                                        <div className="flex flex-col items-center justify-center px-2.5 py-2 rounded-lg bg-bg-hover/50">
+                                            <span className="text-[10px] text-emerald-400 font-medium uppercase tracking-wider">Bookings</span>
+                                            <span className="text-lg font-bold text-text-main tabular-nums">{(businessMetrics?.onlineBooking?.bookings ?? 1240).toLocaleString()}</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

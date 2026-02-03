@@ -39,6 +39,7 @@ const mainMenus = [
             { id: "leads", label: "Leads" },
             { id: "demos", label: "Demos" },
             { id: "sales", label: "Sales" },
+            { id: "renewals", label: "Renewals" },
         ]
     },
 ];
@@ -120,7 +121,8 @@ const Sidebar = memo(function Sidebar({ currentView, setView, onLogout, userRole
                         const visibleChildren = item.children.filter(child =>
                             isAdmin ||
                             userRole?.permissions?.[child.id]?.read ||
-                            (child.id === 'cs_followup' && userRole?.permissions?.['customers']?.read)
+                            (child.id === 'cs_followup' && userRole?.permissions?.['customers']?.read) ||
+                            (child.id === 'renewals' && userRole?.permissions?.['sales']?.read)
                         );
 
                         // If no children are visible, hide the group
@@ -156,7 +158,7 @@ const Sidebar = memo(function Sidebar({ currentView, setView, onLogout, userRole
 
                                 {/* Submenu for Expanded State */}
                                 {!isCollapsed && isExpanded && (
-                                    <div className="ml-4 pl-3 border-l border-white/10 space-y-1 animate-in slide-in-from-top-1 duration-200">
+                                    <div className="ml-4 pl-3 border-l border-border-light space-y-1 animate-in slide-in-from-top-1 duration-200">
                                         {visibleChildren.map((child) => (
                                             <button
                                                 key={child.id}
