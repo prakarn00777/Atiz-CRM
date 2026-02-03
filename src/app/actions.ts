@@ -125,7 +125,7 @@ export async function getCustomers(params?: PaginationParams): Promise<Customer[
             .from('customers')
             .select(`
                 id, name, client_code, subdomain, product_type, package, usage_status,
-                contract_start, contract_end,
+                contract_start, contract_end, cs_owner, contact_name, contact_phone,
                 sales_name, note,
                 installation_status, created_by, created_at, modified_by, modified_at,
                 branches (*)
@@ -158,6 +158,9 @@ export async function getCustomers(params?: PaginationParams): Promise<Customer[
             usageStatus: (row.usage_status as UsageStatus) || "Active",
             contractStart: row.contract_start ? String(row.contract_start) : undefined,
             contractEnd: row.contract_end ? String(row.contract_end) : undefined,
+            csOwner: row.cs_owner ? String(row.cs_owner) : undefined,
+            contactName: row.contact_name ? String(row.contact_name) : undefined,
+            contactPhone: row.contact_phone ? String(row.contact_phone) : undefined,
             salesName: row.sales_name ? String(row.sales_name) : undefined,
             note: row.note ? String(row.note) : undefined,
             installationStatus: row.installation_status ? String(row.installation_status) : undefined,
@@ -535,7 +538,10 @@ export async function saveCustomer(customerData: Partial<Customer>): Promise<Api
             installation_status: rest.installationStatus,
             contract_start: toNull(rest.contractStart),
             contract_end: toNull(rest.contractEnd),
+            cs_owner: toNull(rest.csOwner),
             sales_name: rest.salesName,
+            contact_name: rest.contactName,
+            contact_phone: rest.contactPhone,
             note: rest.note,
             created_by: rest.createdBy,
             created_at: rest.createdAt,

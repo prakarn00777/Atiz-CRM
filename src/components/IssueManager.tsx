@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Search, Plus, AlertCircle } from "lucide-react";
+import { Search, AlertCircle } from "lucide-react";
 import CustomSelect from "./CustomSelect";
 import CustomDatePicker from "./CustomDatePicker";
 import { Customer, Issue } from "@/types";
@@ -121,14 +121,6 @@ const IssueManager = React.memo(function IssueManager({ issues, customers: _cust
                         </div>
                     </div>
                 </div>
-
-                <button
-                    onClick={onAdd}
-                    className="btn btn-primary h-9 whitespace-nowrap"
-                >
-                    <Plus className="w-4 h-4" />
-                    New Case
-                </button>
             </div>
 
             <div className="glass-card overflow-hidden border-indigo-500/5 flex flex-col h-[calc(100vh-175px)]">
