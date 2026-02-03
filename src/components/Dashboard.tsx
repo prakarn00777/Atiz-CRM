@@ -346,8 +346,8 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
             })
             .reduce((sum, s) => sum + (s.amount || 0), 0);
 
-        // Use calculated sales or fallback to businessMetrics
-        const newSales = currentMonthSales > 0 ? currentMonthSales : (businessMetrics?.newSales ?? 0);
+        // Use calculated sales - only fallback if newSalesData is empty (not loaded)
+        const newSales = newSalesData.length > 0 ? currentMonthSales : (businessMetrics?.newSales ?? 0);
 
         // Calculate Renewals from Sheet7
         const currentMonthRenewals = renewalsData
@@ -366,8 +366,8 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
             })
             .reduce((sum, r) => sum + (r.renewedAmount || 0), 0);
 
-        // Use calculated renewals or fallback to businessMetrics
-        const renewal = currentMonthRenewals > 0 ? currentMonthRenewals : (businessMetrics?.renewal ?? 0);
+        // Use calculated renewals - only fallback if renewalsData is empty (not loaded)
+        const renewal = renewalsData.length > 0 ? currentMonthRenewals : (businessMetrics?.renewal ?? 0);
 
         // Calculate Sales MoM %
         let salesMoMPercent = 0;
