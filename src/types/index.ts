@@ -122,7 +122,7 @@ export interface Issue {
     status: "แจ้งเคส" | "กำลังดำเนินการ" | "เสร็จสิ้น";
     type: string;
     description?: string;
-    attachments?: string | { name: string, type: string, size: number, data: string }[]; // JSON string or Array for optimistic UI
+    attachments?: string | { name: string, type: string, size: number, data?: string, url?: string }[]; // JSON string or Array - supports both base64 (data) and URL
     createdBy?: string;
     createdAt?: string;
     modifiedBy?: string;

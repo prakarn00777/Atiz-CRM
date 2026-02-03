@@ -28,6 +28,59 @@ import LeadModal from "@/components/modals/LeadModal";
 import { Customer, Branch, Installation, Issue, UsageStatus, Activity as CSActivity, ActivityType, SentimentType, Lead, GoogleSheetLead, MasterDemoLead, BusinessMetrics, NewSalesRecord, RenewalsRecord } from "@/types";
 import { useNotification } from "@/components/NotificationProvider";
 import { db } from "@/lib/db";
+
+// Safe localStorage wrapper to handle QuotaExceededError
+const safeLocalStorage = {
+  setItem: (key: string, value: string) => {
+    try {
+      localStorage.setItem(key, value);
+    } catch (e) {
+      if (e instanceof DOMException && (e.name === 'QuotaExceededError' || e.code === 22)) {
+        console.warn(`localStorage quota exceeded for key: ${key}, clearing cache...`);
+        // Clear all CRM cache keys to free up space
+        const keysToRemove = Object.keys(localStorage).filter(k => k.startsWith('crm_'));
+        keysToRemove.forEach(k => localStorage.removeItem(k));
+        // Retry once after clearing
+        try {
+          localStorage.setItem(key, value);
+        } catch {
+          console.warn(`Still cannot save ${key}, skipping cache`);
+        }
+      }
+    }
+  },
+  getItem: (key: string) => localStorage.getItem(key),
+  removeItem: (key: string) => localStorage.removeItem(key),
+};
+
+// Strip base64 data from issues attachments for caching (keep only URL)
+const stripAttachmentsForCache = (issues: Issue[]): Issue[] => {
+  return issues.map(issue => {
+    if (!issue.attachments) return issue;
+
+    let attachments: any[] = [];
+    if (typeof issue.attachments === 'string') {
+      try {
+        attachments = JSON.parse(issue.attachments);
+      } catch {
+        return issue;
+      }
+    } else {
+      attachments = issue.attachments;
+    }
+
+    // Strip base64 data, keep only url, name, type, size
+    const strippedAttachments = attachments.map(att => ({
+      name: att.name,
+      type: att.type,
+      size: att.size,
+      url: att.url, // Keep URL only
+      // data is intentionally excluded
+    }));
+
+    return { ...issue, attachments: JSON.stringify(strippedAttachments) };
+  });
+};
 import {
   importCustomersFromCSV, getCustomers, getIssues, getInstallations,
   getUsers, saveUser, deleteUser, getRoles, saveRole, deleteRole, loginUser,
@@ -117,7 +170,7 @@ export default function CRMPage() {
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
   const [selectedCustomerName, setSelectedCustomerName] = useState("");
   const [selectedBranchName, setSelectedBranchName] = useState("");
-  const [selectedFiles, setSelectedFiles] = useState<{ name: string, type: string, size: number, data: string }[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<{ name: string, type: string, size: number, data?: string, url?: string }[]>([]);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
 
   const [showInstallationModal, setShowInstallationModal] = useState(false);
@@ -182,14 +235,14 @@ export default function CRMPage() {
         setBusinessMetrics(metricsResult.data);
       }
 
-      // Update cache for next load
-      localStorage.setItem("crm_customers_v2", JSON.stringify(cData));
-      localStorage.setItem("crm_issues_v2", JSON.stringify(iData));
-      localStorage.setItem("crm_installations_v2", JSON.stringify(instData));
-      localStorage.setItem("crm_system_users_v2", JSON.stringify(userData));
-      localStorage.setItem("crm_roles_v2", JSON.stringify(roleData));
-      localStorage.setItem("crm_activities_v2", JSON.stringify(actData));
-      localStorage.setItem("crm_leads_v2", JSON.stringify(lData));
+      // Update cache for next load (using safe wrapper to handle quota)
+      safeLocalStorage.setItem("crm_customers_v2", JSON.stringify(cData));
+      safeLocalStorage.setItem("crm_issues_v2", JSON.stringify(stripAttachmentsForCache(iData)));
+      safeLocalStorage.setItem("crm_installations_v2", JSON.stringify(instData));
+      safeLocalStorage.setItem("crm_system_users_v2", JSON.stringify(userData));
+      safeLocalStorage.setItem("crm_roles_v2", JSON.stringify(roleData));
+      safeLocalStorage.setItem("crm_activities_v2", JSON.stringify(actData));
+      safeLocalStorage.setItem("crm_leads_v2", JSON.stringify(lData));
     } catch (err) {
       console.error("Background fetch failed:", err);
     } finally {
@@ -278,7 +331,7 @@ export default function CRMPage() {
 
   useEffect(() => {
     if (mounted) {
-      localStorage.setItem("crm_last_view_v2", currentView);
+      safeLocalStorage.setItem("crm_last_view_v2", currentView);
     }
   }, [currentView, mounted]);
 
@@ -413,7 +466,7 @@ export default function CRMPage() {
         const userToLogin = result.data;
 
         setUser(userToLogin);
-        localStorage.setItem("crm_user_v2", JSON.stringify(result.data));
+        safeLocalStorage.setItem("crm_user_v2", JSON.stringify(result.data));
 
         setView("dashboard"); // Always open dashboard after login
         setToast({ message: "เข้าสู่ระบบสำเร็จ", type: "success" });
@@ -462,7 +515,7 @@ export default function CRMPage() {
     }
 
     // Immediate Cache Sync
-    localStorage.setItem("crm_customers_v2", JSON.stringify(editingCustomer
+    safeLocalStorage.setItem("crm_customers_v2", JSON.stringify(editingCustomer
       ? customers.map(c => c.id === data.id ? data : c)
       : [data, ...customers]));
 
@@ -565,7 +618,7 @@ export default function CRMPage() {
     const previousLeads = [...leads];
     setLeads(prev => {
       const updated = editingLead ? prev.map(l => l.id === editingLead.id ? optimisticLead : l) : [optimisticLead, ...prev];
-      localStorage.setItem("crm_leads_v2", JSON.stringify(updated));
+      safeLocalStorage.setItem("crm_leads_v2", JSON.stringify(updated));
       return updated;
     });
 
@@ -588,7 +641,7 @@ export default function CRMPage() {
     const previousLeads = [...leads];
     const updatedLeads = leads.filter(l => l.id !== id);
     setLeads(updatedLeads);
-    localStorage.setItem("crm_leads_v2", JSON.stringify(updatedLeads));
+    safeLocalStorage.setItem("crm_leads_v2", JSON.stringify(updatedLeads));
     setToast({ message: "ลบข้อมูลลีดเรียบร้อยแล้ว", type: "success" });
 
     const res = await deleteLead(id);
@@ -643,9 +696,9 @@ export default function CRMPage() {
       setIssues([data, ...issues]);
     }
 
-    localStorage.setItem("crm_issues_v2", JSON.stringify(editingIssue
+    safeLocalStorage.setItem("crm_issues_v2", JSON.stringify(stripAttachmentsForCache(editingIssue
       ? issues.map(i => i.id === data.id ? data : i)
-      : [data, ...issues]));
+      : [data, ...issues])));
 
     setIssueModalOpen(false);
     setEditingIssue(null);
@@ -953,7 +1006,7 @@ export default function CRMPage() {
       : [data, ...activities];
 
     setActivities(updatedActivities);
-    localStorage.setItem("crm_activities_v2", JSON.stringify(updatedActivities));
+    safeLocalStorage.setItem("crm_activities_v2", JSON.stringify(updatedActivities));
     setIsSavingActivity(true);
     setActivityModalOpen(false);
     setEditingActivity(null);
@@ -1072,7 +1125,7 @@ export default function CRMPage() {
           <Sidebar
             currentView={currentView}
             setView={setView}
-            onLogout={() => { setUser(null); localStorage.removeItem("crm_user_v2"); }}
+            onLogout={() => { setUser(null); safeLocalStorage.removeItem("crm_user_v2"); }}
             userRole={{ ...roles.find(r => r.id === user?.role), role: user?.role }}
             onQuickAction={handleQuickAction}
           />
@@ -1302,7 +1355,7 @@ export default function CRMPage() {
                         const prevActivities = [...activities];
                         const updatedActivities = activities.filter(a => a.id !== deleteConfirm.id);
                         setActivities(updatedActivities);
-                        localStorage.setItem("crm_activities_v2", JSON.stringify(updatedActivities));
+                        safeLocalStorage.setItem("crm_activities_v2", JSON.stringify(updatedActivities));
                         setToast({ message: "กำลังลบกิจกรรม...", type: "info" });
                         setIsDeleting(true);
                         const res = await deleteActivity(deleteConfirm.id);

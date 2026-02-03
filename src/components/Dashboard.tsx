@@ -137,7 +137,7 @@ const parseLocalISO = (isoStr: string) => {
 const Dashboard = React.memo(function Dashboard({ customers, installations, issues, activities, leads, googleSheetLeads = [], googleSheetDemos = [], newSalesData = [], renewalsData = [], businessMetrics, user, onViewChange }: DashboardProps) {
     const dashboardRef = useRef<HTMLDivElement>(null);
     const [activeTab, setActiveTab] = useState<'cs' | 'business'>('cs');
-    const [timeRange, setTimeRange] = useState<'1w' | '1m' | '3m' | '6m' | '1y' | 'custom'>('1w');
+    const [timeRange, setTimeRange] = useState<'1w' | '1m' | '3m' | '6m' | '1y' | 'custom'>('1m');
     const [customStartDate, setCustomStartDate] = useState('');
     const [customEndDate, setCustomEndDate] = useState('');
     const [productFilter, setProductFilter] = useState<'all' | 'Dr.Ease' | 'Ease POS'>('all');
