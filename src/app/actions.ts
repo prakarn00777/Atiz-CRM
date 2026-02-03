@@ -548,6 +548,7 @@ export async function saveCustomer(customerData: Partial<Customer>): Promise<Api
         const toNull = (val: any) => (val === "" || val === undefined) ? null : val;
 
         // Note: cs_owner is now managed at branch level, not customer level
+        // Note: contact_name/contact_phone columns don't exist in customers table
         const dbData = {
             name: rest.name,
             client_code: rest.clientCode,
@@ -559,8 +560,6 @@ export async function saveCustomer(customerData: Partial<Customer>): Promise<Api
             contract_start: toNull(rest.contractStart),
             contract_end: toNull(rest.contractEnd),
             sales_name: rest.salesName,
-            contact_name: rest.contactName,
-            contact_phone: rest.contactPhone,
             note: rest.note,
             created_by: rest.createdBy,
             created_at: rest.createdAt,
