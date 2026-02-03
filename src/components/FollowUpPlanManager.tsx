@@ -41,12 +41,35 @@ const FollowUpPlanManager = React.memo(function FollowUpPlanManager({ customers,
     const [isLoadingHistory, setIsLoadingHistory] = useState(false);
     const [historyPage, setHistoryPage] = useState(1);
 
+    // Track recently completed items for fade-out animation
+    const [recentlyCompleted, setRecentlyCompleted] = useState<Map<number, number>>(new Map());
+
     // Fetch history when tab changes to history
     useEffect(() => {
         if (activeTab === "history") {
             fetchHistory();
         }
     }, [activeTab]);
+
+    // Auto-remove recently completed items after 3 seconds
+    useEffect(() => {
+        if (recentlyCompleted.size === 0) return;
+
+        const timer = setTimeout(() => {
+            const now = Date.now();
+            setRecentlyCompleted(prev => {
+                const next = new Map(prev);
+                for (const [id, timestamp] of prev) {
+                    if (now - timestamp >= 3000) {
+                        next.delete(id);
+                    }
+                }
+                return next;
+            });
+        }, 3000);
+
+        return () => clearTimeout(timer);
+    }, [recentlyCompleted]);
 
     const fetchHistory = async () => {
         setIsLoadingHistory(true);
@@ -87,6 +110,13 @@ const FollowUpPlanManager = React.memo(function FollowUpPlanManager({ customers,
 
             // Notify parent component
             onUpdateStatus?.(selectedItem.id, "Completed", feedback);
+
+            // Add to recently completed for fade-out animation
+            setRecentlyCompleted(prev => {
+                const next = new Map(prev);
+                next.set(selectedItem.id, Date.now());
+                return next;
+            });
 
             // Refresh history if on history tab
             if (activeTab === "history") {
@@ -437,8 +467,19 @@ const FollowUpPlanManager = React.memo(function FollowUpPlanManager({ customers,
                         </thead>
                         <tbody className="divide-y divide-border-light">
                             {paginatedQueue.length > 0 ? (
-                                paginatedQueue.map((item, index) => (
-                                    <tr key={item.id} className="group hover:bg-bg-hover transition-colors h-14">
+                                paginatedQueue
+                                    .filter(item => !recentlyCompleted.has(item.id) || Date.now() - (recentlyCompleted.get(item.id) || 0) < 3000)
+                                    .map((item, index) => {
+                                        const isCompleted = recentlyCompleted.has(item.id);
+                                        return (
+                                            <tr
+                                                key={item.id}
+                                                className={`group transition-all duration-500 h-14 ${
+                                                    isCompleted
+                                                        ? "opacity-40 bg-emerald-500/5"
+                                                        : "hover:bg-bg-hover"
+                                                }`}
+                                            >
                                         <td className="px-3 py-3 text-center">
                                             <span className="text-xs text-text-muted opacity-60">
                                                 {(currentPage - 1) * itemsPerPage + index + 1}
@@ -509,15 +550,21 @@ const FollowUpPlanManager = React.memo(function FollowUpPlanManager({ customers,
                                             </div>
                                         </td>
                                         <td className="px-3 py-3 text-right">
-                                            <button
-                                                onClick={() => handleMarkDoneClick(item)}
-                                                className="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-300/70 hover:bg-emerald-500 hover:text-white text-xs font-medium transition-all border border-emerald-500/20 hover:border-emerald-500"
-                                            >
-                                                Mark Done
-                                            </button>
+                                            {!isCompleted && (
+                                                <button
+                                                    onClick={() => handleMarkDoneClick(item)}
+                                                    className="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-300/70 hover:bg-emerald-500 hover:text-white text-xs font-medium transition-all border border-emerald-500/20 hover:border-emerald-500"
+                                                >
+                                                    Mark Done
+                                                </button>
+                                            )}
+                                            {isCompleted && (
+                                                <span className="text-xs text-emerald-500 font-medium">Done!</span>
+                                            )}
                                         </td>
                                     </tr>
-                                ))
+                                        );
+                                    })
                             ) : (
                                 <tr>
                                     <td colSpan={9} className="px-3 py-16 text-center">
