@@ -172,7 +172,8 @@ export async function getCustomers(params?: PaginationParams): Promise<Customer[
                 isMain: Boolean(b.is_main),
                 status: b.status as any,
                 address: b.address,
-                contractStart: b.contract_start
+                contractStart: b.contract_start,
+                csOwner: b.cs_owner ? String(b.cs_owner) : undefined
             }))
         })) as Customer[];
     } catch (err) {
