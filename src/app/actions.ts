@@ -29,8 +29,22 @@ function createSuccess<T>(data: T, meta?: PaginationMeta): ApiResponse<T> {
 }
 
 function handleDbError(err: unknown, context: string): ApiResponse<never> {
-    const message = err instanceof Error ? err.message : 'Unknown database error';
-    log.error(`${context}:`, message);
+    let message = 'Unknown database error';
+
+    if (err instanceof Error) {
+        message = err.message;
+    } else if (typeof err === 'object' && err !== null) {
+        // Supabase errors are often plain objects with message/code/details
+        const e = err as Record<string, any>;
+        message = e.message || e.error || e.details || JSON.stringify(err);
+        if (e.code) {
+            message = `[${e.code}] ${message}`;
+        }
+    } else if (typeof err === 'string') {
+        message = err;
+    }
+
+    log.error(`${context}:`, message, err);
     return createError(message, 'DATABASE_ERROR');
 }
 
@@ -532,6 +546,7 @@ export async function saveCustomer(customerData: Partial<Customer>): Promise<Api
         const { id, ...rest } = customerData;
         const toNull = (val: any) => (val === "" || val === undefined) ? null : val;
 
+        // Note: cs_owner is now managed at branch level, not customer level
         const dbData = {
             name: rest.name,
             client_code: rest.clientCode,
@@ -542,7 +557,6 @@ export async function saveCustomer(customerData: Partial<Customer>): Promise<Api
             installation_status: rest.installationStatus,
             contract_start: toNull(rest.contractStart),
             contract_end: toNull(rest.contractEnd),
-            cs_owner: toNull(rest.csOwner),
             sales_name: rest.salesName,
             contact_name: rest.contactName,
             contact_phone: rest.contactPhone,
@@ -554,15 +568,27 @@ export async function saveCustomer(customerData: Partial<Customer>): Promise<Api
             // branches column is now legacy - managed in separate table
         };
 
+        log.info("saveCustomer: Starting save for customer id:", id, "isNew:", isTemporaryId(id));
+
         let result;
         if (!isTemporaryId(id)) {
+            log.info("saveCustomer: Updating existing customer...");
             const { data, error } = await db.from('customers').update(dbData).eq('id', id).select();
-            if (error) throw error;
+            if (error) {
+                log.error("saveCustomer: Error updating customer:", error);
+                throw error;
+            }
             result = data?.[0];
+            log.info("saveCustomer: Update successful, result:", result?.id);
         } else {
+            log.info("saveCustomer: Inserting new customer...");
             const { data, error } = await db.from('customers').insert(dbData).select();
-            if (error) throw error;
+            if (error) {
+                log.error("saveCustomer: Error inserting customer:", error);
+                throw error;
+            }
             result = data?.[0];
+            log.info("saveCustomer: Insert successful, result:", result?.id);
         }
 
         if (!result) {
@@ -572,13 +598,18 @@ export async function saveCustomer(customerData: Partial<Customer>): Promise<Api
         // --- Branch Normalization Logic ---
         const customerId = Number(result.id);
         const incomingBranches = rest.branches || [];
+        log.info("saveCustomer: Processing branches for customer:", customerId, "count:", incomingBranches.length);
 
         try {
             // 1. Get existing branches from DB for this customer
-            const { data: existingBranches } = await db
+            const { data: existingBranches, error: fetchBranchError } = await db
                 .from('branches')
                 .select('id')
                 .eq('customer_id', customerId);
+
+            if (fetchBranchError) {
+                log.error("saveCustomer: Error fetching existing branches:", fetchBranchError);
+            }
 
             const existingIds = (existingBranches || []).map(b => Number(b.id));
             const incomingIds = incomingBranches
@@ -588,7 +619,11 @@ export async function saveCustomer(customerData: Partial<Customer>): Promise<Api
             // 2. Determine branches to delete (in DB but not in incoming)
             const idsToDelete = existingIds.filter(id => !incomingIds.includes(id));
             if (idsToDelete.length > 0) {
-                await db.from('branches').delete().in('id', idsToDelete);
+                log.info("saveCustomer: Deleting branches:", idsToDelete);
+                const { error: deleteError } = await db.from('branches').delete().in('id', idsToDelete);
+                if (deleteError) {
+                    log.error("saveCustomer: Error deleting branches:", deleteError);
+                }
             }
 
             // 3. Upsert incoming branches
@@ -610,30 +645,46 @@ export async function saveCustomer(customerData: Partial<Customer>): Promise<Api
                     return data;
                 });
 
+                log.info("saveCustomer: Upserting branches:", branchesToUpsert.length);
                 const { error: branchError } = await db.from('branches').upsert(branchesToUpsert);
-                if (branchError) throw branchError;
+                if (branchError) {
+                    log.error("saveCustomer: Error upserting branches:", branchError);
+                    throw branchError;
+                }
+                log.info("saveCustomer: Branches upsert successful");
             }
         } catch (branchErr: any) {
-            log.error("Error managing branches for customer:", customerId, branchErr);
+            log.error("saveCustomer: Branch management failed for customer:", customerId, branchErr);
             // We don't fail the whole customer save, but log it
         }
 
         // Fetch the customer again to return complete data
+        log.info("saveCustomer: Fetching final customer data for id:", customerId);
         const { data: finalData, error: finalError } = await db
             .from('customers')
             .select('*')
             .eq('id', customerId)
             .maybeSingle();
 
+        if (finalError) {
+            log.error("saveCustomer: Error fetching final customer data:", finalError);
+        }
+
         if (finalError || !finalData) {
+            log.info("saveCustomer: Returning partial data as fallback");
             return createSuccess(result as Customer); // Fallback to partial data
         }
 
         // Fetch branches separately
-        const { data: branchesData } = await db
+        log.info("saveCustomer: Fetching branches for customer:", customerId);
+        const { data: branchesData, error: branchFetchError } = await db
             .from('branches')
             .select('id, name, is_main, status, address, contract_start, cs_owner')
             .eq('customer_id', customerId);
+
+        if (branchFetchError) {
+            log.error("saveCustomer: Error fetching branches:", branchFetchError);
+        }
 
         // Map back to Customer type
         const savedCustomer: Customer = {
@@ -657,8 +708,10 @@ export async function saveCustomer(customerData: Partial<Customer>): Promise<Api
             }))
         } as Customer;
 
+        log.info("saveCustomer: Complete! Customer saved successfully:", savedCustomer.id);
         return createSuccess(savedCustomer);
-    } catch (err) {
+    } catch (err: any) {
+        log.error("saveCustomer: Caught error:", err?.message || err, err?.code, err?.details);
         return handleDbError(err, "saveCustomer");
     }
 }

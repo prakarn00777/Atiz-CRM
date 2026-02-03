@@ -523,6 +523,9 @@ export default function CRMPage() {
 
     try {
       const result = await saveCustomer(data);
+      console.log("[handleSaveCustomer] Result:", result);
+      console.log("[handleSaveCustomer] result.success:", result.success);
+      console.log("[handleSaveCustomer] result.error:", result.error);
       if (!result.success) {
         // Rollback on error
         setCustomers(previousCustomers);

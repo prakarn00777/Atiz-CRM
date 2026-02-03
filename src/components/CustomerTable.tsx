@@ -1,9 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { Search, Filter } from "lucide-react";
+import { Search, Filter, Users } from "lucide-react";
 import CustomSelect from "./CustomSelect";
-import Papa from "papaparse";
 import { Customer } from "@/types";
 import CustomerRow from "./rows/CustomerRow";
 
@@ -11,34 +10,14 @@ interface CustomerTableProps {
     customers: Customer[];
     onEdit: (customer: Customer) => void;
     onDelete: (id: number) => void;
-    onImport?: (data: any[]) => Promise<void>;
 }
 
-const CustomerTable = React.memo(function CustomerTable({ customers, onEdit, onDelete, onImport }: CustomerTableProps) {
+const CustomerTable = React.memo(function CustomerTable({ customers, onEdit, onDelete }: CustomerTableProps) {
     const [searchTerm, setSearchTerm] = useState("");
     const [usageStatusFilter, setUsageStatusFilter] = useState("all");
     const [installationStatusFilter, setInstallationStatusFilter] = useState("all");
     const [packageFilter, setPackageFilter] = useState("all");
     const [productFilter, setProductFilter] = useState<"all" | "Dr.Ease" | "EasePos">("all");
-
-    const importCSV = () => {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = '.csv';
-        input.onchange = (e: any) => {
-            const file = e.target.files[0];
-            if (file && onImport) {
-                Papa.parse(file, {
-                    header: true,
-                    skipEmptyLines: true,
-                    complete: (results) => {
-                        onImport(results.data);
-                    }
-                });
-            }
-        };
-        input.click();
-    };
 
     const filteredCustomers = customers.filter((c) => {
         const matchesSearch =
@@ -154,15 +133,16 @@ const CustomerTable = React.memo(function CustomerTable({ customers, onEdit, onD
                     <table className="w-full text-left border-collapse relative">
                         <thead className="sticky top-0 z-10 bg-card-bg shadow-sm backdrop-blur-xl">
                             <tr className="bg-bg-hover text-text-muted text-xs uppercase tracking-wider border-b border-border-light">
-                                <th className="px-4 py-3 font-semibold w-[5%] text-center">No.</th>
-                                <th className="px-4 py-3 font-semibold w-[10%] text-center">ID</th>
-                                <th className="px-4 py-3 font-semibold w-[15%]">Clinic/Shop Name</th>
-                                <th className="px-4 py-3 font-semibold w-[25%]">Subdomain</th>
-                                <th className="px-4 py-3 font-semibold w-[10%] text-center">Package</th>
-                                <th className="px-4 py-3 font-semibold w-[10%] text-center">Status</th>
-                                <th className="px-4 py-3 font-semibold w-[10%] text-center">Branches</th>
-                                <th className="px-4 py-3 font-semibold w-[15%]">Modified By</th>
-                                <th className="px-4 py-3 font-semibold w-[10%] text-right">Actions</th>
+                                <th className="px-3 py-3 font-semibold w-[4%] text-center">No.</th>
+                                <th className="px-3 py-3 font-semibold w-[7%] text-center">ID</th>
+                                <th className="px-3 py-3 font-semibold w-[14%]">Clinic/Shop Name</th>
+                                <th className="px-3 py-3 font-semibold w-[16%]">Subdomain</th>
+                                <th className="px-3 py-3 font-semibold w-[8%] text-center">ประเภท</th>
+                                <th className="px-3 py-3 font-semibold w-[7%] text-center">Package</th>
+                                <th className="px-3 py-3 font-semibold w-[10%] text-center">สถานะใช้งาน</th>
+                                <th className="px-3 py-3 font-semibold w-[10%] text-center">สถานะติดตั้ง</th>
+                                <th className="px-3 py-3 font-semibold w-[12%]">Modified By</th>
+                                <th className="px-3 py-3 font-semibold w-[5%] text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-border-light">
@@ -178,8 +158,14 @@ const CustomerTable = React.memo(function CustomerTable({ customers, onEdit, onD
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={9} className="px-4 py-8 text-center text-slate-500 text-sm">
-                                        ไม่พบข้อมูลลูกค้า
+                                    <td colSpan={10} className="px-4 py-12">
+                                        <div className="flex flex-col items-center gap-3">
+                                            <div className="w-16 h-16 rounded-full bg-bg-hover flex items-center justify-center">
+                                                <Users className="w-8 h-8 text-text-muted opacity-50" />
+                                            </div>
+                                            <p className="text-text-muted text-sm">ไม่พบข้อมูลลูกค้า</p>
+                                            <p className="text-text-muted text-xs opacity-70">ลองปรับตัวกรองหรือค้นหาใหม่</p>
+                                        </div>
                                     </td>
                                 </tr>
                             )}
@@ -206,7 +192,7 @@ const CustomerTable = React.memo(function CustomerTable({ customers, onEdit, onD
                                 <button
                                     onClick={() => setCurrentPage(1)}
                                     disabled={currentPage === 1}
-                                    className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-bg-hover disabled:opacity-30 disabled:hover:bg-transparent transition-all text-text-main group"
+                                    className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-bg-hover disabled:opacity-30 disabled:hover:bg-transparent transition-all text-text-main group focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:outline-none cursor-pointer disabled:cursor-not-allowed"
                                     title="หน้าแรก"
                                 >
                                     <svg className="w-4 h-4 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -217,7 +203,7 @@ const CustomerTable = React.memo(function CustomerTable({ customers, onEdit, onD
                                 <button
                                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                                     disabled={currentPage === 1}
-                                    className="px-3 h-8 rounded-lg flex items-center gap-1.5 hover:bg-bg-hover disabled:opacity-30 disabled:hover:bg-transparent transition-all text-text-main text-xs font-medium group"
+                                    className="px-3 h-8 rounded-lg flex items-center gap-1.5 hover:bg-bg-hover disabled:opacity-30 disabled:hover:bg-transparent transition-all text-text-main text-xs font-medium group focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:outline-none cursor-pointer disabled:cursor-not-allowed"
                                 >
                                     <svg className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -257,7 +243,7 @@ const CustomerTable = React.memo(function CustomerTable({ customers, onEdit, onD
                                                 <button
                                                     key={page}
                                                     onClick={() => setCurrentPage(page as number)}
-                                                    className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${currentPage === page
+                                                    className={`w-8 h-8 rounded-lg text-xs font-bold transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:outline-none ${currentPage === page
                                                         ? "bg-gradient-to-br from-indigo-500 to-indigo-600 text-white shadow-lg shadow-indigo-500/30 scale-110"
                                                         : "hover:bg-bg-hover text-text-muted hover:text-text-main hover:scale-105"
                                                         }`}
@@ -272,7 +258,7 @@ const CustomerTable = React.memo(function CustomerTable({ customers, onEdit, onD
                                 <button
                                     onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                                     disabled={currentPage === totalPages}
-                                    className="px-3 h-8 rounded-lg flex items-center gap-1.5 hover:bg-bg-hover disabled:opacity-30 disabled:hover:bg-transparent transition-all text-text-main text-xs font-medium group"
+                                    className="px-3 h-8 rounded-lg flex items-center gap-1.5 hover:bg-bg-hover disabled:opacity-30 disabled:hover:bg-transparent transition-all text-text-main text-xs font-medium group focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:outline-none cursor-pointer disabled:cursor-not-allowed"
                                 >
                                     ถัดไป
                                     <svg className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -283,7 +269,7 @@ const CustomerTable = React.memo(function CustomerTable({ customers, onEdit, onD
                                 <button
                                     onClick={() => setCurrentPage(totalPages)}
                                     disabled={currentPage === totalPages}
-                                    className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-bg-hover disabled:opacity-30 disabled:hover:bg-transparent transition-all text-text-main group"
+                                    className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-bg-hover disabled:opacity-30 disabled:hover:bg-transparent transition-all text-text-main group focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:outline-none cursor-pointer disabled:cursor-not-allowed"
                                     title="หน้าสุดท้าย"
                                 >
                                     <svg className="w-4 h-4 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">

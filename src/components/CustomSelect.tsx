@@ -114,10 +114,10 @@ export default function CustomSelect({
                 type="button"
                 onClick={() => !disabled && setIsOpen(!isOpen)}
                 disabled={disabled}
-                className={`input-field flex items-center justify-between group transition-all duration-200 ${disabled ? "cursor-not-allowed opacity-50 bg-white/5" : "cursor-pointer active:scale-[0.99]"} ${icon ? "pl-9" : className?.includes("pl-") ? "" : "pl-3"} ${className || ""}`}
+                className={`input-field flex items-center justify-between group transition-all duration-200 ${disabled ? "cursor-not-allowed opacity-50 bg-bg-hover" : "cursor-pointer active:scale-[0.99]"} ${icon ? "pl-9" : className?.includes("pl-") ? "" : "pl-3"} ${className || ""}`}
             >
                 {icon && (
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none">
                         {icon}
                     </span>
                 )}
@@ -125,7 +125,7 @@ export default function CustomSelect({
                     {selectedOption ? selectedOption.label : placeholder}
                 </span>
                 <ChevronDown
-                    className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-300 ease-in-out ml-2 ${isOpen ? "rotate-180" : ""}`}
+                    className={`w-4 h-4 text-text-muted shrink-0 transition-transform duration-300 ease-in-out ml-2 ${isOpen ? "rotate-180" : ""}`}
                 />
             </button>
 
@@ -148,7 +148,7 @@ export default function CustomSelect({
                             type="button"
                             onClick={() => handleSelect(opt.value)}
                             className={`w-full text-left px-3 py-2 text-xs transition-colors duration-150 hover:bg-bg-hover ${activeValue === opt.value
-                                ? "text-indigo-500 dark:text-indigo-400 font-bold bg-indigo-500/10"
+                                ? "text-indigo-600 dark:text-indigo-400 font-bold bg-indigo-500/10"
                                 : "text-text-main"
                                 }`}
                         >

@@ -35,7 +35,7 @@ const LeadModal = React.memo(function LeadModal({
     >
       <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
       <div className="glass-card w-full max-w-2xl max-h-[90vh] flex flex-col relative shadow-2xl">
-        <div className="p-6 border-b border-white/5 flex items-center justify-between shrink-0">
+        <div className="p-6 border-b border-border-light flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400" aria-hidden="true">
               <Plus className="w-5 h-5" />
@@ -44,13 +44,13 @@ const LeadModal = React.memo(function LeadModal({
               <h2 id="lead-modal-title" className="text-xl font-bold text-white">
                 {editingLead ? "แก้ไขข้อมูลลีด" : "เพิ่มลีดใหม่"}
               </h2>
-              <p className="text-xs text-slate-400">กรอกข้อมูลลีดให้ครบถ้วนเพื่อใช้ในการติดตาม</p>
+              <p className="text-xs text-text-muted">กรอกข้อมูลลีดให้ครบถ้วนเพื่อใช้ในการติดตาม</p>
             </div>
           </div>
           <button
             onClick={onClose}
             aria-label="ปิดหน้าต่าง"
-            className="p-2 hover:bg-white/5 rounded-lg text-slate-400 hover:text-white transition-colors"
+            className="p-2 hover:bg-bg-hover rounded-lg text-text-muted hover:text-text-main transition-colors"
           >
             <X className="w-5 h-5" aria-hidden="true" />
           </button>
@@ -59,7 +59,7 @@ const LeadModal = React.memo(function LeadModal({
         <div className="overflow-y-auto p-6 custom-scrollbar flex-1">
           <form id="lead-form" onSubmit={onSave} className="grid grid-cols-2 gap-6">
             <div className="space-y-1.5 col-span-2 md:col-span-1">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+              <label className="text-xs font-bold text-text-muted uppercase tracking-widest">
                 เลขที่ลีด (Lead Number) <span className="text-rose-400">*</span>
               </label>
               <input
@@ -73,7 +73,7 @@ const LeadModal = React.memo(function LeadModal({
             </div>
 
             <div className="space-y-1.5 col-span-2 md:col-span-1">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">Product</label>
+              <label className="text-xs font-bold text-text-muted uppercase tracking-widest">Product</label>
               <CustomSelect
                 name="product"
                 defaultValue={editingLead?.product || "Dr.Ease"}
@@ -85,7 +85,7 @@ const LeadModal = React.memo(function LeadModal({
             </div>
 
             <div className="space-y-1.5 col-span-2">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+              <label className="text-xs font-bold text-text-muted uppercase tracking-widest">
                 ชื่อลูกค้า / คลินิก / ร้าน <span className="text-rose-400">*</span>
               </label>
               <input
@@ -99,7 +99,7 @@ const LeadModal = React.memo(function LeadModal({
             </div>
 
             <div className="space-y-1.5 col-span-2 md:col-span-1">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+              <label className="text-xs font-bold text-text-muted uppercase tracking-widest">
                 เบอร์โทรศัพท์ <span className="text-rose-400">*</span>
               </label>
               <input
@@ -113,7 +113,7 @@ const LeadModal = React.memo(function LeadModal({
             </div>
 
             <div className="space-y-1.5 col-span-2 md:col-span-1">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+              <label className="text-xs font-bold text-text-muted uppercase tracking-widest">
                 เซลล์ผู้ดูแล (Sales)
               </label>
               <CustomSelect
@@ -127,7 +127,7 @@ const LeadModal = React.memo(function LeadModal({
             </div>
 
             <div className="space-y-1.5 col-span-2 md:col-span-1">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+              <label className="text-xs font-bold text-text-muted uppercase tracking-widest">
                 ที่มาลีด (Lead Source)
               </label>
               <CustomSelect
@@ -143,7 +143,7 @@ const LeadModal = React.memo(function LeadModal({
             </div>
 
             <div className="space-y-1.5 col-span-2 md:col-span-1">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+              <label className="text-xs font-bold text-text-muted uppercase tracking-widest">
                 วันที่รับลีด (Received Date)
               </label>
               <CustomDatePicker
@@ -156,7 +156,7 @@ const LeadModal = React.memo(function LeadModal({
             </div>
 
             <div className="space-y-1.5 col-span-2 md:col-span-1">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+              <label className="text-xs font-bold text-text-muted uppercase tracking-widest">
                 ประเภทลีด (Lead Type)
               </label>
               <CustomSelect
@@ -175,7 +175,7 @@ const LeadModal = React.memo(function LeadModal({
             </div>
 
             <div className="space-y-1.5 col-span-2">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">หมายเหตุ (Notes)</label>
+              <label className="text-xs font-bold text-text-muted uppercase tracking-widest">หมายเหตุ (Notes)</label>
               <textarea
                 name="notes"
                 defaultValue={editingLead?.notes}
@@ -186,7 +186,7 @@ const LeadModal = React.memo(function LeadModal({
           </form>
         </div>
 
-        <div className="p-6 border-t border-white/5 flex gap-3 shrink-0">
+        <div className="p-6 border-t border-border-light flex gap-3 shrink-0">
           <button
             type="button"
             onClick={onClose}

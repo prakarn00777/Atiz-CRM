@@ -39,7 +39,7 @@ export default function NotificationBell() {
             <button
                 ref={bellRef}
                 onClick={() => setIsOpen(!isOpen)}
-                className={`relative p-2 rounded-xl transition-all duration-300 ${isOpen ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/30' : 'bg-white/5 text-slate-400 hover:text-white hover:bg-white/10 border border-white/5'
+                className={`relative p-2 rounded-xl transition-all duration-300 ${isOpen ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/30' : 'bg-bg-hover text-text-muted hover:text-white hover:bg-bg-hover border border-border-light'
                     }`}
             >
                 <Bell className={`w-5 h-5 ${unreadCount > 0 ? 'animate-bounce' : ''}`} />
@@ -65,9 +65,9 @@ export default function NotificationBell() {
                             top: bellRef.current ? bellRef.current.getBoundingClientRect().bottom + 12 : 80,
                             right: 16,
                         }}
-                        className="z-[201] w-80 max-h-[480px] glass-card flex flex-col shadow-2xl border-white/10 animate-in fade-in slide-in-from-top-2 duration-200"
+                        className="z-[201] w-80 max-h-[480px] glass-card flex flex-col shadow-2xl border-border animate-in fade-in slide-in-from-top-2 duration-200"
                     >
-                        <div className="p-4 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
+                        <div className="p-4 border-b border-border-light flex items-center justify-between bg-bg-hover/50">
                             <h3 className="text-sm font-bold flex items-center gap-2">
                                 การแจ้งเตือน
                                 {unreadCount > 0 && (
@@ -79,14 +79,14 @@ export default function NotificationBell() {
                             <div className="flex gap-2">
                                 <button
                                     onClick={(e) => { e.stopPropagation(); clearAll(); }}
-                                    className="p-1.5 hover:bg-rose-500/10 text-slate-500 hover:text-rose-400 rounded-lg transition-colors"
+                                    className="p-1.5 hover:bg-rose-500/10 text-text-muted hover:text-rose-400 rounded-lg transition-colors"
                                     title="ล้างทั้งหมด"
                                 >
                                     <Trash2 className="w-4 h-4" />
                                 </button>
                                 <button
                                     onClick={() => { setIsOpen(false); markAsRead(); }}
-                                    className="p-1.5 hover:bg-white/10 text-slate-500 hover:text-white rounded-lg transition-colors"
+                                    className="p-1.5 hover:bg-bg-hover text-text-muted hover:text-white rounded-lg transition-colors"
                                 >
                                     <X className="w-4 h-4" />
                                 </button>
@@ -99,19 +99,19 @@ export default function NotificationBell() {
                                     {notifications.map((notif) => (
                                         <div
                                             key={notif.id}
-                                            className={`p-4 transition-colors hover:bg-white/[0.03] flex gap-3 ${!notif.isRead ? 'bg-indigo-500/[0.02]' : ''}`}
+                                            className={`p-4 transition-colors hover:bg-bg-hover flex gap-3 ${!notif.isRead ? 'bg-indigo-500/[0.02]' : ''}`}
                                         >
                                             <div className="mt-1 flex-shrink-0">
                                                 {getIcon(notif.type)}
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <p className={`text-xs font-semibold truncate ${!notif.isRead ? 'text-white' : 'text-slate-300'}`}>
+                                                <p className={`text-xs font-semibold truncate ${!notif.isRead ? 'text-white' : 'text-text-main/80'}`}>
                                                     {notif.title}
                                                 </p>
-                                                <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-2 leading-relaxed">
+                                                <p className="text-[11px] text-text-muted mt-0.5 line-clamp-2 leading-relaxed">
                                                     {notif.message}
                                                 </p>
-                                                <p className="text-[9px] text-slate-600 mt-2 flex items-center gap-1.5">
+                                                <p className="text-[9px] text-text-muted/70 mt-2 flex items-center gap-1.5">
                                                     <Clock className="w-3 h-3" />
                                                     {formatTime(notif.timestamp)}
                                                 </p>
@@ -124,19 +124,19 @@ export default function NotificationBell() {
                                 </div>
                             ) : (
                                 <div className="p-12 text-center flex flex-col items-center gap-3">
-                                    <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center">
-                                        <Bell className="w-6 h-6 text-slate-700" />
+                                    <div className="w-12 h-12 rounded-full bg-bg-hover flex items-center justify-center">
+                                        <Bell className="w-6 h-6 text-text-muted/50" />
                                     </div>
-                                    <p className="text-xs text-slate-500 font-medium">ไม่มีการแจ้งเตือนใหม่</p>
+                                    <p className="text-xs text-text-muted font-medium">ไม่มีการแจ้งเตือนใหม่</p>
                                 </div>
                             )}
                         </div>
 
                         {notifications.length > 0 && (
-                            <div className="p-2 border-t border-white/5 bg-white/[0.01]">
+                            <div className="p-2 border-t border-border-light bg-bg-hover/30">
                                 <button
                                     onClick={() => markAsRead()}
-                                    className="w-full py-2 text-[10px] font-bold text-slate-500 hover:text-indigo-400 transition-colors uppercase tracking-wider"
+                                    className="w-full py-2 text-[10px] font-bold text-text-muted hover:text-indigo-400 transition-colors uppercase tracking-wider"
                                 >
                                     ทำเครื่องหมายว่าอ่านแล้วทั้งหมด
                                 </button>

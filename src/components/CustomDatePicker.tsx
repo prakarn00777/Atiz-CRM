@@ -15,6 +15,8 @@ interface CustomDatePickerProps {
     portalContainer?: HTMLElement | null;
 }
 
+type ViewMode = 'days' | 'months' | 'years';
+
 export default function CustomDatePicker({
     value,
     onChange,
@@ -26,8 +28,12 @@ export default function CustomDatePicker({
     portalContainer
 }: CustomDatePickerProps) {
     const [isOpen, setIsOpen] = useState(false);
-    // Initialize current viewing month from value or current date
+    const [viewMode, setViewMode] = useState<ViewMode>('days');
     const [currentMonth, setCurrentMonth] = useState(() => value ? new Date(value) : new Date());
+    const [yearRangeStart, setYearRangeStart] = useState(() => {
+        const year = value ? new Date(value).getFullYear() : new Date().getFullYear();
+        return Math.floor(year / 12) * 12;
+    });
     const containerRef = useRef<HTMLDivElement>(null);
     const portalRef = useRef<HTMLDivElement>(null);
 
@@ -39,13 +45,20 @@ export default function CustomDatePicker({
 
             if (isOutsideContainer && isOutsidePortal) {
                 setIsOpen(false);
+                setViewMode('days');
             }
         }
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    // Helper to format date for display (DD/MM/YYYY)
+    // Reset view mode when closing
+    useEffect(() => {
+        if (!isOpen) {
+            setViewMode('days');
+        }
+    }, [isOpen]);
+
     const formatDisplayDate = (dateStr: string) => {
         if (!dateStr) return "";
         const date = new Date(dateStr);
@@ -56,7 +69,6 @@ export default function CustomDatePicker({
         });
     };
 
-    // Calendar generation helpers
     const getDaysInMonth = (date: Date) => {
         const year = date.getFullYear();
         const month = date.getMonth();
@@ -68,6 +80,10 @@ export default function CustomDatePicker({
     const { days, firstDay } = getDaysInMonth(currentMonth);
     const dayNames = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
     const monthNames = [
+        "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.",
+        "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."
+    ];
+    const monthNamesFull = [
         "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
         "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"
     ];
@@ -76,6 +92,10 @@ export default function CustomDatePicker({
         const newDate = new Date(currentMonth);
         newDate.setMonth(newDate.getMonth() + offset);
         setCurrentMonth(newDate);
+    };
+
+    const changeYearRange = (offset: number) => {
+        setYearRangeStart(prev => prev + (offset * 12));
     };
 
     const getDateString = (date: Date) => {
@@ -92,10 +112,23 @@ export default function CustomDatePicker({
         setIsOpen(false);
     };
 
+    const handleMonthSelect = (monthIndex: number) => {
+        const newDate = new Date(currentMonth);
+        newDate.setMonth(monthIndex);
+        setCurrentMonth(newDate);
+        setViewMode('days');
+    };
+
+    const handleYearSelect = (year: number) => {
+        const newDate = new Date(currentMonth);
+        newDate.setFullYear(year);
+        setCurrentMonth(newDate);
+        setViewMode('months');
+    };
+
     const isDateDisabled = (day: number) => {
         const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
         const dateStr = getDateString(date);
-
         if (min && dateStr < min) return true;
         if (max && dateStr > max) return true;
         return false;
@@ -113,6 +146,233 @@ export default function CustomDatePicker({
         return day === today.getDate() &&
             currentMonth.getMonth() === today.getMonth() &&
             currentMonth.getFullYear() === today.getFullYear();
+    };
+
+    const isCurrentMonth = (monthIndex: number) => {
+        const today = new Date();
+        return monthIndex === today.getMonth() &&
+            currentMonth.getFullYear() === today.getFullYear();
+    };
+
+    const isSelectedMonth = (monthIndex: number) => {
+        return monthIndex === currentMonth.getMonth();
+    };
+
+    const isCurrentYear = (year: number) => {
+        return year === new Date().getFullYear();
+    };
+
+    const isSelectedYear = (year: number) => {
+        return year === currentMonth.getFullYear();
+    };
+
+    const getDropdownPosition = () => {
+        if (!containerRef.current) return { top: 0, left: 0, showAbove: false };
+
+        const rect = containerRef.current.getBoundingClientRect();
+        const dropdownHeight = 320;
+        const gap = 4;
+        const viewportHeight = window.innerHeight;
+        const spaceBelow = viewportHeight - rect.bottom;
+        const spaceAbove = rect.top;
+
+        const showAbove = spaceBelow < dropdownHeight && spaceAbove > spaceBelow;
+
+        const top = showAbove
+            ? rect.top - dropdownHeight - gap
+            : rect.bottom + gap;
+
+        const left = align === 'right'
+            ? rect.right - 280
+            : rect.left;
+
+        const adjustedLeft = Math.max(8, Math.min(left, window.innerWidth - 288));
+
+        return { top, left: adjustedLeft, showAbove };
+    };
+
+    const renderHeader = () => {
+        if (viewMode === 'years') {
+            return (
+                <div className="flex items-center justify-between mb-4">
+                    <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); changeYearRange(-1); }}
+                        className="p-1.5 hover:bg-bg-hover rounded-lg text-text-muted hover:text-text-main transition-colors"
+                    >
+                        <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <span className="text-sm font-semibold text-text-main">
+                        {yearRangeStart + 543} - {yearRangeStart + 11 + 543}
+                    </span>
+                    <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); changeYearRange(1); }}
+                        className="p-1.5 hover:bg-bg-hover rounded-lg text-text-muted hover:text-text-main transition-colors"
+                    >
+                        <ChevronRight className="w-4 h-4" />
+                    </button>
+                </div>
+            );
+        }
+
+        if (viewMode === 'months') {
+            return (
+                <div className="flex items-center justify-between mb-4">
+                    <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setViewMode('days'); }}
+                        className="p-1.5 hover:bg-bg-hover rounded-lg text-text-muted hover:text-text-main transition-colors"
+                    >
+                        <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setViewMode('years'); setYearRangeStart(Math.floor(currentMonth.getFullYear() / 12) * 12); }}
+                        className="text-sm font-semibold text-text-main hover:text-indigo-400 transition-colors cursor-pointer"
+                    >
+                        {currentMonth.getFullYear() + 543}
+                    </button>
+                    <div className="w-7" /> {/* Spacer for alignment */}
+                </div>
+            );
+        }
+
+        return (
+            <div className="flex items-center justify-between mb-4">
+                <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); changeMonth(-1); }}
+                    className="p-1.5 hover:bg-bg-hover rounded-lg text-text-muted hover:text-text-main transition-colors"
+                >
+                    <ChevronLeft className="w-4 h-4" />
+                </button>
+                <div className="flex items-center gap-1">
+                    <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setViewMode('months'); }}
+                        className="text-sm font-semibold text-text-main hover:text-indigo-400 transition-colors cursor-pointer px-1"
+                    >
+                        {monthNamesFull[currentMonth.getMonth()]}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setViewMode('years'); setYearRangeStart(Math.floor(currentMonth.getFullYear() / 12) * 12); }}
+                        className="text-sm font-semibold text-text-main hover:text-indigo-400 transition-colors cursor-pointer px-1"
+                    >
+                        {currentMonth.getFullYear() + 543}
+                    </button>
+                </div>
+                <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); changeMonth(1); }}
+                    className="p-1.5 hover:bg-bg-hover rounded-lg text-text-muted hover:text-text-main transition-colors"
+                >
+                    <ChevronRight className="w-4 h-4" />
+                </button>
+            </div>
+        );
+    };
+
+    const renderYearPicker = () => {
+        const years = Array.from({ length: 12 }, (_, i) => yearRangeStart + i);
+
+        return (
+            <div className="grid grid-cols-3 gap-2">
+                {years.map((year) => (
+                    <button
+                        key={year}
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handleYearSelect(year); }}
+                        className={`
+                            py-2.5 rounded-lg text-xs font-medium transition-all duration-150
+                            ${isSelectedYear(year)
+                                ? "bg-indigo-500 text-white font-bold shadow-lg shadow-indigo-500/20"
+                                : isCurrentYear(year)
+                                    ? "border border-indigo-500/50 text-indigo-400 hover:bg-bg-hover"
+                                    : "text-text-main hover:bg-bg-hover"
+                            }
+                        `}
+                    >
+                        {year + 543}
+                    </button>
+                ))}
+            </div>
+        );
+    };
+
+    const renderMonthPicker = () => {
+        return (
+            <div className="grid grid-cols-3 gap-2">
+                {monthNames.map((month, index) => (
+                    <button
+                        key={index}
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handleMonthSelect(index); }}
+                        className={`
+                            py-2.5 rounded-lg text-xs font-medium transition-all duration-150
+                            ${isSelectedMonth(index)
+                                ? "bg-indigo-500 text-white font-bold shadow-lg shadow-indigo-500/20"
+                                : isCurrentMonth(index)
+                                    ? "border border-indigo-500/50 text-indigo-400 hover:bg-bg-hover"
+                                    : "text-text-main hover:bg-bg-hover"
+                            }
+                        `}
+                    >
+                        {month}
+                    </button>
+                ))}
+            </div>
+        );
+    };
+
+    const renderDayPicker = () => {
+        return (
+            <>
+                {/* Weekdays */}
+                <div className="grid grid-cols-7 mb-2">
+                    {dayNames.map((day, i) => (
+                        <div key={i} className="text-center text-[10px] uppercase font-medium text-slate-500">
+                            {day}
+                        </div>
+                    ))}
+                </div>
+
+                {/* Days */}
+                <div className="grid grid-cols-7 gap-1">
+                    {Array.from({ length: firstDay }).map((_, i) => (
+                        <div key={`empty-${i}`} />
+                    ))}
+                    {Array.from({ length: days }).map((_, i) => {
+                        const day = i + 1;
+                        const disabled = isDateDisabled(day);
+                        const selected = isSelected(day);
+                        const today = isToday(day);
+
+                        return (
+                            <button
+                                key={day}
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); !disabled && handleDateClick(day); }}
+                                disabled={disabled}
+                                className={`
+                                    h-8 w-8 rounded-lg flex items-center justify-center text-xs transition-all duration-150
+                                    ${selected
+                                        ? "bg-indigo-500 text-white font-bold shadow-lg shadow-indigo-500/20"
+                                        : disabled
+                                            ? "text-text-muted cursor-not-allowed opacity-30"
+                                            : "text-text-main hover:bg-bg-hover"
+                                    }
+                                    ${today && !selected ? "border border-indigo-500/50 text-indigo-500 dark:text-indigo-400" : ""}
+                                `}
+                            >
+                                {day}
+                            </button>
+                        );
+                    })}
+                </div>
+            </>
+        );
     };
 
     return (
@@ -134,82 +394,28 @@ export default function CustomDatePicker({
             </button>
 
             {isOpen && createPortal(
-                <div
-                    ref={portalRef}
-                    className={`fixed z-[9999] w-[280px] mt-1.5 p-4 bg-card-bg border border-border rounded-xl shadow-2xl transition-all duration-150 ease-out origin-top backdrop-blur-xl ${isOpen
-                        ? "opacity-100 translate-y-0 visible"
-                        : "opacity-0 -translate-y-2 invisible"
-                        }`}
-                    style={{
-                        top: containerRef.current ? containerRef.current.getBoundingClientRect().bottom + 6 : 0,
-                        left: align === 'right'
-                            ? (containerRef.current ? containerRef.current.getBoundingClientRect().right - 280 : 0)
-                            : (containerRef.current ? containerRef.current.getBoundingClientRect().left : 0),
-                        willChange: "transform, opacity",
-                        transform: isOpen ? "translateY(0)" : "translateY(-4px)"
-                    }}
-                >
-                    {/* Header */}
-                    <div className="flex items-center justify-between mb-4">
-                        <button
-                            onClick={(e) => { e.stopPropagation(); changeMonth(-1); }}
-                            className="p-1 hover:bg-bg-hover rounded-lg text-text-muted hover:text-text-main transition-colors"
+                (() => {
+                    const { top, left, showAbove } = getDropdownPosition();
+                    return (
+                        <div
+                            ref={portalRef}
+                            className={`fixed z-[9999] w-[280px] p-4 bg-card-bg border border-border rounded-xl shadow-2xl transition-all duration-150 ease-out backdrop-blur-xl ${showAbove ? 'origin-bottom' : 'origin-top'} ${isOpen
+                                ? "opacity-100 visible"
+                                : "opacity-0 invisible"
+                            }`}
+                            style={{
+                                top,
+                                left,
+                                willChange: "transform, opacity",
+                            }}
                         >
-                            <ChevronLeft className="w-4 h-4" />
-                        </button>
-                        <span className="text-sm font-semibold text-text-main">
-                            {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear() + 543}
-                        </span>
-                        <button
-                            onClick={(e) => { e.stopPropagation(); changeMonth(1); }}
-                            className="p-1 hover:bg-bg-hover rounded-lg text-text-muted hover:text-text-main transition-colors"
-                        >
-                            <ChevronRight className="w-4 h-4" />
-                        </button>
-                    </div>
-
-                    {/* Weekdays */}
-                    <div className="grid grid-cols-7 mb-2">
-                        {dayNames.map((day, i) => (
-                            <div key={i} className="text-center text-[10px] uppercase font-medium text-slate-500">
-                                {day}
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* Days */}
-                    <div className="grid grid-cols-7 gap-1">
-                        {Array.from({ length: firstDay }).map((_, i) => (
-                            <div key={`empty-${i}`} />
-                        ))}
-                        {Array.from({ length: days }).map((_, i) => {
-                            const day = i + 1;
-                            const disabled = isDateDisabled(day);
-                            const selected = isSelected(day);
-                            const today = isToday(day);
-
-                            return (
-                                <button
-                                    key={day}
-                                    onClick={(e) => { e.stopPropagation(); !disabled && handleDateClick(day); }}
-                                    disabled={disabled}
-                                    className={`
-                                    h-8 w-8 rounded-lg flex items-center justify-center text-xs transition-all duration-150
-                                    ${selected
-                                            ? "bg-indigo-500 text-white font-bold shadow-lg shadow-indigo-500/20"
-                                            : disabled
-                                                ? "text-text-muted cursor-not-allowed opacity-30"
-                                                : "text-text-main hover:bg-bg-hover"
-                                        }
-                                    ${today && !selected ? "border border-indigo-500/50 text-indigo-500 dark:text-indigo-400" : ""}
-                                `}
-                                >
-                                    {day}
-                                </button>
-                            );
-                        })}
-                    </div>
-                </div>,
+                            {renderHeader()}
+                            {viewMode === 'years' && renderYearPicker()}
+                            {viewMode === 'months' && renderMonthPicker()}
+                            {viewMode === 'days' && renderDayPicker()}
+                        </div>
+                    );
+                })(),
                 portalContainer || document.body
             )}
         </div>

@@ -64,7 +64,7 @@ export default function SearchableCustomerSelect({
                 onClick={() => setIsOpen(!isOpen)}
                 className="input-field w-full flex items-center justify-between gap-2"
             >
-                <span className={selectedCustomer ? "text-slate-200" : "text-slate-500"}>
+                <span className={selectedCustomer ? "text-text-main/90" : "text-text-muted"}>
                     {selectedCustomer ? (
                         <span className="flex items-center gap-2">
                             <span className="font-mono text-indigo-400">DE{selectedCustomer.id.toString().padStart(4, "0")}</span>
@@ -76,26 +76,26 @@ export default function SearchableCustomerSelect({
                 <div className="flex items-center gap-1">
                     {selectedCustomer && (
                         <X
-                            className="w-3.5 h-3.5 text-slate-500 hover:text-slate-300"
+                            className="w-3.5 h-3.5 text-text-muted hover:text-text-main/80"
                             onClick={handleClear}
                         />
                     )}
-                    <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
+                    <ChevronDown className={`w-4 h-4 text-text-muted transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
                 </div>
             </button>
 
             {isOpen && (
-                <div className="absolute z-50 w-full mt-1 bg-slate-900 border border-white/10 rounded-xl shadow-2xl max-h-64 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150"
+                <div className="absolute z-50 w-full mt-1 bg-card-bg border border-border rounded-xl shadow-2xl max-h-64 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150"
                     style={{ willChange: "opacity, transform" }}>
-                    <div className="p-2 border-b border-white/10">
+                    <div className="p-2 border-b border-border">
                         <div className="relative">
-                            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted" />
                             <input
                                 type="text"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 placeholder="ค้นหา รหัส, ชื่อ, หรือลิงก์..."
-                                className="w-full pl-8 pr-3 py-1.5 bg-black/20 border border-white/10 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500"
+                                className="w-full pl-8 pr-3 py-1.5 bg-black/20 border border-border rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500"
                                 autoFocus
                             />
                         </div>
@@ -107,19 +107,19 @@ export default function SearchableCustomerSelect({
                                     key={customer.id}
                                     type="button"
                                     onClick={() => handleSelect(customer)}
-                                    className="w-full px-3 py-2 text-left hover:bg-white/5 transition-colors border-b border-white/5 last:border-0"
+                                    className="w-full px-3 py-2 text-left hover:bg-bg-hover transition-colors border-b border-border-light last:border-0"
                                 >
                                     <div className="flex items-center gap-2">
                                         <span className="text-xs font-mono text-indigo-400">
                                             DE{customer.id.toString().padStart(4, "0")}
                                         </span>
-                                        <span className="text-xs text-slate-200 flex-1 truncate">{customer.name}</span>
+                                        <span className="text-xs text-text-main/90 flex-1 truncate">{customer.name}</span>
                                     </div>
-                                    <div className="text-[10px] text-slate-500 truncate mt-0.5">{customer.subdomain}</div>
+                                    <div className="text-[10px] text-text-muted truncate mt-0.5">{customer.subdomain}</div>
                                 </button>
                             ))
                         ) : (
-                            <div className="px-3 py-4 text-center text-xs text-slate-500">
+                            <div className="px-3 py-4 text-center text-xs text-text-muted">
                                 ไม่พบข้อมูลลูกค้า
                             </div>
                         )}
