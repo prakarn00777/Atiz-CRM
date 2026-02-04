@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useState } from "react";
-import { LayoutDashboard, Users, LogOut, Layers, Settings, ChevronRight, UserCog, ShieldCheck, AlertCircle, History as HistoryIcon, Wrench, Megaphone, Sun, Moon } from "lucide-react";
+import { LayoutDashboard, LogOut, Settings, ChevronRight, UserCog, ShieldCheck, AlertCircle, Wrench, Megaphone, Sun, Moon } from "lucide-react";
 import ActiveItemEffect from "./ActiveItemEffect";
 import { useTheme } from "./ThemeProvider";
 
@@ -60,37 +60,45 @@ const Sidebar = memo(function Sidebar({ currentView, setView, onLogout, userRole
 
     return (
         <aside
-            className={`bg-card-bg shadow-xl border border-border/50 min-h-[calc(100vh-2rem)] lg:h-[calc(100vh-2rem)] m-2 lg:m-4 flex flex-col p-4 fixed lg:relative z-50 transition-all duration-300 ease-in-out ${isCollapsed ? "w-20" : "w-64"
+            className={`bg-card-bg backdrop-blur-sm shadow-xl shadow-black/5 border border-border/50 rounded-2xl min-h-[calc(100vh-2rem)] lg:h-[calc(100vh-2rem)] m-2 lg:m-4 flex flex-col p-4 fixed lg:relative z-50 transition-all duration-300 ease-in-out ${isCollapsed ? "w-20" : "w-64"
                 }`}
         >
             {/* Toggle Button */}
             <button
                 onClick={() => setIsCollapsed(!isCollapsed)}
-                className="absolute -right-3 top-10 w-6 h-6 bg-indigo-500 rounded-full flex items-center justify-center text-white shadow-lg hover:bg-indigo-600 transition-colors z-[60]"
+                className="absolute -right-3 top-10 w-6 h-6 bg-indigo-500 rounded-full flex items-center justify-center text-white shadow-lg shadow-indigo-500/25 hover:bg-indigo-600 hover:scale-110 transition-all duration-200 z-[60]"
             >
                 <ChevronRight className={`w-4 h-4 transition-transform duration-300 ${isCollapsed ? "" : "rotate-180"}`} />
             </button>
 
+            {/* Logo & Brand */}
             <div className={`flex items-center mb-6 px-2 transition-all duration-300 ${isCollapsed ? "justify-center gap-0" : "gap-3"}`}>
-                <div className="w-8 h-8 bg-indigo-600 rounded-lg flex-shrink-0 flex items-center justify-center shadow-lg shadow-indigo-600/20">
-                    <Layers className="w-5 h-5 text-white" />
+                <div className={`rounded-xl flex-shrink-0 flex items-center justify-center overflow-hidden transition-all duration-300 ${isCollapsed ? 'w-8 h-8' : 'w-10 h-10'}`}>
+                    <img
+                        src="/images/LOGO ATIZ-02.png"
+                        alt="ATIZ Logo"
+                        className={`object-contain transition-all duration-300 ${isCollapsed ? 'w-8 h-8' : 'w-10 h-10'}`}
+                    />
                 </div>
                 {!isCollapsed && (
-                    <h2 className="text-base font-bold tracking-tight truncate animate-in fade-in duration-300 text-text-main">CRM Admin</h2>
+                    <div className="animate-in fade-in duration-300">
+                        <h2 className="text-base font-black tracking-tight text-text-main leading-tight">AXIS</h2>
+                        <p className="text-[9px] text-text-muted tracking-wider uppercase leading-tight">Atiz Experience & Insight System</p>
+                    </div>
                 )}
             </div>
 
             {/* Quick Actions */}
             {onQuickAction && (
-                <div className={`mb-4 pb-4 border-b border-border-light space-y-2 ${isCollapsed ? "px-0" : "px-0"}`}>
+                <div className={`mb-4 pb-4 border-b border-border-light space-y-2`}>
                     {!isCollapsed && (
                         <h3 className="px-2 text-[10px] font-bold text-text-muted uppercase tracking-widest mb-2">Quick Actions</h3>
                     )}
                     <button
                         onClick={() => onQuickAction('new_install')}
                         className={`btn w-full text-xs font-bold transition-all duration-200 ${isCollapsed
-                            ? "h-10 w-10 p-0 rounded-xl bg-indigo-500 text-white shadow-lg mx-auto flex items-center justify-center"
-                            : "bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/20 justify-start px-3 py-2.5"
+                            ? "h-10 w-10 p-0 rounded-xl bg-indigo-500 text-white shadow-lg shadow-indigo-500/20 mx-auto flex items-center justify-center"
+                            : "bg-indigo-500 hover:bg-indigo-600 text-white shadow-md shadow-indigo-500/15 justify-start px-3 py-2.5 rounded-xl"
                             }`}
                         title="แจ้งติดตั้งใหม่"
                     >
@@ -100,8 +108,8 @@ const Sidebar = memo(function Sidebar({ currentView, setView, onLogout, userRole
                     <button
                         onClick={() => onQuickAction('new_issue')}
                         className={`btn w-full text-xs font-bold transition-all duration-200 ${isCollapsed
-                            ? "h-10 w-10 p-0 rounded-xl bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 mx-auto flex items-center justify-center mt-2"
-                            : "bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 justify-start px-3 py-2.5"
+                            ? "h-10 w-10 p-0 rounded-xl bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 mx-auto flex items-center justify-center mt-2"
+                            : "bg-rose-500/10 text-rose-500 hover:bg-rose-500/15 border border-rose-500/20 justify-start px-3 py-2.5 rounded-xl"
                             }`}
                         title="แจ้งเคส/ปัญหา"
                     >
@@ -115,9 +123,8 @@ const Sidebar = memo(function Sidebar({ currentView, setView, onLogout, userRole
                 {mainMenus.map((item) => {
                     const isAdmin = userRole?.role?.toLowerCase() === 'admin' || userRole?.name?.toLowerCase() === 'admin' || userRole?.id === 'admin';
 
-                    // Handle Group Items (like "ลูกค้า")
+                    // Handle Group Items
                     if (item.children) {
-                        // Filter visible children based on permissions
                         const visibleChildren = item.children.filter(child =>
                             isAdmin ||
                             userRole?.permissions?.[child.id]?.read ||
@@ -125,7 +132,6 @@ const Sidebar = memo(function Sidebar({ currentView, setView, onLogout, userRole
                             (child.id === 'renewals' && userRole?.permissions?.['sales']?.read)
                         );
 
-                        // If no children are visible, hide the group
                         if (visibleChildren.length === 0) return null;
 
                         const isActive = currentView === item.id || visibleChildren.some(child => child.id === currentView);
@@ -135,18 +141,18 @@ const Sidebar = memo(function Sidebar({ currentView, setView, onLogout, userRole
                             <div key={item.id} className="space-y-1 relative group">
                                 <button
                                     onClick={() => !isCollapsed ? toggleMenu(item.id) : null}
-                                    className={`btn w-full text-sm transition-all duration-200 relative overflow-hidden ${isCollapsed ? "justify-center p-2" : "justify-between"
+                                    className={`btn w-full text-sm transition-all duration-200 relative overflow-hidden rounded-xl ${isCollapsed ? "justify-center p-2" : "justify-between"
                                         } ${isActive && !visibleChildren.some(c => c.id === currentView)
-                                            ? "text-white"
+                                            ? "text-active-text bg-active-bg"
                                             : "btn-ghost text-text-muted hover:text-text-main"
                                         }`}
                                     title={isCollapsed ? item.label : ""}
                                 >
                                     {isActive && !visibleChildren.some(c => c.id === currentView) && <ActiveItemEffect />}
                                     <div className={`flex items-center relative z-10 ${isCollapsed ? "justify-center" : "gap-3"}`}>
-                                        <item.icon className={`w-4 h-4 flex-shrink-0 ${isActive && !visibleChildren.some(c => c.id === currentView) ? "text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.8)]" : "text-current"}`} />
+                                        <item.icon className={`w-4 h-4 flex-shrink-0 ${isActive && !visibleChildren.some(c => c.id === currentView) ? "text-active-text" : "text-current"}`} />
                                         {!isCollapsed && (
-                                            <span className={`truncate animate-in fade-in duration-300 font-medium ${isActive && !visibleChildren.some(c => c.id === currentView) ? "text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.6)]" : ""}`}>
+                                            <span className={`truncate animate-in fade-in duration-300 font-medium ${isActive && !visibleChildren.some(c => c.id === currentView) ? "text-active-text" : ""}`}>
                                                 {item.label}
                                             </span>
                                         )}
@@ -158,18 +164,18 @@ const Sidebar = memo(function Sidebar({ currentView, setView, onLogout, userRole
 
                                 {/* Submenu for Expanded State */}
                                 {!isCollapsed && isExpanded && (
-                                    <div className="ml-4 pl-3 border-l border-border-light space-y-1 animate-in slide-in-from-top-1 duration-200">
+                                    <div className="ml-4 pl-3 border-l-2 border-border-light space-y-0.5 animate-in slide-in-from-top-1 duration-200">
                                         {visibleChildren.map((child) => (
                                             <button
                                                 key={child.id}
                                                 onClick={() => setView(child.id)}
-                                                className={`btn w-full justify-start text-sm h-9 font-medium relative overflow-hidden ${currentView === child.id
-                                                    ? "bg-indigo-500/10 text-white"
+                                                className={`btn w-full justify-start text-sm h-9 font-medium relative overflow-hidden rounded-lg ${currentView === child.id
+                                                    ? "bg-active-bg text-active-text"
                                                     : "text-text-muted hover:text-text-main hover:bg-bg-hover"
                                                     }`}
                                             >
                                                 {currentView === child.id && <ActiveItemEffect />}
-                                                <span className={`truncate relative z-10 ${currentView === child.id ? "text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.7)]" : ""}`}>
+                                                <span className={`truncate relative z-10 ${currentView === child.id ? "text-active-text font-semibold" : ""}`}>
                                                     {child.label}
                                                 </span>
                                             </button>
@@ -188,10 +194,10 @@ const Sidebar = memo(function Sidebar({ currentView, setView, onLogout, userRole
                                                 <button
                                                     key={child.id}
                                                     onClick={() => setView(child.id)}
-                                                    className={`btn w-full justify-start text-sm font-medium relative overflow-hidden ${currentView === child.id ? "text-white bg-indigo-500/10" : "text-text-muted hover:text-text-main hover:bg-bg-hover"}`}
+                                                    className={`btn w-full justify-start text-sm font-medium relative overflow-hidden rounded-lg ${currentView === child.id ? "text-active-text bg-active-bg" : "text-text-muted hover:text-text-main hover:bg-bg-hover"}`}
                                                 >
                                                     {currentView === child.id && <ActiveItemEffect />}
-                                                    <span className={`truncate relative z-10 ${currentView === child.id ? "text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.7)]" : ""}`}>
+                                                    <span className={`truncate relative z-10 ${currentView === child.id ? "text-active-text font-semibold" : ""}`}>
                                                         {child.label}
                                                     </span>
                                                 </button>
@@ -203,7 +209,7 @@ const Sidebar = memo(function Sidebar({ currentView, setView, onLogout, userRole
                         );
                     }
 
-                    // Handle Single Items - Check permission (dashboard always visible)
+                    // Handle Single Items
                     const canRead = isAdmin || item.id === 'dashboard' || userRole?.permissions?.[item.id]?.read;
                     if (!canRead) return null;
 
@@ -211,18 +217,18 @@ const Sidebar = memo(function Sidebar({ currentView, setView, onLogout, userRole
                         <button
                             key={item.id}
                             onClick={() => setView(item.id)}
-                            className={`btn w-full text-sm transition-all duration-200 relative overflow-hidden ${isCollapsed ? "justify-center p-2" : "justify-start"
+                            className={`btn w-full text-sm transition-all duration-200 relative overflow-hidden rounded-xl ${isCollapsed ? "justify-center p-2" : "justify-start"
                                 } ${currentView === item.id
-                                    ? "bg-indigo-500/10 text-white"
+                                    ? "bg-active-bg text-active-text"
                                     : "text-text-muted hover:text-text-main hover:bg-bg-hover"
                                 }`}
                             title={isCollapsed ? item.label : ""}
                         >
                             {currentView === item.id && <ActiveItemEffect />}
                             <div className={`flex items-center relative z-10 ${isCollapsed ? "justify-center" : "gap-3"}`}>
-                                <item.icon className={`w-4 h-4 flex-shrink-0 ${currentView === item.id ? "text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.8)]" : "text-current"}`} />
+                                <item.icon className={`w-4 h-4 flex-shrink-0 ${currentView === item.id ? "text-active-text" : "text-current"}`} />
                                 {!isCollapsed && (
-                                    <span className={`truncate animate-in fade-in duration-300 font-medium ${currentView === item.id ? "text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.6)]" : ""}`}>
+                                    <span className={`truncate animate-in fade-in duration-300 font-medium ${currentView === item.id ? "text-active-text font-semibold" : ""}`}>
                                         {item.label}
                                     </span>
                                 )}
@@ -232,12 +238,12 @@ const Sidebar = memo(function Sidebar({ currentView, setView, onLogout, userRole
                 })}
             </nav>
 
-            {/* Settings Section - Only show if has permission for user_management OR role_management */}
+            {/* Settings Section */}
             {(userRole?.permissions?.['user_management']?.read || userRole?.permissions?.['role_management']?.read || userRole?.role?.toLowerCase() === 'admin') && (
                 <div className="pt-2 mt-2 border-t border-border-light relative group">
                     <button
                         onClick={() => !isCollapsed && setIsSettingsOpen(!isSettingsOpen)}
-                        className={`btn btn-ghost w-full text-text-muted hover:text-text-main hover:bg-bg-hover text-sm transition-all duration-200 ${isCollapsed ? "justify-center p-2" : "justify-start"
+                        className={`btn btn-ghost w-full text-text-muted hover:text-text-main hover:bg-bg-hover text-sm transition-all duration-200 rounded-xl ${isCollapsed ? "justify-center p-2" : "justify-start"
                             }`}
                         title={isCollapsed ? "Settings" : ""}
                     >
@@ -262,11 +268,11 @@ const Sidebar = memo(function Sidebar({ currentView, setView, onLogout, userRole
                                 {(userRole?.permissions?.['user_management']?.read || userRole?.role?.toLowerCase() === 'admin') && (
                                     <button
                                         onClick={() => setView("user_management")}
-                                        className={`btn w-full justify-start text-sm font-medium relative overflow-hidden ${currentView === "user_management" ? "text-white bg-indigo-500/10" : "text-text-muted hover:text-text-main hover:bg-bg-hover"}`}
+                                        className={`btn w-full justify-start text-sm font-medium relative overflow-hidden rounded-lg ${currentView === "user_management" ? "text-active-text bg-active-bg" : "text-text-muted hover:text-text-main hover:bg-bg-hover"}`}
                                     >
                                         {currentView === "user_management" && <ActiveItemEffect />}
-                                        <UserCog className={`w-3.5 h-3.5 relative z-10 ${currentView === "user_management" ? "text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.8)]" : "text-current"}`} />
-                                        <span className={`relative z-10 ${currentView === "user_management" ? "text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.7)]" : "text-current"}`}>
+                                        <UserCog className={`w-3.5 h-3.5 relative z-10 ${currentView === "user_management" ? "text-active-text" : "text-current"}`} />
+                                        <span className={`relative z-10 ${currentView === "user_management" ? "text-active-text font-semibold" : "text-current"}`}>
                                             User Management
                                         </span>
                                     </button>
@@ -274,11 +280,11 @@ const Sidebar = memo(function Sidebar({ currentView, setView, onLogout, userRole
                                 {(userRole?.permissions?.['role_management']?.read || userRole?.role?.toLowerCase() === 'admin') && (
                                     <button
                                         onClick={() => setView("role_management")}
-                                        className={`btn w-full justify-start text-sm font-medium relative overflow-hidden ${currentView === "role_management" ? "text-white bg-indigo-500/10" : "text-text-muted hover:text-text-main hover:bg-bg-hover"}`}
+                                        className={`btn w-full justify-start text-sm font-medium relative overflow-hidden rounded-lg ${currentView === "role_management" ? "text-active-text bg-active-bg" : "text-text-muted hover:text-text-main hover:bg-bg-hover"}`}
                                     >
                                         {currentView === "role_management" && <ActiveItemEffect />}
-                                        <ShieldCheck className={`w-3.5 h-3.5 relative z-10 ${currentView === "role_management" ? "text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.8)]" : "text-current"}`} />
-                                        <span className={`relative z-10 ${currentView === "role_management" ? "text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.7)]" : "text-current"}`}>
+                                        <ShieldCheck className={`w-3.5 h-3.5 relative z-10 ${currentView === "role_management" ? "text-active-text" : "text-current"}`} />
+                                        <span className={`relative z-10 ${currentView === "role_management" ? "text-active-text font-semibold" : "text-current"}`}>
                                             Role Management
                                         </span>
                                     </button>
@@ -288,15 +294,15 @@ const Sidebar = memo(function Sidebar({ currentView, setView, onLogout, userRole
                     )}
 
                     {!isCollapsed && isSettingsOpen && (
-                        <div className="mt-1 ml-4 pl-3 border-l border-border-light space-y-1 animate-in slide-in-from-top-2 duration-200">
+                        <div className="mt-1 ml-4 pl-3 border-l-2 border-border-light space-y-0.5 animate-in slide-in-from-top-2 duration-200">
                             {(userRole?.permissions?.['user_management']?.read || userRole?.role?.toLowerCase() === 'admin') && (
                                 <button
                                     onClick={() => setView("user_management")}
-                                    className={`btn w-full justify-start text-sm h-9 font-medium relative overflow-hidden ${currentView === "user_management" ? "text-white bg-indigo-500/10" : "text-text-muted hover:text-text-main hover:bg-bg-hover"}`}
+                                    className={`btn w-full justify-start text-sm h-9 font-medium relative overflow-hidden rounded-lg ${currentView === "user_management" ? "text-active-text bg-active-bg" : "text-text-muted hover:text-text-main hover:bg-bg-hover"}`}
                                 >
                                     {currentView === "user_management" && <ActiveItemEffect />}
-                                    <UserCog className={`w-3.5 h-3.5 mr-2 relative z-10 ${currentView === "user_management" ? "text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.8)]" : "text-current"}`} />
-                                    <span className={`relative z-10 ${currentView === "user_management" ? "text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.7)]" : ""}`}>
+                                    <UserCog className={`w-3.5 h-3.5 mr-2 relative z-10 ${currentView === "user_management" ? "text-active-text" : "text-current"}`} />
+                                    <span className={`relative z-10 ${currentView === "user_management" ? "text-active-text font-semibold" : ""}`}>
                                         User Management
                                     </span>
                                 </button>
@@ -304,11 +310,11 @@ const Sidebar = memo(function Sidebar({ currentView, setView, onLogout, userRole
                             {(userRole?.permissions?.['role_management']?.read || userRole?.role?.toLowerCase() === 'admin') && (
                                 <button
                                     onClick={() => setView("role_management")}
-                                    className={`btn w-full justify-start text-sm h-9 font-medium relative overflow-hidden ${currentView === "role_management" ? "text-white bg-indigo-500/10" : "text-text-muted hover:text-text-main hover:bg-bg-hover"}`}
+                                    className={`btn w-full justify-start text-sm h-9 font-medium relative overflow-hidden rounded-lg ${currentView === "role_management" ? "text-active-text bg-active-bg" : "text-text-muted hover:text-text-main hover:bg-bg-hover"}`}
                                 >
                                     {currentView === "role_management" && <ActiveItemEffect />}
-                                    <ShieldCheck className={`w-3.5 h-3.5 mr-2 relative z-10 ${currentView === "role_management" ? "text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.8)]" : "text-current"}`} />
-                                    <span className={`relative z-10 ${currentView === "role_management" ? "text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.7)]" : ""}`}>
+                                    <ShieldCheck className={`w-3.5 h-3.5 mr-2 relative z-10 ${currentView === "role_management" ? "text-active-text" : "text-current"}`} />
+                                    <span className={`relative z-10 ${currentView === "role_management" ? "text-active-text font-semibold" : ""}`}>
                                         Role Management
                                     </span>
                                 </button>
@@ -322,7 +328,7 @@ const Sidebar = memo(function Sidebar({ currentView, setView, onLogout, userRole
             <div className="pt-2 mt-2 border-t border-border-light">
                 <button
                     onClick={toggleTheme}
-                    className={`btn btn-ghost w-full text-text-muted hover:text-text-main hover:bg-bg-hover text-sm transition-all duration-200 ${isCollapsed ? "justify-center p-2" : "justify-start"
+                    className={`btn btn-ghost w-full text-text-muted hover:text-text-main hover:bg-bg-hover text-sm transition-all duration-200 rounded-xl ${isCollapsed ? "justify-center p-2" : "justify-start"
                         }`}
                     title={isCollapsed ? "Switch Theme" : ""}
                 >
@@ -339,19 +345,22 @@ const Sidebar = memo(function Sidebar({ currentView, setView, onLogout, userRole
                 </button>
             </div>
 
-            <button
-                onClick={onLogout}
-                className={`btn btn-ghost w-full text-rose-500 hover:text-rose-400 hover:bg-rose-500/5 pt-3 border-t border-border-light transition-all duration-200 ${isCollapsed ? "justify-center p-2" : "justify-start"
-                    }`}
-                title={isCollapsed ? "Logout" : ""}
-            >
-                <div className={`flex items-center ${isCollapsed ? "justify-center" : "gap-3"}`}>
-                    <LogOut className="w-4 h-4 flex-shrink-0" />
-                    {!isCollapsed && (
-                        <span className="animate-in fade-in duration-300 font-medium">Logout</span>
-                    )}
-                </div>
-            </button>
+            {/* Logout */}
+            <div className="pt-2 mt-2 border-t border-border-light">
+                <button
+                    onClick={onLogout}
+                    className={`btn btn-ghost w-full text-rose-500 hover:text-rose-400 hover:bg-rose-500/5 text-sm transition-all duration-200 rounded-xl ${isCollapsed ? "justify-center p-2" : "justify-start"
+                        }`}
+                    title={isCollapsed ? "Logout" : ""}
+                >
+                    <div className={`flex items-center ${isCollapsed ? "justify-center" : "gap-3"}`}>
+                        <LogOut className="w-4 h-4 flex-shrink-0" />
+                        {!isCollapsed && (
+                            <span className="animate-in fade-in duration-300 font-medium">Logout</span>
+                        )}
+                    </div>
+                </button>
+            </div>
         </aside>
     );
 });

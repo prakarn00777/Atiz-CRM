@@ -753,14 +753,6 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
 
             <div className={`flex flex-col md:flex-row justify-between items-start md:items-end gap-4 relative z-10 ${isFullscreen ? 'mb-4 px-1' : ''}`}>
                 <div className="flex items-center gap-4">
-                    <div className="p-1 bg-bg-hover rounded-2xl border border-border shadow-xl overflow-hidden animate-in zoom-in-50 duration-700">
-                        <img
-                            src="/images/LOGO ATIZ-02.png"
-                            alt="ATIZ Logo"
-                            className="w-12 h-12 object-contain rounded-xl shadow-lg"
-                            style={{ animation: 'logoPulse 4s ease-in-out infinite' }}
-                        />
-                    </div>
                     <div>
                         <h1 className={`text-3xl font-black tracking-tight ${activeTab === 'business' ? 'text-text-main' : 'text-text-main bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-purple-400 to-indigo-400'}`}>
                             {activeTab === 'cs' ? 'CS Operational Center' : 'Business Insights'}
@@ -775,18 +767,17 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
                             </span>
                             {user.name} • {activeTab === 'cs' ? 'Command Mode' : 'Strategic Mode'}
                         </p>
+                        <div className="flex items-center gap-3 text-text-muted mt-1.5">
+                            <div className="flex items-center gap-1.5 bg-bg-hover px-3 py-1 rounded-lg border border-border-light">
+                                <Clock className="w-3.5 h-3.5 text-indigo-400" />
+                                <span className="text-[11px] font-bold tracking-wider font-mono">{currentTime.toLocaleTimeString('th-TH', { hour12: false })}</span>
+                            </div>
+                            <span className="text-[10px] font-bold uppercase tracking-widest opacity-60 hidden sm:block">{currentTime.toLocaleDateString('en-US', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                        </div>
                     </div>
                 </div>
 
                 <div className="flex flex-col items-end gap-3 mr-1">
-                    <div className="flex items-center gap-3 text-text-muted mr-12">
-                        <div className="flex items-center gap-1.5 bg-bg-hover px-3 py-1 rounded-lg border border-border-light">
-                            <Clock className="w-3.5 h-3.5 text-indigo-400" />
-                            <span className="text-[11px] font-bold tracking-wider font-mono">{currentTime.toLocaleTimeString('th-TH', { hour12: false })}</span>
-                        </div>
-                        <span className="text-[10px] font-bold uppercase tracking-widest opacity-60 hidden sm:block">{currentTime.toLocaleDateString('en-US', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}</span>
-                    </div>
-
                     {!isFullscreen && (
                         <div className="flex items-center gap-2">
                             <div className="flex bg-bg-hover p-1 rounded-xl border border-border mr-2">

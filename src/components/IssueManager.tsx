@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Search, AlertCircle } from "lucide-react";
 import CustomSelect from "./CustomSelect";
 import CustomDatePicker from "./CustomDatePicker";
@@ -22,35 +22,35 @@ const IssueManager = React.memo(function IssueManager({ issues, customers: _cust
     const [dateRange, setDateRange] = useState({ start: "", end: "" });
     const [currentPage, setCurrentPage] = useState(1);
 
-    const filteredIssues = issues.filter(issue => {
-        const matchesSearch =
-            issue.caseNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            issue.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            issue.customerName.toLowerCase().includes(searchTerm.toLowerCase());
+    const sortedIssues = useMemo(() => {
+        const filtered = issues.filter(issue => {
+            const matchesSearch =
+                issue.caseNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                issue.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                issue.customerName.toLowerCase().includes(searchTerm.toLowerCase());
 
-        const matchesStatus = statusFilter === "all" || issue.status === statusFilter;
-        const matchesSeverity = severityFilter === "all" || issue.severity === severityFilter;
+            const matchesStatus = statusFilter === "all" || issue.status === statusFilter;
+            const matchesSeverity = severityFilter === "all" || issue.severity === severityFilter;
 
-        // Date Range Filter logic
-        let matchesDate = true;
-        if (dateRange.start && issue.createdAt) {
-            matchesDate = matchesDate && issue.createdAt >= dateRange.start;
-        }
-        if (dateRange.end && issue.createdAt) {
-            const endDate = new Date(dateRange.end);
-            endDate.setHours(23, 59, 59, 999);
-            matchesDate = matchesDate && new Date(issue.createdAt) <= endDate;
-        }
+            let matchesDate = true;
+            if (dateRange.start && issue.createdAt) {
+                matchesDate = matchesDate && issue.createdAt >= dateRange.start;
+            }
+            if (dateRange.end && issue.createdAt) {
+                const endDate = new Date(dateRange.end);
+                endDate.setHours(23, 59, 59, 999);
+                matchesDate = matchesDate && new Date(issue.createdAt) <= endDate;
+            }
 
-        return matchesSearch && matchesStatus && matchesSeverity && matchesDate;
-    });
+            return matchesSearch && matchesStatus && matchesSeverity && matchesDate;
+        });
 
-    // Sort by createdAt descending (newest first)
-    const sortedIssues = [...filteredIssues].sort((a, b) => {
-        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-        return dateB - dateA;
-    });
+        return [...filtered].sort((a, b) => {
+            const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+            const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+            return dateB - dateA;
+        });
+    }, [issues, searchTerm, statusFilter, severityFilter, dateRange]);
 
     const itemsPerPage = 10;
     const totalPages = Math.ceil(sortedIssues.length / itemsPerPage);
@@ -175,7 +175,7 @@ const IssueManager = React.memo(function IssueManager({ issues, customers: _cust
                                 </span>
                                 <div className="h-4 w-px bg-border-light mx-2"></div>
                                 <span className="text-xs text-text-muted">
-                                    {((currentPage - 1) * itemsPerPage) + 1}–{Math.min(currentPage * itemsPerPage, filteredIssues.length)} จาก {filteredIssues.length} รายการ
+                                    {((currentPage - 1) * itemsPerPage) + 1}–{Math.min(currentPage * itemsPerPage, sortedIssues.length)} จาก {sortedIssues.length} รายการ
                                 </span>
                             </div>
 

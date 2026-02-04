@@ -1,40 +1,37 @@
 "use client";
 
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 
 export default function ActiveItemEffect() {
-    // Generate particles for the wave
     const particles = useMemo(() => {
         return Array.from({ length: 12 }).map((_, i) => ({
             id: i,
-            delay: (i * 0.4), // Staggered entry
+            delay: (i * 0.4),
             duration: 4 + Math.random() * 2,
-            size: Math.random() * 2 + 1.5,
-            opacity: Math.random() * 0.4 + 0.4,
+            size: Math.random() * 2.5 + 2,
+            opacity: Math.random() * 0.3 + 0.6,
         }));
     }, []);
 
     return (
         <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-lg">
             {/* Background Base Glow */}
-            <div className="absolute inset-0 bg-indigo-500/5" />
-
-            {/* Central Horizontal Line */}
-            <div className="absolute top-1/2 left-[10%] right-[10%] h-[1px] bg-gradient-to-r from-transparent via-indigo-400/40 to-transparent transform -translate-y-1/2" />
+            <div className="absolute inset-0 bg-active-bg" />
 
             {/* Particle Wave */}
             <div className="absolute inset-0">
                 {particles.map((p) => (
                     <div
                         key={p.id}
-                        className="absolute bg-indigo-300 rounded-full animate-particle-wave"
+                        className="absolute rounded-full animate-particle-wave"
                         style={{
                             width: `${p.size}px`,
                             height: `${p.size}px`,
-                            left: '-10%',
+                            left: 0,
                             top: '50%',
-                            opacity: p.opacity,
-                            boxShadow: '0 0 6px rgba(165, 180, 252, 0.8)',
+                            opacity: 0,
+                            backgroundColor: 'var(--active-text)',
+                            boxShadow: `0 0 4px var(--active-icon-glow), 0 0 10px var(--active-icon-glow), 0 0 20px var(--active-icon-glow)`,
                             animationDuration: `${p.duration}s`,
                             animationDelay: `${p.delay}s`,
                         }}
@@ -44,39 +41,36 @@ export default function ActiveItemEffect() {
 
             <style>{`
                 @keyframes particle-wave-move {
-                    0% { 
-                        left: -10%; 
-                        transform: translateY(-50%) translateY(0); 
-                        opacity: 0; 
+                    0% {
+                        transform: translate3d(-30px, -50%, 0);
+                        opacity: 0;
                     }
-                    10% { 
-                        opacity: 0.8; 
+                    10% {
+                        opacity: 0.8;
                     }
-                    25% { 
-                        transform: translateY(-50%) translateY(-6px); 
+                    25% {
+                        transform: translate3d(70px, calc(-50% - 6px), 0);
                     }
-                    50% { 
-                        transform: translateY(-50%) translateY(6px); 
+                    50% {
+                        transform: translate3d(150px, calc(-50% + 6px), 0);
                     }
-                    75% { 
-                        transform: translateY(-50%) translateY(-6px); 
+                    75% {
+                        transform: translate3d(220px, calc(-50% - 6px), 0);
                     }
-                    90% { 
-                        opacity: 0.8; 
+                    90% {
+                        opacity: 0.8;
                     }
-                    100% { 
-                        left: 110%; 
-                        transform: translateY(-50%) translateY(0); 
-                        opacity: 0; 
+                    100% {
+                        transform: translate3d(290px, -50%, 0);
+                        opacity: 0;
                     }
                 }
 
                 .animate-particle-wave {
-                    animation: particle-wave-move linear infinite;
+                    animation: particle-wave-move linear infinite both;
+                    will-change: transform, opacity;
                 }
             `}</style>
         </div>
     );
 }
-
-

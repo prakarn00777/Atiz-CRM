@@ -16,6 +16,9 @@
   --success: #10b981;
   --warning: #f59e0b;
   --danger: #ef4444;
+  --active-text: #ffffff;
+  --active-bg: rgba(99, 102, 241, 0.15);
+  --active-icon-glow: rgba(255, 255, 255, 0.8);
 }
 
 [data-theme='light'] {
@@ -28,6 +31,9 @@
   --border-light: rgba(0, 0, 0, 0.05);
   --bg-hover: rgba(0, 0, 0, 0.04);
   --input-bg: rgba(255, 255, 255, 0.95);
+  --active-text: #4338ca;
+  --active-bg: rgba(99, 102, 241, 0.08);
+  --active-icon-glow: rgba(99, 102, 241, 0.6);
 }
 
 @layer base {
@@ -66,6 +72,9 @@
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-danger: var(--danger);
+  --color-active-text: var(--active-text);
+  --color-active-bg: var(--active-bg);
+  --color-active-icon-glow: var(--active-icon-glow);
 }
 
 @utility glass-card {
