@@ -89,6 +89,7 @@ import {
     XAxis, YAxis, CartesianGrid, Tooltip, Legend
 } from 'recharts';
 import ParticlesBackground from "./ParticlesBackground";
+import { useTheme } from "./ThemeProvider";
 import type { Customer, Installation, Issue, Lead, Activity as CSActivity, GoogleSheetLead, MasterDemoLead, BusinessMetrics, NewSalesRecord, RenewalsRecord } from "@/types";
 
 import SegmentedControl from "./SegmentedControl";
@@ -136,6 +137,7 @@ const parseLocalISO = (isoStr: string) => {
 
 const Dashboard = React.memo(function Dashboard({ customers, installations, issues, activities, leads, googleSheetLeads = [], googleSheetDemos = [], newSalesData = [], renewalsData = [], businessMetrics, user, onViewChange }: DashboardProps) {
     const dashboardRef = useRef<HTMLDivElement>(null);
+    const { theme } = useTheme();
     const [activeTab, setActiveTab] = useState<'cs' | 'business'>('cs');
     const [timeRange, setTimeRange] = useState<'1w' | '1m' | '3m' | '6m' | '1y' | 'custom'>('1m');
     const [customStartDate, setCustomStartDate] = useState('');
@@ -146,6 +148,7 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
     const [currentTime, setCurrentTime] = useState(new Date());
     const [isAutoCycle, setIsAutoCycle] = useState(false);
     const [selectedMetric, setSelectedMetric] = useState('leads');
+    const [renewalLines, setRenewalLines] = useState({ renewed: true, notRenewed: true, pending: true });
 
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -366,6 +369,21 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
             })
             .reduce((sum, r) => sum + (r.renewedAmount || 0), 0);
 
+        // Calculate not-renewed and pending for current month
+        const currentMonthNotRenewed = renewalsData
+            .filter(r => {
+                const rMonth = thaiMonthMap[r.month];
+                return rMonth === currentMonth && r.year === currentBuddhistYear;
+            })
+            .reduce((sum, r) => sum + (r.notRenewedAmount || 0), 0);
+
+        const currentMonthPending = renewalsData
+            .filter(r => {
+                const rMonth = thaiMonthMap[r.month];
+                return rMonth === currentMonth && r.year === currentBuddhistYear;
+            })
+            .reduce((sum, r) => sum + (r.pendingAmount || 0), 0);
+
         // Use calculated renewals - only fallback if renewalsData is empty (not loaded)
         const renewal = renewalsData.length > 0 ? currentMonthRenewals : (businessMetrics?.renewal ?? 0);
 
@@ -429,7 +447,7 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
             { id: 'leads', label: "Total Leads – This Week", subLabel: "ผู้สนใจรายสัปดาห์ (Mon-Sun)", numericValue: currentCount, prefix: "", suffix: "", sub: `Dr.Ease: ${dreaseLeads} | Ease: ${easeLeads}`, extraInfo: WoWTag, tooltip: "อัตราการเติบโตเมื่อเทียบกับสัปดาห์ก่อน (WoW): ((จำนวนสัปดาห์นี้-จำนวนสัปดาห์ก่อน) / จำนวนสัปดาห์ก่อน) x 100", icon: Briefcase, color: "text-amber-400", border: "border-amber-500/20", bg: "from-amber-500/10" },
             { id: 'demos', label: "Weekly Demos", subLabel: "การทำ Demo รายสัปดาห์ (Mon-Sun)", numericValue: currentDemos, prefix: "", suffix: "", sub: `เข้าข่ายสัปดาห์ปัจจุบัน`, extraInfo: DemosWoWTag, icon: Monitor, color: "text-blue-400", border: "border-blue-500/20", bg: "from-blue-500/10" },
             { id: 'sales', label: "New Sales", subLabel: `ยอดเงินปิดใหม่ (${currentMonthName} ${currentBuddhistYear.slice(-2)})`, numericValue: newSales, prefix: "฿", suffix: "", sub: prevMonthSales > 0 ? `เดือนก่อน: ฿${prevMonthSales.toLocaleString()}` : "Revenue เดือนนี้", extraInfo: SalesMoMTag, icon: DollarSign, color: "text-emerald-400", border: "border-emerald-500/20", bg: "from-emerald-500/10" },
-            { id: 'renewals', label: "Renewal", subLabel: `ยอดต่อสัญญา (${currentMonthName} ${currentBuddhistYear.slice(-2)})`, numericValue: renewal, prefix: "฿", suffix: "", sub: prevMonthRenewals > 0 ? `เดือนก่อน: ฿${prevMonthRenewals.toLocaleString()}` : "Revenue เดือนนี้", extraInfo: RenewalsMoMTag, icon: TrendingUp, color: "text-purple-400", border: "border-purple-500/20", bg: "from-purple-500/10" },
+            { id: 'renewals', label: "Renewal", subLabel: `ยอดต่อสัญญา (${currentMonthName} ${currentBuddhistYear.slice(-2)})`, numericValue: renewal, prefix: "฿", suffix: "", sub: `ไม่ต่อ: ฿${currentMonthNotRenewed.toLocaleString()} | รอ: ฿${currentMonthPending.toLocaleString()}`, extraInfo: RenewalsMoMTag, icon: TrendingUp, color: "text-purple-400", border: "border-purple-500/20", bg: "from-purple-500/10" },
         ];
     }, [googleSheetLeads, googleSheetDemos, activities, businessMetrics, newSalesData, renewalsData]);
 
@@ -519,6 +537,20 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
                 .reduce((sum, r) => sum + (r.renewedAmount || 0), 0);
         };
 
+        // Helper to get renewals breakdown for a specific month/year
+        const getRenewalsBreakdown = (gregorianYear: number, month: number) => {
+            const buddhistYear = String(gregorianYear + 543);
+            const filtered = renewalsData.filter(r => {
+                const rMonth = thaiMonthMap[r.month];
+                return rMonth === month && r.year === buddhistYear;
+            });
+            return {
+                renewed: filtered.reduce((sum, r) => sum + (r.renewedAmount || 0), 0),
+                notRenewed: filtered.reduce((sum, r) => sum + (r.notRenewedAmount || 0), 0),
+                pending: filtered.reduce((sum, r) => sum + (r.pendingAmount || 0), 0),
+            };
+        };
+
         if (groupBy === 'month') {
             const monthlyData: { [key: string]: any } = {};
             const current = new Date(startDate);
@@ -533,9 +565,11 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
                     ? getSalesForMonth(current.getFullYear(), current.getMonth() + 1)
                     : (filteredSalesAoey + filteredSalesYo);
                 const renewalsAmount = getRenewalsForMonth(current.getFullYear(), current.getMonth() + 1);
+                const renewalsBreakdown = getRenewalsBreakdown(current.getFullYear(), current.getMonth() + 1);
                 monthlyData[key] = {
                     drease: 0, ease: 0, leads: 0, demos: 0, demosAoey: 0, demosYo: 0,
-                    sales: salesAmount, salesAoey: filteredSalesAoey, salesYo: filteredSalesYo, renewals: renewalsAmount
+                    sales: salesAmount, salesAoey: filteredSalesAoey, salesYo: filteredSalesYo, renewals: renewalsAmount,
+                    renewalsNotRenewed: renewalsBreakdown.notRenewed, renewalsPending: renewalsBreakdown.pending
                 };
                 current.setMonth(current.getMonth() + 1);
             }
@@ -608,11 +642,14 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
             const monthlySalesAoey = getSalesForMonthBySalesperson(date.getFullYear(), date.getMonth() + 1, 'เอย');
             const monthlySalesYo = getSalesForMonthBySalesperson(date.getFullYear(), date.getMonth() + 1, 'โย');
             const monthlyRenewals = getRenewalsForMonth(date.getFullYear(), date.getMonth() + 1);
+            const monthlyRenewalsBreakdown = getRenewalsBreakdown(date.getFullYear(), date.getMonth() + 1);
             const daysInMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
             const dailySalesEstimate = Math.round(monthlySales / daysInMonth);
             const dailySalesAoey = Math.round(monthlySalesAoey / daysInMonth);
             const dailySalesYo = Math.round(monthlySalesYo / daysInMonth);
             const dailyRenewalsEstimate = Math.round(monthlyRenewals / daysInMonth);
+            const dailyNotRenewed = Math.round(monthlyRenewalsBreakdown.notRenewed / daysInMonth);
+            const dailyPending = Math.round(monthlyRenewalsBreakdown.pending / daysInMonth);
 
             return {
                 name: `${date.getDate()} ${days[date.getDay()]}`,
@@ -627,6 +664,8 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
                 salesAoey: dailySalesAoey,
                 salesYo: dailySalesYo,
                 renewals: dailyRenewalsEstimate,
+                renewalsNotRenewed: dailyNotRenewed,
+                renewalsPending: dailyPending,
             };
         });
     }, [dateRange, googleSheetLeads, googleSheetDemos, activities, productFilter, salesFilter, newSalesData, selectedMetric, renewalsData]);
@@ -643,8 +682,10 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
             acc.salesAoey += (curr.salesAoey || 0);
             acc.salesYo += (curr.salesYo || 0);
             acc.renewals += (curr.renewals || 0);
+            acc.renewalsNotRenewed += (curr.renewalsNotRenewed || 0);
+            acc.renewalsPending += (curr.renewalsPending || 0);
             return acc;
-        }, { drease: 0, ease: 0, leads: 0, demos: 0, demosAoey: 0, demosYo: 0, sales: 0, salesAoey: 0, salesYo: 0, renewals: 0 });
+        }, { drease: 0, ease: 0, leads: 0, demos: 0, demosAoey: 0, demosYo: 0, sales: 0, salesAoey: 0, salesYo: 0, renewals: 0, renewalsNotRenewed: 0, renewalsPending: 0 });
     }, [dynamicGraphData]);
 
     // Compute sales by salesperson dynamically
@@ -1271,14 +1312,78 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
                                                 )}
                                             </div>
                                         ) : (
-                                            <div className="p-3 rounded-xl bg-bg-hover border border-border-light space-y-2">
-                                                <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest">Period Insights</p>
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
-                                                    <p className="text-text-main text-[11px] font-bold">Trend is stable</p>
+                                            <div className="relative flex flex-col gap-3 ml-1.5 pl-5 border-l border-border">
+                                                {/* Renewal Toggle Lines */}
+                                                <p className="text-text-main text-[10px] uppercase font-bold tracking-widest opacity-70">แสดงเส้นกราฟ</p>
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    <button
+                                                        onClick={() => setRenewalLines(prev => ({ ...prev, renewed: !prev.renewed }))}
+                                                        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer border ${renewalLines.renewed ? 'bg-purple-500/20 text-purple-400 border-purple-500/40 shadow-[0_0_10px_rgba(139,92,246,0.15)]' : 'bg-bg-hover text-text-muted border-border-light opacity-50 hover:opacity-75'}`}
+                                                    >
+                                                        <div className={`w-2 h-2 rounded-full transition-all ${renewalLines.renewed ? 'bg-purple-500 shadow-[0_0_8px_#8b5cf6]' : 'bg-text-muted/30'}`} />
+                                                        ต่อสัญญา
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setRenewalLines(prev => ({ ...prev, notRenewed: !prev.notRenewed }))}
+                                                        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer border ${renewalLines.notRenewed ? 'bg-rose-500/20 text-rose-400 border-rose-500/40 shadow-[0_0_10px_rgba(244,63,94,0.15)]' : 'bg-bg-hover text-text-muted border-border-light opacity-50 hover:opacity-75'}`}
+                                                    >
+                                                        <div className={`w-2 h-2 rounded-full transition-all ${renewalLines.notRenewed ? 'bg-rose-500 shadow-[0_0_8px_#f43f5e]' : 'bg-text-muted/30'}`} />
+                                                        ไม่ต่อ
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setRenewalLines(prev => ({ ...prev, pending: !prev.pending }))}
+                                                        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer border ${renewalLines.pending ? 'bg-amber-500/20 text-amber-400 border-amber-500/40 shadow-[0_0_10px_rgba(245,158,11,0.15)]' : 'bg-bg-hover text-text-muted border-border-light opacity-50 hover:opacity-75'}`}
+                                                    >
+                                                        <div className={`w-2 h-2 rounded-full transition-all ${renewalLines.pending ? 'bg-amber-500 shadow-[0_0_8px_#f59e0b]' : 'bg-text-muted/30'}`} />
+                                                        รอคำตอบ
+                                                    </button>
                                                 </div>
-                                                <div className="h-1 w-full bg-slate-800 rounded-full overflow-hidden">
-                                                    <div className="h-full bg-indigo-500 w-[65%]" />
+
+                                                {/* Renewal Breakdown Values */}
+                                                <div className="h-px bg-bg-hover w-full my-0.5" />
+                                                <div className="flex flex-col relative">
+                                                    <div className="absolute -left-5 top-2 w-4 h-px bg-white/10" />
+                                                    <div className="flex items-center gap-1.5 mb-1">
+                                                        <div className="w-2 h-2 rounded-full bg-purple-500 shadow-[0_0_8px_#8b5cf6]" />
+                                                        <span className="text-text-muted text-[10px] uppercase font-bold tracking-widest">ต่อสัญญา</span>
+                                                    </div>
+                                                    <p className="text-text-main text-2xl font-bold tracking-tighter tabular-nums leading-none">฿{graphTotals.renewals.toLocaleString()}</p>
+                                                </div>
+                                                <div className="flex flex-col relative">
+                                                    <div className="absolute -left-5 top-2 w-4 h-px bg-white/10" />
+                                                    <div className="flex items-center gap-1.5 mb-1">
+                                                        <div className="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_8px_#f43f5e]" />
+                                                        <span className="text-text-muted text-[10px] uppercase font-bold tracking-widest">ไม่ต่อสัญญา</span>
+                                                    </div>
+                                                    <p className="text-rose-400 text-2xl font-bold tracking-tighter tabular-nums leading-none">฿{graphTotals.renewalsNotRenewed.toLocaleString()}</p>
+                                                </div>
+                                                <div className="flex flex-col relative">
+                                                    <div className="absolute -left-5 top-2 w-4 h-px bg-white/10" />
+                                                    <div className="flex items-center gap-1.5 mb-1">
+                                                        <div className="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_8px_#f59e0b]" />
+                                                        <span className="text-text-muted text-[10px] uppercase font-bold tracking-widest">รอคำตอบ</span>
+                                                    </div>
+                                                    <p className="text-amber-400 text-2xl font-bold tracking-tighter tabular-nums leading-none">฿{graphTotals.renewalsPending.toLocaleString()}</p>
+                                                </div>
+
+                                                {/* Monthly Breakdown */}
+                                                <div className="h-px bg-bg-hover w-full my-1" />
+                                                <p className="text-text-main text-[10px] uppercase font-bold tracking-widest mb-1 opacity-70">สรุปรายเดือน</p>
+                                                <div className="flex flex-col gap-2.5 max-h-[120px] overflow-y-auto custom-scrollbar">
+                                                    {[...dynamicGraphData].reverse().map((data, index) => (
+                                                        <div key={index} className="flex flex-col relative group/item">
+                                                            <div className="absolute -left-5 top-2 w-4 h-px bg-white/10 group-hover/item:bg-purple-500/50 transition-colors" />
+                                                            <div className="flex items-center gap-1.5 mb-0.5">
+                                                                <div className="w-1.5 h-1.5 rounded-full bg-purple-500 shadow-[0_0_8px_#8b5cf6]" />
+                                                                <span className="text-text-muted text-[10px] uppercase font-bold tracking-widest">{data.name}</span>
+                                                            </div>
+                                                            <div className="flex items-center gap-2 text-[10px] tabular-nums">
+                                                                <span className="text-text-main font-bold">฿{(data.renewals || 0).toLocaleString()}</span>
+                                                                <span className="text-rose-400/70">-฿{(data.renewalsNotRenewed || 0).toLocaleString()}</span>
+                                                                <span className="text-amber-400/70">?฿{(data.renewalsPending || 0).toLocaleString()}</span>
+                                                            </div>
+                                                        </div>
+                                                    ))}
                                                 </div>
                                             </div>
                                         )}
@@ -1313,6 +1418,14 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
                                                     <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
                                                     <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
                                                 </linearGradient>
+                                                <linearGradient id="colorNotRenewed" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3} />
+                                                    <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
+                                                </linearGradient>
+                                                <linearGradient id="colorPending" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3} />
+                                                    <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
+                                                </linearGradient>
                                                 <linearGradient id="colorDemos" x1="0" y1="0" x2="0" y2="1">
                                                     <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
                                                     <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
@@ -1341,6 +1454,14 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
                                                     <feGaussianBlur stdDeviation="3" result="blur" />
                                                     <feComposite in="SourceGraphic" in2="blur" operator="over" />
                                                 </filter>
+                                                <filter id="glowNotRenewed" x="-20%" y="-20%" width="140%" height="140%">
+                                                    <feGaussianBlur stdDeviation="3" result="blur" />
+                                                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                                                </filter>
+                                                <filter id="glowPending" x="-20%" y="-20%" width="140%" height="140%">
+                                                    <feGaussianBlur stdDeviation="3" result="blur" />
+                                                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                                                </filter>
                                                 <filter id="glowDemos" x="-20%" y="-20%" width="140%" height="140%">
                                                     <feGaussianBlur stdDeviation="3" result="blur" />
                                                     <feComposite in="SourceGraphic" in2="blur" operator="over" />
@@ -1354,7 +1475,7 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
                                                     <feComposite in="SourceGraphic" in2="blur" operator="over" />
                                                 </filter>
                                             </defs>
-                                            <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
+                                            <CartesianGrid strokeDasharray="3 3" stroke={theme === 'light' ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.06)'} />
                                             <XAxis dataKey="name" stroke="#64748b" fontSize={10} fontWeight="bold" tickLine={false} axisLine={false} dy={10} minTickGap={20} />
                                             <YAxis
                                                 stroke="#64748b"
@@ -1409,7 +1530,11 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
                                                 <Area type="monotone" dataKey="sales" name="ยอดขายรวม" stroke="#10b981" fill="url(#colorSales)" strokeWidth={3} filter="url(#glowSales)" activeDot={{ r: 6, stroke: '#10b981', strokeWidth: 2, fill: '#fff' }} />
                                             )}
                                             {selectedMetric === 'renewals' && (
-                                                <Area type="monotone" dataKey="renewals" name="Renewal" stroke="#8b5cf6" fill="url(#colorRenewals)" strokeWidth={3} filter="url(#glowRenewals)" activeDot={{ r: 6, stroke: '#8b5cf6', strokeWidth: 2, fill: '#fff' }} />
+                                                <>
+                                                    {renewalLines.renewed && <Area type="monotone" dataKey="renewals" name="ต่อสัญญา" stroke="#8b5cf6" fill="url(#colorRenewals)" strokeWidth={3} filter="url(#glowRenewals)" activeDot={{ r: 6, stroke: '#8b5cf6', strokeWidth: 2, fill: '#fff' }} />}
+                                                    {renewalLines.notRenewed && <Area type="monotone" dataKey="renewalsNotRenewed" name="ไม่ต่อสัญญา" stroke="#f43f5e" fill="url(#colorNotRenewed)" strokeWidth={2.5} filter="url(#glowNotRenewed)" activeDot={{ r: 5, stroke: '#f43f5e', strokeWidth: 2, fill: '#fff' }} strokeDasharray="6 3" />}
+                                                    {renewalLines.pending && <Area type="monotone" dataKey="renewalsPending" name="รอคำตอบ" stroke="#f59e0b" fill="url(#colorPending)" strokeWidth={2.5} filter="url(#glowPending)" activeDot={{ r: 5, stroke: '#f59e0b', strokeWidth: 2, fill: '#fff' }} strokeDasharray="4 4" />}
+                                                </>
                                             )}
                                         </AreaChart>
                                     </ResponsiveContainer>
