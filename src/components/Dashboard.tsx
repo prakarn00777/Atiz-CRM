@@ -1492,19 +1492,19 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
                                                 content={({ active, payload, label }) => {
                                                     if (active && payload && payload.length) {
                                                         return (
-                                                            <div className="bg-slate-900/95 backdrop-blur-xl border border-border p-4 rounded-2xl shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-                                                                <div className="flex items-center gap-2 mb-3 pb-2 border-b border-border-light">
+                                                            <div className="bg-slate-900/95 backdrop-blur-xl border border-slate-700/50 p-4 rounded-2xl shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+                                                                <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-700/50">
                                                                     <Clock className="w-3.5 h-3.5 text-indigo-400" />
-                                                                    <span className="text-text-main font-bold text-xs tracking-tight">{payload[0].payload.fullDate || label}</span>
+                                                                    <span className="text-slate-100 font-bold text-xs tracking-tight">{payload[0].payload.fullDate || label}</span>
                                                                 </div>
                                                                 <div className="space-y-2.5">
                                                                     {payload.map((entry, index) => (
                                                                         <div key={index} className="flex items-center justify-between gap-8">
                                                                             <div className="flex items-center gap-2.5">
-                                                                                <div className="w-2 rounded-full h-2 shadow-[0_0_8px_rgba(0,0,0,0.5)]" style={{ backgroundColor: entry.color, boxShadow: `0 0 10px ${entry.color}80` }} />
-                                                                                <span className="text-text-muted text-[10px] font-bold uppercase tracking-wider">{entry.name}</span>
+                                                                                <div className="w-2 rounded-full h-2" style={{ backgroundColor: entry.color, boxShadow: `0 0 10px ${entry.color}80` }} />
+                                                                                <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">{entry.name}</span>
                                                                             </div>
-                                                                            <span className="text-text-main font-bold text-sm tabular-nums">{entry.value}</span>
+                                                                            <span className="text-white font-bold text-sm tabular-nums">{entry.value}</span>
                                                                         </div>
                                                                     ))}
                                                                 </div>
@@ -1532,8 +1532,8 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
                                             {selectedMetric === 'renewals' && (
                                                 <>
                                                     {renewalLines.renewed && <Area type="monotone" dataKey="renewals" name="ต่อสัญญา" stroke="#8b5cf6" fill="url(#colorRenewals)" strokeWidth={3} filter="url(#glowRenewals)" activeDot={{ r: 6, stroke: '#8b5cf6', strokeWidth: 2, fill: '#fff' }} />}
-                                                    {renewalLines.notRenewed && <Area type="monotone" dataKey="renewalsNotRenewed" name="ไม่ต่อสัญญา" stroke="#f43f5e" fill="url(#colorNotRenewed)" strokeWidth={2.5} filter="url(#glowNotRenewed)" activeDot={{ r: 5, stroke: '#f43f5e', strokeWidth: 2, fill: '#fff' }} strokeDasharray="6 3" />}
-                                                    {renewalLines.pending && <Area type="monotone" dataKey="renewalsPending" name="รอคำตอบ" stroke="#f59e0b" fill="url(#colorPending)" strokeWidth={2.5} filter="url(#glowPending)" activeDot={{ r: 5, stroke: '#f59e0b', strokeWidth: 2, fill: '#fff' }} strokeDasharray="4 4" />}
+                                                    {renewalLines.notRenewed && <Area type="monotone" dataKey="renewalsNotRenewed" name="ไม่ต่อสัญญา" stroke="#f43f5e" fill="url(#colorNotRenewed)" strokeWidth={2.5} filter="url(#glowNotRenewed)" activeDot={{ r: 5, stroke: '#f43f5e', strokeWidth: 2, fill: '#fff' }} />}
+                                                    {renewalLines.pending && <Area type="monotone" dataKey="renewalsPending" name="รอคำตอบ" stroke="#f59e0b" fill="url(#colorPending)" strokeWidth={2.5} filter="url(#glowPending)" activeDot={{ r: 5, stroke: '#f59e0b', strokeWidth: 2, fill: '#fff' }} />}
                                                 </>
                                             )}
                                         </AreaChart>
