@@ -488,14 +488,32 @@ export async function deleteRole(id: string): Promise<ApiResponse<{ deleted: boo
     }
 }
 
+// Generate next case number in C-0001 format
+async function generateNextCaseNumber(): Promise<string> {
+    const { data } = await db
+        .from('issues')
+        .select('case_number')
+        .like('case_number', 'C-%')
+        .order('case_number', { ascending: false })
+        .limit(1);
+
+    if (data && data.length > 0) {
+        const lastNum = parseInt(data[0].case_number.replace('C-', ''), 10);
+        return `C-${String(lastNum + 1).padStart(4, '0')}`;
+    }
+    return 'C-0001';
+}
+
 // Issue persistence
 export async function saveIssue(issueData: Partial<Issue>): Promise<ApiResponse<Issue>> {
     try {
         const { id, ...rest } = issueData;
+        const isNew = isTemporaryId(id);
+
         const dbData = {
             customer_id: rest.customerId && rest.customerId > 0 ? rest.customerId : null,
             branch_name: rest.branchName,
-            case_number: rest.caseNumber,
+            case_number: isNew ? await generateNextCaseNumber() : rest.caseNumber,
             title: rest.title,
             description: rest.description,
             type: rest.type,
@@ -509,7 +527,7 @@ export async function saveIssue(issueData: Partial<Issue>): Promise<ApiResponse<
         };
 
         let result;
-        if (!isTemporaryId(id)) {
+        if (!isNew) {
             log.debug("Updating issue:", id);
             const { data, error } = await db.from('issues').update(dbData).eq('id', id).select();
             if (error) throw error;
