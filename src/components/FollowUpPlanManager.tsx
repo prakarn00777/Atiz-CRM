@@ -267,6 +267,28 @@ const FollowUpPlanManager = React.memo(function FollowUpPlanManager({ customers,
         return queue.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
     }, [customers]);
 
+    // Lookup map: customerId → latest customer data (name, csOwner, branches)
+    const customerLookup = useMemo(() => {
+        const map = new Map<number, Customer>();
+        customers.forEach(c => map.set(c.id, c));
+        return map;
+    }, [customers]);
+
+    // Helper: get latest customer name & csOwner from lookup
+    const getLatestCustomerInfo = (log: FollowUpLog) => {
+        const customer = customerLookup.get(log.customerId);
+        if (!customer) return { name: log.customerName, csOwner: log.csOwner };
+
+        // Find matching branch for branch-level csOwner
+        let csOwner = customer.csOwner || log.csOwner;
+        if (log.branchName && customer.branches) {
+            const branch = customer.branches.find(b => b.name === log.branchName);
+            if (branch?.csOwner) csOwner = branch.csOwner;
+        }
+
+        return { name: customer.name, csOwner };
+    };
+
     // Reset page when filters change
     useEffect(() => {
         setCurrentPage(1);
@@ -276,6 +298,10 @@ const FollowUpPlanManager = React.memo(function FollowUpPlanManager({ customers,
         const milestones = [7, 14, 30, 60, 90];
 
         const filtered = followUpQueue.filter(item => {
+            // Filter out completed items first (before pagination)
+            const logKey = `${item.customerId}-${item.branchName}-${item.round}`;
+            if (completedLogKeys.has(logKey)) return false;
+
             const daysUsed = getDaysUsed(item.contractStart);
             const matchesSearch = item.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                                   item.branchName.toLowerCase().includes(searchTerm.toLowerCase());
@@ -302,7 +328,7 @@ const FollowUpPlanManager = React.memo(function FollowUpPlanManager({ customers,
             const daysB = getDaysUsed(b.contractStart);
             return daysA - daysB;
         });
-    }, [followUpQueue, activeTab, searchTerm]);
+    }, [followUpQueue, activeTab, searchTerm, completedLogKeys]);
 
     const totalPages = Math.ceil(filteredQueue.length / itemsPerPage);
     const paginatedQueue = useMemo(() => {
@@ -420,7 +446,9 @@ const FollowUpPlanManager = React.memo(function FollowUpPlanManager({ customers,
                                     <tbody className="divide-y divide-border-light">
                                         {followUpLogs
                                             .slice((historyPage - 1) * itemsPerPage, historyPage * itemsPerPage)
-                                            .map((log, index) => (
+                                            .map((log, index) => {
+                                            const latest = getLatestCustomerInfo(log);
+                                            return (
                                             <tr key={log.id} className="group hover:bg-bg-hover transition-colors h-14">
                                                 <td className="px-3 py-3 text-center">
                                                     <span className="text-xs text-text-muted opacity-60">
@@ -430,8 +458,8 @@ const FollowUpPlanManager = React.memo(function FollowUpPlanManager({ customers,
                                                 <td className="px-3 py-3">
                                                     <div className="flex flex-col">
                                                         <div className="flex items-center gap-2">
-                                                            <span className="text-xs text-text-main truncate max-w-[140px]" title={log.customerName}>
-                                                                {log.customerName}
+                                                            <span className="text-xs text-text-main truncate max-w-[140px]" title={latest.name}>
+                                                                {latest.name}
                                                             </span>
                                                             {log.branchName && (
                                                                 <span className="text-[10px] px-1.5 py-0.5 rounded bg-bg-hover text-text-muted border border-border-light">
@@ -443,7 +471,7 @@ const FollowUpPlanManager = React.memo(function FollowUpPlanManager({ customers,
                                                 </td>
                                                 <td className="px-3 py-3">
                                                     <span className="text-xs text-text-muted">
-                                                        {log.csOwner || "-"}
+                                                        {latest.csOwner || "-"}
                                                     </span>
                                                 </td>
                                                 <td className="px-3 py-3 text-center">
@@ -496,39 +524,122 @@ const FollowUpPlanManager = React.memo(function FollowUpPlanManager({ customers,
                                                     )}
                                                 </td>
                                             </tr>
-                                        ))}
+                                            );
+                                        })}
                                     </tbody>
                                 </table>
 
                                 {/* History Pagination */}
-                                {followUpLogs.length > itemsPerPage && (
-                                    <div className="px-3 py-3 bg-bg-hover border-t border-border-light">
-                                        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-                                            <span className="text-xs text-text-muted">
-                                                {(historyPage - 1) * itemsPerPage + 1}–{Math.min(historyPage * itemsPerPage, followUpLogs.length)} จาก {followUpLogs.length} รายการ
-                                            </span>
-                                            <div className="flex items-center gap-2">
-                                                <button
-                                                    onClick={() => setHistoryPage(p => Math.max(1, p - 1))}
-                                                    disabled={historyPage === 1}
-                                                    className="px-3 h-8 rounded-lg flex items-center gap-1.5 hover:bg-bg-hover disabled:opacity-30 transition-all text-text-main text-xs font-medium"
-                                                >
-                                                    ก่อนหน้า
-                                                </button>
-                                                <span className="px-3 py-1.5 text-xs text-text-muted">
-                                                    หน้า {historyPage} / {Math.ceil(followUpLogs.length / itemsPerPage)}
-                                                </span>
-                                                <button
-                                                    onClick={() => setHistoryPage(p => Math.min(Math.ceil(followUpLogs.length / itemsPerPage), p + 1))}
-                                                    disabled={historyPage >= Math.ceil(followUpLogs.length / itemsPerPage)}
-                                                    className="px-3 h-8 rounded-lg flex items-center gap-1.5 hover:bg-bg-hover disabled:opacity-30 transition-all text-text-main text-xs font-medium"
-                                                >
-                                                    ถัดไป
-                                                </button>
+                                {(() => {
+                                    const historyTotalPages = Math.ceil(followUpLogs.length / itemsPerPage);
+                                    if (historyTotalPages <= 1) return null;
+                                    return (
+                                        <div className="px-6 py-4 border-t border-border-light bg-gradient-to-r from-bg-hover to-transparent">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-2 h-2 rounded-full bg-purple-500 animate-pulse"></div>
+                                                    <span className="text-xs font-medium text-text-main">
+                                                        หน้า {historyPage} / {historyTotalPages}
+                                                    </span>
+                                                    <div className="h-4 w-px bg-border-light mx-2"></div>
+                                                    <span className="text-xs text-text-muted">
+                                                        {((historyPage - 1) * itemsPerPage) + 1}–{Math.min(historyPage * itemsPerPage, followUpLogs.length)} จาก {followUpLogs.length} รายการ
+                                                    </span>
+                                                </div>
+
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        onClick={() => setHistoryPage(1)}
+                                                        disabled={historyPage === 1}
+                                                        className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-bg-hover disabled:opacity-30 disabled:hover:bg-transparent transition-all text-text-main group focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:outline-none cursor-pointer disabled:cursor-not-allowed"
+                                                        title="หน้าแรก"
+                                                    >
+                                                        <svg className="w-4 h-4 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                                                        </svg>
+                                                    </button>
+
+                                                    <button
+                                                        onClick={() => setHistoryPage(p => Math.max(1, p - 1))}
+                                                        disabled={historyPage === 1}
+                                                        className="px-3 h-8 rounded-lg flex items-center gap-1.5 hover:bg-bg-hover disabled:opacity-30 disabled:hover:bg-transparent transition-all text-text-main text-xs font-medium group focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:outline-none cursor-pointer disabled:cursor-not-allowed"
+                                                    >
+                                                        <svg className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                                                        </svg>
+                                                        ก่อนหน้า
+                                                    </button>
+
+                                                    <div className="flex gap-1">
+                                                        {(() => {
+                                                            const pageNumbers: (number | string)[] = [];
+                                                            const maxVisible = 5;
+
+                                                            if (historyTotalPages <= maxVisible) {
+                                                                for (let i = 1; i <= historyTotalPages; i++) pageNumbers.push(i);
+                                                            } else {
+                                                                if (historyPage <= 3) {
+                                                                    for (let i = 1; i <= 4; i++) pageNumbers.push(i);
+                                                                    pageNumbers.push('...');
+                                                                    pageNumbers.push(historyTotalPages);
+                                                                } else if (historyPage >= historyTotalPages - 2) {
+                                                                    pageNumbers.push(1);
+                                                                    pageNumbers.push('...');
+                                                                    for (let i = historyTotalPages - 3; i <= historyTotalPages; i++) pageNumbers.push(i);
+                                                                } else {
+                                                                    pageNumbers.push(1);
+                                                                    pageNumbers.push('...');
+                                                                    for (let i = historyPage - 1; i <= historyPage + 1; i++) pageNumbers.push(i);
+                                                                    pageNumbers.push('...');
+                                                                    pageNumbers.push(historyTotalPages);
+                                                                }
+                                                            }
+
+                                                            return pageNumbers.map((page, idx) => (
+                                                                page === '...' ? (
+                                                                    <span key={`h-ellipsis-${idx}`} className="w-8 h-8 flex items-center justify-center text-text-muted text-xs">•••</span>
+                                                                ) : (
+                                                                    <button
+                                                                        key={page}
+                                                                        onClick={() => setHistoryPage(page as number)}
+                                                                        className={`w-8 h-8 rounded-lg text-xs font-bold transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:outline-none ${historyPage === page
+                                                                            ? "bg-gradient-to-br from-purple-500 to-purple-600 text-white shadow-lg shadow-purple-500/30 scale-110"
+                                                                            : "hover:bg-bg-hover text-text-muted hover:text-text-main hover:scale-105"
+                                                                            }`}
+                                                                    >
+                                                                        {page}
+                                                                    </button>
+                                                                )
+                                                            ));
+                                                        })()}
+                                                    </div>
+
+                                                    <button
+                                                        onClick={() => setHistoryPage(p => Math.min(historyTotalPages, p + 1))}
+                                                        disabled={historyPage >= historyTotalPages}
+                                                        className="px-3 h-8 rounded-lg flex items-center gap-1.5 hover:bg-bg-hover disabled:opacity-30 disabled:hover:bg-transparent transition-all text-text-main text-xs font-medium group focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:outline-none cursor-pointer disabled:cursor-not-allowed"
+                                                    >
+                                                        ถัดไป
+                                                        <svg className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                                        </svg>
+                                                    </button>
+
+                                                    <button
+                                                        onClick={() => setHistoryPage(historyTotalPages)}
+                                                        disabled={historyPage >= historyTotalPages}
+                                                        className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-bg-hover disabled:opacity-30 disabled:hover:bg-transparent transition-all text-text-main group focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:outline-none cursor-pointer disabled:cursor-not-allowed"
+                                                        title="หน้าสุดท้าย"
+                                                    >
+                                                        <svg className="w-4 h-4 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                )}
+                                    );
+                                })()}
                             </>
                         )}
                     </div>
@@ -552,11 +663,6 @@ const FollowUpPlanManager = React.memo(function FollowUpPlanManager({ customers,
                         <tbody className="divide-y divide-border-light">
                             {paginatedQueue.length > 0 ? (
                                 paginatedQueue
-                                    .filter(item => {
-                                        // Hide if already completed in DB (outcome='completed')
-                                        const logKey = `${item.customerId}-${item.branchName}-${item.round}`;
-                                        return !completedLogKeys.has(logKey);
-                                    })
                                     .map((item, index) => {
                                         const isCompleted = recentlyCompleted.has(item.id);
                                         const logKey = `${item.customerId}-${item.branchName}-${item.round}`;
@@ -678,12 +784,17 @@ const FollowUpPlanManager = React.memo(function FollowUpPlanManager({ customers,
                 </div>
 
                 {/* Pagination Footer */}
-                {filteredQueue.length > 0 && (
-                    <div className="px-3 py-3 bg-bg-hover border-t border-border-light">
-                        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-                            <div className="flex items-center gap-4">
+                {totalPages > 1 && (
+                    <div className="px-6 py-4 border-t border-border-light bg-gradient-to-r from-bg-hover to-transparent">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></div>
+                                <span className="text-xs font-medium text-text-main">
+                                    หน้า {currentPage} / {totalPages}
+                                </span>
+                                <div className="h-4 w-px bg-border-light mx-2"></div>
                                 <span className="text-xs text-text-muted">
-                                    {(currentPage - 1) * itemsPerPage + 1}–{Math.min(currentPage * itemsPerPage, filteredQueue.length)} จาก {filteredQueue.length} รายการ
+                                    {((currentPage - 1) * itemsPerPage) + 1}–{Math.min(currentPage * itemsPerPage, filteredQueue.length)} จาก {filteredQueue.length} รายการ
                                 </span>
                             </div>
 
@@ -691,23 +802,28 @@ const FollowUpPlanManager = React.memo(function FollowUpPlanManager({ customers,
                                 <button
                                     onClick={() => setCurrentPage(1)}
                                     disabled={currentPage === 1}
-                                    className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-bg-hover disabled:opacity-30 disabled:hover:bg-transparent transition-all text-text-main group"
+                                    className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-bg-hover disabled:opacity-30 disabled:hover:bg-transparent transition-all text-text-main group focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:outline-none cursor-pointer disabled:cursor-not-allowed"
                                     title="หน้าแรก"
                                 >
-                                    <ChevronRight className="w-4 h-4 rotate-180" />
+                                    <svg className="w-4 h-4 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                                    </svg>
                                 </button>
 
                                 <button
                                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                                     disabled={currentPage === 1}
-                                    className="px-3 h-8 rounded-lg flex items-center gap-1.5 hover:bg-bg-hover disabled:opacity-30 disabled:hover:bg-transparent transition-all text-text-main text-xs font-medium group"
+                                    className="px-3 h-8 rounded-lg flex items-center gap-1.5 hover:bg-bg-hover disabled:opacity-30 disabled:hover:bg-transparent transition-all text-text-main text-xs font-medium group focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:outline-none cursor-pointer disabled:cursor-not-allowed"
                                 >
+                                    <svg className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                                    </svg>
                                     ก่อนหน้า
                                 </button>
 
                                 <div className="flex gap-1">
                                     {(() => {
-                                        const pageNumbers = [];
+                                        const pageNumbers: (number | string)[] = [];
                                         const maxVisible = 5;
 
                                         if (totalPages <= maxVisible) {
@@ -737,9 +853,9 @@ const FollowUpPlanManager = React.memo(function FollowUpPlanManager({ customers,
                                                 <button
                                                     key={page}
                                                     onClick={() => setCurrentPage(page as number)}
-                                                    className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${currentPage === page
-                                                        ? "bg-indigo-600 text-white shadow-lg"
-                                                        : "hover:bg-bg-hover text-text-muted hover:text-text-main"
+                                                    className={`w-8 h-8 rounded-lg text-xs font-bold transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:outline-none ${currentPage === page
+                                                        ? "bg-gradient-to-br from-indigo-500 to-indigo-600 text-white shadow-lg shadow-indigo-500/30 scale-110"
+                                                        : "hover:bg-bg-hover text-text-muted hover:text-text-main hover:scale-105"
                                                         }`}
                                                 >
                                                     {page}
@@ -752,18 +868,23 @@ const FollowUpPlanManager = React.memo(function FollowUpPlanManager({ customers,
                                 <button
                                     onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                                     disabled={currentPage === totalPages}
-                                    className="px-3 h-8 rounded-lg flex items-center gap-1.5 hover:bg-bg-hover disabled:opacity-30 disabled:hover:bg-transparent transition-all text-text-main text-xs font-medium group"
+                                    className="px-3 h-8 rounded-lg flex items-center gap-1.5 hover:bg-bg-hover disabled:opacity-30 disabled:hover:bg-transparent transition-all text-text-main text-xs font-medium group focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:outline-none cursor-pointer disabled:cursor-not-allowed"
                                 >
                                     ถัดไป
+                                    <svg className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                    </svg>
                                 </button>
 
                                 <button
                                     onClick={() => setCurrentPage(totalPages)}
                                     disabled={currentPage === totalPages}
-                                    className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-bg-hover disabled:opacity-30 disabled:hover:bg-transparent transition-all text-text-main group"
+                                    className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-bg-hover disabled:opacity-30 disabled:hover:bg-transparent transition-all text-text-main group focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:outline-none cursor-pointer disabled:cursor-not-allowed"
                                     title="หน้าสุดท้าย"
                                 >
-                                    <ChevronRight className="w-4 h-4" />
+                                    <svg className="w-4 h-4 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                                    </svg>
                                 </button>
                             </div>
                         </div>
