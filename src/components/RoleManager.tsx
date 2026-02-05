@@ -110,12 +110,16 @@ export default function RoleManager({ roles, onSave, onDelete }: RoleManagerProp
 
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center">
-                <h1 className="text-3xl font-bold tracking-tight text-text-main">Role Management</h1>
-                <button onClick={() => handleOpenModal()} className="btn btn-primary px-6">
-                    <Plus className="w-5 h-5" />
-                    <span>เพิ่มบทบาท</span>
-                </button>
+            <div className="flex flex-col gap-4">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight text-text-main">Role Management</h1>
+                </div>
+                <div className="flex justify-end">
+                    <button onClick={() => handleOpenModal()} className="btn btn-primary px-6">
+                        <Plus className="w-5 h-5" />
+                        <span>เพิ่มบทบาท</span>
+                    </button>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

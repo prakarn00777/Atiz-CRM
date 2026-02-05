@@ -125,15 +125,11 @@ export default function UserManager({ users, roles, onSave, onDelete }: UserMana
         <div className="space-y-6">
             {/* Header with Search and Filters */}
             <div className="flex flex-col gap-4">
-                <div className="flex justify-between items-center">
+                <div>
                     <h1 className="text-3xl font-bold tracking-tight text-text-main">User Management</h1>
-                    <button onClick={() => handleOpenModal()} className="btn btn-primary px-6">
-                        <Plus className="w-5 h-5" />
-                        <span>Add User</span>
-                    </button>
                 </div>
 
-                {/* Search and Filter Bar */}
+                {/* Search, Filter Bar & Add Button */}
                 <div className="flex items-center gap-3 flex-wrap">
                     <div className="relative flex-1 min-w-[200px] max-w-md">
                         <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
@@ -157,6 +153,12 @@ export default function UserManager({ users, roles, onSave, onDelete }: UserMana
                             placeholder="บทบาท"
                             icon={<Filter className="w-3.5 h-3.5" />}
                         />
+                    </div>
+                    <div className="ml-auto shrink-0">
+                        <button onClick={() => handleOpenModal()} className="btn btn-primary px-6">
+                            <Plus className="w-5 h-5" />
+                            <span>Add User</span>
+                        </button>
                     </div>
                 </div>
             </div>

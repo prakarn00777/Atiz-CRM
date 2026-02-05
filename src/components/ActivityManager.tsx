@@ -171,63 +171,61 @@ export default function ActivityManager({ activities, customers, users = [], onA
 
             <div className="glass-card overflow-hidden border-indigo-500/5 flex flex-col h-[calc(100vh-175px)]">
                 <div className="overflow-auto custom-scrollbar flex-1">
-                    <div className="overflow-auto custom-scrollbar flex-1 px-2">
-                        {/* Header */}
-                        <div className="sticky top-0 z-10 bg-card-bg shadow-sm mb-2 backdrop-blur-xl">
-                            <div className="flex bg-bg-hover text-text-muted text-xs uppercase tracking-wider rounded-lg">
-                                <div className="px-4 py-3 font-semibold w-[5%] text-center">No.</div>
-                                <div className="px-4 py-3 font-semibold w-[18%] text-left">Activity Info</div>
-                                <div className="px-4 py-3 font-semibold w-[13%] text-center">Customer</div>
-                                <div className="px-4 py-3 font-semibold w-[10%] text-center">Type</div>
-                                <div className="px-4 py-3 font-semibold w-[10%] text-center">Status</div>
-                                <div className="px-4 py-3 font-semibold w-[12%] text-center">Assignee</div>
-                                <div className="px-4 py-3 font-semibold w-[18%] text-center">Created By</div>
-                                <div className="px-4 py-3 font-semibold w-[8%] text-center">Actions</div>
-                            </div>
-                        </div>
-
-                        <div className="space-y-1">
+                    <table className="w-full">
+                        <thead className="sticky top-0 z-10 bg-card-bg shadow-sm backdrop-blur-xl">
+                            <tr className="bg-bg-hover text-text-muted text-xs uppercase tracking-wider border-b border-border-light">
+                                <th className="px-4 py-3 font-semibold w-[4%] text-center">No.</th>
+                                <th className="px-4 py-3 font-semibold w-[28%] text-left">Summary</th>
+                                <th className="px-4 py-3 font-semibold w-[13%] text-center">Customer</th>
+                                <th className="px-4 py-3 font-semibold w-[9%] text-center">Type</th>
+                                <th className="px-4 py-3 font-semibold w-[9%] text-center">Status</th>
+                                <th className="px-4 py-3 font-semibold w-[11%] text-center">Assignee</th>
+                                <th className="px-4 py-3 font-semibold w-[18%] text-center">Created By</th>
+                                <th className="px-4 py-3 font-semibold w-[8%] text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border-light">
                             {paginatedActivities.length > 0 ? (
                                 paginatedActivities.map((activity, index) => (
-                                    <div key={activity.id} className="group relative flex items-center bg-bg-hover/30 hover:bg-bg-hover transition-all rounded-lg min-h-[56px] overflow-hidden">
-                                        <div className="px-4 py-3 text-center w-[5%] relative z-10">
+                                    <tr key={activity.id} className="group hover:bg-bg-hover transition-colors h-14">
+                                        <td className="px-4 py-3 text-center">
                                             <span className="text-xs text-text-muted opacity-60">{(currentPage - 1) * itemsPerPage + index + 1}</span>
-                                        </div>
-                                        <div className="px-4 py-3 text-left w-[18%] relative z-10">
-                                            <div className="flex flex-col gap-0.5 max-w-[280px]">
-                                                <div className="font-semibold text-text-main text-xs truncate" title={activity.title}>
+                                        </td>
+                                        <td className="px-4 py-3 text-left">
+                                            <div className="flex flex-col gap-0.5">
+                                                <div className="font-normal text-text-main text-xs truncate max-w-[450px]" title={activity.title}>
                                                     {activity.title || "Untitled Task"}
                                                 </div>
-                                                <div className="text-[10px] text-text-muted opacity-60 truncate" title={activity.content}>
-                                                    {activity.content || "-"}
-                                                </div>
+                                                {activity.content && (
+                                                    <div className="text-[10px] text-text-muted opacity-60 truncate max-w-[450px]" title={activity.content}>
+                                                        {activity.content}
+                                                    </div>
+                                                )}
                                             </div>
-                                        </div>
-                                        <div className="px-4 py-3 text-center w-[13%] relative z-10">
-                                            <div className="flex flex-col items-center">
-                                                <span className="text-xs text-text-main font-medium truncate max-w-full">{activity.customerName}</span>
-                                            </div>
-                                        </div>
-                                        <div className="px-4 py-3 text-center w-[10%] relative z-10">
-                                            <span className="px-2 py-0.5 rounded-md bg-bg-hover border border-border-light text-text-main text-[10px] font-medium whitespace-nowrap">
+                                        </td>
+                                        <td className="px-4 py-3 text-center">
+                                            <span className="text-xs text-text-main font-medium line-clamp-1">{activity.customerName}</span>
+                                        </td>
+                                        <td className="px-4 py-3 text-center">
+                                            <span className="text-xs text-text-muted whitespace-nowrap">
                                                 {activity.activityType}
                                             </span>
-                                        </div>
-                                        <div className="px-4 py-3 text-center w-[10%] relative z-10">
+                                        </td>
+                                        <td className="px-4 py-3 text-center">
                                             <div className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-bold whitespace-nowrap ${getStatusColor(activity.status || "Open")}`}>
                                                 {getStatusIcon(activity.status || "Open")}
                                                 {activity.status || "Open"}
                                             </div>
-                                        </div>
-                                        <div className="px-4 py-3 text-center w-[12%] relative z-10">
+                                        </td>
+                                        <td className="px-4 py-3 text-center">
                                             <span className="text-xs text-indigo-400 font-medium">
                                                 {activity.assignee || "-"}
                                             </span>
-                                        </div>
-                                        <div className="px-4 py-3 text-center w-[18%] relative z-10">
+                                        </td>
+                                        <td className="px-4 py-3 text-center">
                                             <div className="flex flex-col items-center">
                                                 <span className="text-xs font-medium text-text-main">{activity.createdBy || "Admin"}</span>
-                                                <span className="text-[10px] text-text-muted opacity-70">
+                                                <span className="text-[10px] text-text-muted opacity-60">
                                                     {new Date(activity.createdAt!).toLocaleString('th-TH', {
                                                         month: 'short',
                                                         day: 'numeric',
@@ -237,14 +235,14 @@ export default function ActivityManager({ activities, customers, users = [], onA
                                                     })}
                                                 </span>
                                             </div>
-                                        </div>
-                                        <div className="px-4 py-3 text-center w-[8%] relative z-10">
+                                        </td>
+                                        <td className="px-4 py-3 text-center">
                                             <div className="flex justify-center">
                                                 <button
                                                     onClick={(e) => handleMenuToggle(e, activity.id!)}
-                                                    className={`p-2 rounded-lg transition-colors ${activeMenu === activity.id ? 'bg-indigo-500/20 text-indigo-500 dark:text-white' : 'hover:bg-bg-hover text-text-muted hover:text-text-main'}`}
+                                                    className={`p-2.5 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center ${activeMenu === activity.id ? 'bg-indigo-500/20 text-indigo-400' : 'hover:bg-bg-hover text-text-muted hover:text-text-main'}`}
                                                 >
-                                                    <MoreVertical className="w-4 h-4" />
+                                                    <MoreVertical className="w-5 h-5" />
                                                 </button>
 
                                                 {mounted && activeMenu === activity.id && menuPosition && createPortal(
@@ -276,19 +274,21 @@ export default function ActivityManager({ activities, customers, users = [], onA
                                                     document.body
                                                 )}
                                             </div>
-                                        </div>
-                                    </div>
+                                        </td>
+                                    </tr>
                                 ))
                             ) : (
-                                <div className="px-4 py-12 text-center">
-                                    <div className="flex flex-col items-center gap-2">
-                                        <LayoutList className="w-12 h-12 text-text-muted opacity-30" />
-                                        <p className="text-sm text-text-muted">ไม่พบข้อมูลกิจกรรม</p>
-                                    </div>
-                                </div>
+                                <tr>
+                                    <td colSpan={8} className="px-4 py-12 text-center">
+                                        <div className="flex flex-col items-center gap-2">
+                                            <LayoutList className="w-12 h-12 text-text-muted opacity-30" />
+                                            <p className="text-sm text-text-muted">ไม่พบข้อมูลกิจกรรม</p>
+                                        </div>
+                                    </td>
+                                </tr>
                             )}
-                        </div>
-                    </div>
+                        </tbody>
+                    </table>
                 </div>
 
                 {/* Pagination Controls */}
