@@ -123,6 +123,8 @@ export interface Issue {
     type: string;
     description?: string;
     attachments?: string | { name: string, type: string, size: number, data?: string, url?: string }[]; // JSON string or Array - supports both base64 (data) and URL
+    assignedTo?: string;
+    assignedAt?: string;
     createdBy?: string;
     createdAt?: string;
     modifiedBy?: string;

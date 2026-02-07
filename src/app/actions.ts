@@ -204,7 +204,7 @@ export async function getIssues(params?: PaginationParams): Promise<Issue[]> {
     try {
         let query = db
             .from('issues')
-            .select('id, customer_id, branch_name, case_number, title, description, type, severity, status, created_by, created_at, modified_by, modified_at, attachments, customers(name)')
+            .select('id, customer_id, branch_name, case_number, title, description, type, severity, status, assigned_to, assigned_at, created_by, created_at, modified_by, modified_at, attachments, customers(name)')
             .order('id', { ascending: false });
 
         if (params?.limit) {
@@ -230,6 +230,8 @@ export async function getIssues(params?: PaginationParams): Promise<Issue[]> {
             type: String(row.type),
             severity: String(row.severity) as Issue['severity'],
             status: String(row.status) as Issue['status'],
+            assignedTo: row.assigned_to ? String(row.assigned_to) : undefined,
+            assignedAt: row.assigned_at ? String(row.assigned_at) : undefined,
             createdBy: row.created_by ? String(row.created_by) : undefined,
             createdAt: row.created_at ? String(row.created_at) : undefined,
             modifiedBy: row.modified_by ? String(row.modified_by) : undefined,
@@ -510,21 +512,26 @@ export async function saveIssue(issueData: Partial<Issue>): Promise<ApiResponse<
         const { id, ...rest } = issueData;
         const isNew = isTemporaryId(id);
 
-        const dbData = {
+        const dbData: Record<string, unknown> = {
             customer_id: rest.customerId && rest.customerId > 0 ? rest.customerId : null,
             branch_name: rest.branchName,
-            case_number: isNew ? await generateNextCaseNumber() : rest.caseNumber,
             title: rest.title,
             description: rest.description,
             type: rest.type,
             severity: rest.severity,
             status: rest.status,
+            assigned_to: rest.assignedTo,
+            assigned_at: rest.assignedAt,
             attachments: rest.attachments,
             created_by: rest.createdBy,
             created_at: rest.createdAt,
             modified_by: rest.modifiedBy,
             modified_at: rest.modifiedAt
         };
+
+        if (isNew) {
+            dbData.case_number = await generateNextCaseNumber();
+        }
 
         let result;
         if (!isNew) {
@@ -546,6 +553,42 @@ export async function saveIssue(issueData: Partial<Issue>): Promise<ApiResponse<
         return createSuccess(result as Issue);
     } catch (err) {
         return handleDbError(err, "saveIssue");
+    }
+}
+
+export async function assignIssue(issueId: number, assignedTo: string, modifiedBy: string): Promise<ApiResponse<{ assignedTo: string; assignedAt: string }>> {
+    try {
+        if (!assignedTo || !modifiedBy) {
+            return createError("Missing assignedTo or modifiedBy", "VALIDATION_ERROR");
+        }
+
+        // Check if already assigned
+        const { data: existing } = await db
+            .from('issues')
+            .select('assigned_to')
+            .eq('id', issueId)
+            .single();
+
+        if (existing?.assigned_to) {
+            return createError(`เคสนี้ถูกรับโดย ${existing.assigned_to} แล้ว`, "VALIDATION_ERROR");
+        }
+
+        const now = new Date().toISOString();
+        const { error } = await db
+            .from('issues')
+            .update({
+                assigned_to: assignedTo,
+                assigned_at: now,
+                status: 'กำลังดำเนินการ',
+                modified_by: modifiedBy,
+                modified_at: now,
+            })
+            .eq('id', issueId);
+
+        if (error) throw error;
+        return createSuccess({ assignedTo, assignedAt: now });
+    } catch (err) {
+        return handleDbError(err, "assignIssue");
     }
 }
 

@@ -1,14 +1,12 @@
 "use client";
 
 import { memo, useState } from "react";
-import { LayoutDashboard, LogOut, Settings, ChevronRight, UserCog, ShieldCheck, AlertCircle, Wrench, Megaphone, Sun, Moon } from "lucide-react";
+import { LayoutDashboard, Settings, ChevronRight, UserCog, ShieldCheck, AlertCircle, Wrench, Megaphone } from "lucide-react";
 import ActiveItemEffect from "./ActiveItemEffect";
-import { useTheme } from "./ThemeProvider";
 
 interface SidebarProps {
     currentView: string;
     setView: (view: string) => void;
-    onLogout: () => void;
     userRole: {
         id?: string;
         name?: string;
@@ -44,8 +42,7 @@ const mainMenus = [
     },
 ];
 
-const Sidebar = memo(function Sidebar({ currentView, setView, onLogout, userRole, onQuickAction }: SidebarProps) {
-    const { theme, toggleTheme } = useTheme();
+const Sidebar = memo(function Sidebar({ currentView, setView, userRole, onQuickAction }: SidebarProps) {
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [expandedMenus, setExpandedMenus] = useState<string[]>(["cs_dev_group", "marketing_group"]);
@@ -324,43 +321,6 @@ const Sidebar = memo(function Sidebar({ currentView, setView, onLogout, userRole
                 </div>
             )}
 
-            {/* Theme Toggle */}
-            <div className="pt-2 mt-2 border-t border-border-light">
-                <button
-                    onClick={toggleTheme}
-                    className={`btn btn-ghost w-full text-text-muted hover:text-text-main hover:bg-bg-hover text-sm transition-all duration-200 rounded-xl ${isCollapsed ? "justify-center p-2" : "justify-start"
-                        }`}
-                    title={isCollapsed ? "Switch Theme" : ""}
-                >
-                    <div className={`flex items-center ${isCollapsed ? "justify-center" : "gap-3"}`}>
-                        {theme === 'dark' ? (
-                            <Sun className="w-4 h-4 text-amber-400" />
-                        ) : (
-                            <Moon className="w-4 h-4 text-indigo-500" />
-                        )}
-                        {!isCollapsed && (
-                            <span className="font-medium">{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
-                        )}
-                    </div>
-                </button>
-            </div>
-
-            {/* Logout */}
-            <div className="pt-2 mt-2 border-t border-border-light">
-                <button
-                    onClick={onLogout}
-                    className={`btn btn-ghost w-full text-rose-500 hover:text-rose-400 hover:bg-rose-500/5 text-sm transition-all duration-200 rounded-xl ${isCollapsed ? "justify-center p-2" : "justify-start"
-                        }`}
-                    title={isCollapsed ? "Logout" : ""}
-                >
-                    <div className={`flex items-center ${isCollapsed ? "justify-center" : "gap-3"}`}>
-                        <LogOut className="w-4 h-4 flex-shrink-0" />
-                        {!isCollapsed && (
-                            <span className="animate-in fade-in duration-300 font-medium">Logout</span>
-                        )}
-                    </div>
-                </button>
-            </div>
         </aside>
     );
 });

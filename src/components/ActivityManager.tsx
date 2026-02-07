@@ -204,7 +204,7 @@ export default function ActivityManager({ activities, customers, users = [], onA
                                             </div>
                                         </td>
                                         <td className="px-4 py-3 text-center">
-                                            <span className="text-xs text-text-main font-medium line-clamp-1">{activity.customerName}</span>
+                                            <span className="text-xs text-text-main line-clamp-1">{activity.customerName}</span>
                                         </td>
                                         <td className="px-4 py-3 text-center">
                                             <span className="text-xs text-text-muted whitespace-nowrap">

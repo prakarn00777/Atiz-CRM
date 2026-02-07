@@ -24,7 +24,10 @@ export default function SearchableCustomerSelect({
 
     const selectedCustomer = customers.find(c => c.id === value);
 
+    const DISPLAY_LIMIT = 50;
+
     const filteredCustomers = customers.filter(c => {
+        if (!searchTerm) return true;
         const caseNumber = `DE${c.id.toString().padStart(4, "0")}`;
         const searchLower = searchTerm.toLowerCase();
         return (
@@ -33,6 +36,9 @@ export default function SearchableCustomerSelect({
             (c.subdomain || "").toLowerCase().includes(searchLower)
         );
     });
+
+    const displayCustomers = filteredCustomers.slice(0, DISPLAY_LIMIT);
+    const hasMore = filteredCustomers.length > DISPLAY_LIMIT;
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -85,8 +91,8 @@ export default function SearchableCustomerSelect({
             </button>
 
             {isOpen && (
-                <div className="absolute z-50 w-full mt-1 bg-card-bg border border-border rounded-xl shadow-2xl max-h-64 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150"
-                    style={{ willChange: "opacity, transform" }}>
+                <div className="absolute z-[200] w-full mt-1 border border-border rounded-xl shadow-2xl max-h-64 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150 backdrop-blur-xl"
+                    style={{ willChange: "opacity, transform", backgroundColor: "var(--bg-dark)" }}>
                     <div className="p-2 border-b border-border">
                         <div className="relative">
                             <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted" />
@@ -95,29 +101,36 @@ export default function SearchableCustomerSelect({
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 placeholder="ค้นหา รหัส, ชื่อ, หรือลิงก์..."
-                                className="w-full pl-8 pr-3 py-1.5 bg-black/20 border border-border rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500"
+                                className="w-full pl-8 pr-3 py-1.5 bg-bg-hover border border-border rounded-lg text-xs text-text-main focus:outline-none focus:border-indigo-500"
                                 autoFocus
                             />
                         </div>
                     </div>
                     <div className="overflow-y-auto max-h-48 custom-scrollbar">
-                        {filteredCustomers.length > 0 ? (
-                            filteredCustomers.map(customer => (
-                                <button
-                                    key={customer.id}
-                                    type="button"
-                                    onClick={() => handleSelect(customer)}
-                                    className="w-full px-3 py-2 text-left hover:bg-bg-hover transition-colors border-b border-border-light last:border-0"
-                                >
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-xs font-mono text-indigo-400">
-                                            DE{customer.id.toString().padStart(4, "0")}
-                                        </span>
-                                        <span className="text-xs text-text-main/90 flex-1 truncate">{customer.name}</span>
+                        {displayCustomers.length > 0 ? (
+                            <>
+                                {displayCustomers.map(customer => (
+                                    <button
+                                        key={customer.id}
+                                        type="button"
+                                        onClick={() => handleSelect(customer)}
+                                        className="w-full px-3 py-2 text-left hover:bg-bg-hover transition-colors border-b border-border-light last:border-0"
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs font-mono text-indigo-400">
+                                                DE{customer.id.toString().padStart(4, "0")}
+                                            </span>
+                                            <span className="text-xs text-text-main/90 flex-1 truncate">{customer.name}</span>
+                                        </div>
+                                        <div className="text-[10px] text-text-muted truncate mt-0.5">{customer.subdomain}</div>
+                                    </button>
+                                ))}
+                                {hasMore && (
+                                    <div className="px-3 py-2.5 text-center text-[10px] text-text-muted border-t border-border-light">
+                                        แสดง {DISPLAY_LIMIT} จาก {filteredCustomers.length} รายการ · พิมพ์เพื่อค้นหาเพิ่มเติม
                                     </div>
-                                    <div className="text-[10px] text-text-muted truncate mt-0.5">{customer.subdomain}</div>
-                                </button>
-                            ))
+                                )}
+                            </>
                         ) : (
                             <div className="px-3 py-4 text-center text-xs text-text-muted">
                                 ไม่พบข้อมูลลูกค้า

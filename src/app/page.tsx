@@ -10,6 +10,7 @@ import RoleManager from "@/components/RoleManager";
 import ActivityManager from "@/components/ActivityManager";
 import Toast from "@/components/Toast";
 import IssueManager from "@/components/IssueManager";
+import MyTasks from "@/components/MyTasks";
 import Dashboard from "@/components/Dashboard";
 import InstallationManager from "@/components/InstallationManager";
 import InstallationRequestModal from "@/components/InstallationRequestModal";
@@ -25,6 +26,7 @@ import LeadModal from "@/components/modals/LeadModal";
 import ActivityModal from "@/components/modals/ActivityModal";
 import { Customer, Branch, Installation, Issue, UsageStatus, Activity as CSActivity, ActivityType, SentimentType, Lead, GoogleSheetLead, MasterDemoLead, BusinessMetrics, NewSalesRecord, RenewalsRecord } from "@/types";
 import { useNotification } from "@/components/NotificationProvider";
+import { useTheme } from "@/components/ThemeProvider";
 import { db } from "@/lib/db";
 
 // Safe localStorage wrapper to handle QuotaExceededError
@@ -82,7 +84,7 @@ const stripAttachmentsForCache = (issues: Issue[]): Issue[] => {
 import {
   importCustomersFromCSV, getCustomers, getIssues, getInstallations,
   getUsers, saveUser, deleteUser, getRoles, saveRole, deleteRole, loginUser,
-  saveIssue, deleteIssue, saveCustomer, deleteCustomer, saveInstallation, updateInstallationStatus,
+  saveIssue, deleteIssue, assignIssue, saveCustomer, deleteCustomer, saveInstallation, updateInstallationStatus,
   getActivities, saveActivity, deleteActivity,
   getLeads, saveLead, deleteLead, getBusinessMetrics, saveFollowUpLog
 } from "./actions";
@@ -92,6 +94,8 @@ export default function CRMPage() {
     if (typeof window === 'undefined') return "dashboard";
     return localStorage.getItem("crm_last_view_v2") || "dashboard";
   });
+  const { theme, toggleTheme } = useTheme();
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isModalOpen, setModalOpen] = useState(false);
@@ -192,6 +196,7 @@ export default function CRMPage() {
     }
   }, [isLeadModalOpen, editingLead]);
   const [isSavingActivity, setIsSavingActivity] = useState(false);
+  const [isSavingIssue, setIsSavingIssue] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -697,6 +702,8 @@ export default function CRMPage() {
 
   const handleSaveIssue = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (isSavingIssue) return;
+    setIsSavingIssue(true);
     const formData = new FormData(e.currentTarget);
 
     const data: Issue = {
@@ -711,6 +718,8 @@ export default function CRMPage() {
       type: formData.get("type") as string,
       description: formData.get("description") as string,
       attachments: selectedFiles,
+      assignedTo: editingIssue?.assignedTo,
+      assignedAt: editingIssue?.assignedAt,
       createdBy: editingIssue ? editingIssue.createdBy : user?.name,
       createdAt: editingIssue ? editingIssue.createdAt : new Date().toISOString(),
       modifiedBy: user?.name,
@@ -771,6 +780,8 @@ export default function CRMPage() {
       console.error("Failed to save issue:", err);
       setIssues(previousIssues);
       setToast({ message: "เกิดข้อผิดพลาดในการเชื่อมต่อ", type: "error" });
+    } finally {
+      setIsSavingIssue(false);
     }
   };
 
@@ -1137,6 +1148,49 @@ export default function CRMPage() {
     setDeleteConfirm({ type: 'issue', id, title: issue?.title || 'Issue' });
   }, [issues]);
 
+  const [assigningIssueId, setAssigningIssueId] = useState<number | null>(null);
+  const handleAssignIssue = useCallback(async (issue: Issue) => {
+    if (!user?.name || assigningIssueId === issue.id) return;
+    setAssigningIssueId(issue.id);
+    const prev = [...issues];
+    const updated = {
+      ...issue,
+      assignedTo: user.name,
+      assignedAt: new Date().toISOString(),
+      status: "กำลังดำเนินการ" as const,
+      modifiedBy: user.name,
+      modifiedAt: new Date().toISOString(),
+    };
+    setIssues(issues.map(i => i.id === issue.id ? updated : i));
+    setToast({ message: `รับเคส ${issue.caseNumber} เรียบร้อยแล้ว`, type: "success" });
+    pushNotification("✅ รับเคสแล้ว", `${user.name} รับเคส [${issue.caseNumber}] ${issue.title}`, "success");
+    try {
+      const result = await assignIssue(issue.id, user.name, user.name);
+      if (result.success && result.data) {
+        // Sync server timestamp
+        setIssues(prev => prev.map(i => i.id === issue.id ? { ...i, assignedAt: result.data!.assignedAt } : i));
+      } else {
+        setIssues(prev);
+        setToast({ message: "เกิดข้อผิดพลาด: " + result.error, type: "error" });
+      }
+    } catch {
+      setIssues(prev);
+      setToast({ message: "เกิดข้อผิดพลาดในการเชื่อมต่อ", type: "error" });
+    } finally {
+      setAssigningIssueId(null);
+    }
+  }, [issues, user?.name, pushNotification, assigningIssueId]);
+
+  const handleCloseIssueModal = useCallback(() => {
+    setIssueModalOpen(false);
+  }, []);
+
+  const handleAssignFromModal = useCallback(async (issue: Issue) => {
+    setIssueModalOpen(false);
+    setEditingIssue(null);
+    await handleAssignIssue(issue);
+  }, [handleAssignIssue]);
+
   if (!mounted) return null;
 
   return (
@@ -1209,7 +1263,6 @@ export default function CRMPage() {
           <Sidebar
             currentView={currentView}
             setView={setView}
-            onLogout={() => { setUser(null); safeLocalStorage.removeItem("crm_user_v2"); }}
             userRole={userRole}
             onQuickAction={handleQuickAction}
           />
@@ -1217,14 +1270,52 @@ export default function CRMPage() {
             <div className={`p-4 lg:p-8 max-w-[1600px] mx-auto relative z-10 ${currentView === 'dashboard' ? 'min-h-full flex flex-col' : ''}`}>
               <div className="absolute top-4 lg:top-8 right-4 lg:right-8 z-[100] flex items-center gap-3">
                 <NotificationBell />
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all cursor-pointer group">
-                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold shadow-lg shadow-indigo-500/20">
-                    {user?.name?.charAt(0).toUpperCase() || '?'}
+                <div className="relative">
+                  <div
+                    onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all cursor-pointer group"
+                  >
+                    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold shadow-lg shadow-indigo-500/20">
+                      {user?.name?.charAt(0).toUpperCase() || '?'}
+                    </div>
+                    <div className="hidden sm:block">
+                      <p className="text-xs font-bold text-white leading-tight">{user?.name || 'User'}</p>
+                      <p className="text-[10px] text-slate-400 leading-tight">{roles.find(r => r.id === user?.role)?.name || 'Member'}</p>
+                    </div>
                   </div>
-                  <div className="hidden sm:block">
-                    <p className="text-xs font-bold text-white leading-tight">{user?.name || 'User'}</p>
-                    <p className="text-[10px] text-slate-400 leading-tight">{roles.find(r => r.id === user?.role)?.name || 'Member'}</p>
-                  </div>
+                  {profileMenuOpen && (
+                    <>
+                      <div className="fixed inset-0 z-[199]" onClick={() => setProfileMenuOpen(false)} />
+                      <div className="absolute top-full right-0 mt-2 w-48 py-2 bg-card-bg border border-border-light rounded-xl shadow-2xl z-[200] animate-in fade-in zoom-in-95 duration-150">
+                        <button
+                          onClick={() => { setView("my_tasks"); setProfileMenuOpen(false); }}
+                          className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-text-muted hover:bg-bg-hover hover:text-text-main transition-colors"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
+                          งานของฉัน
+                        </button>
+                        <button
+                          onClick={() => { toggleTheme(); setProfileMenuOpen(false); }}
+                          className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-text-muted hover:bg-bg-hover hover:text-text-main transition-colors"
+                        >
+                          {theme === 'dark' ? (
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+                          ) : (
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
+                          )}
+                          {theme === 'dark' ? 'Switch to Light' : 'Switch to Dark'}
+                        </button>
+                        <div className="my-1 border-t border-border-light" />
+                        <button
+                          onClick={() => { setUser(null); safeLocalStorage.removeItem("crm_user_v2"); setProfileMenuOpen(false); }}
+                          className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                          ออกจากระบบ
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
               {currentView === "dashboard" ? (
@@ -1262,6 +1353,24 @@ export default function CRMPage() {
                 <UserManager users={users} roles={roles} onSave={handleSaveUser} onDelete={handleDeleteUser} />
               ) : currentView === "role_management" ? (
                 <RoleManager roles={roles} onSave={handleSaveRole} onDelete={handleDeleteRole} />
+              ) : currentView === "my_tasks" ? (
+                <MyTasks
+                  issues={issues}
+                  activities={activities}
+                  currentUser={user?.name || ""}
+                  onEditIssue={handleIssueEdit}
+                  onEditActivity={(activity) => {
+                    setEditingActivity(activity);
+                    setSelectedCustomerId(activity.customerId);
+                    setSelectedCustomerName(activity.customerName);
+                    setActivitySentiment(activity.sentiment);
+                    setActivityType(activity.activityType);
+                    setActivityStatus(activity.status);
+                    setActivityAssignee(activity.assignee || "");
+                    setActivityFollowUp(activity.followUpDate || "");
+                    setActivityModalOpen(true);
+                  }}
+                />
               ) : currentView === "issues" ? (
                 <IssueManager issues={issues} customers={customers} onAdd={handleIssueAdd} onEdit={handleIssueEdit} onDelete={handleIssueDeleteConfirm} />
               ) : currentView === "cs_activity" ? (
@@ -1379,7 +1488,7 @@ export default function CRMPage() {
           {/* Issue Modal */}
           <IssueModal
             isOpen={isIssueModalOpen}
-            onClose={() => setIssueModalOpen(false)}
+            onClose={handleCloseIssueModal}
             editingIssue={editingIssue}
             customers={customers}
             selectedCustomerId={selectedCustomerId}
@@ -1391,6 +1500,9 @@ export default function CRMPage() {
             modalIssueStatus={modalIssueStatus}
             setModalIssueStatus={setModalIssueStatus}
             onSave={handleSaveIssue}
+            isSaving={isSavingIssue}
+            onAssign={handleAssignFromModal}
+            currentUser={user?.name}
             setToast={setToast}
             setPreviewImage={setPreviewImage}
           />

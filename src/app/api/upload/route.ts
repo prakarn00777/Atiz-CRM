@@ -20,9 +20,10 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ success: false, error: "File too large (max 5MB)" }, { status: 400 });
         }
 
-        // Validate file type (images only)
-        if (!file.type.startsWith("image/")) {
-            return NextResponse.json({ success: false, error: "Only images are allowed" }, { status: 400 });
+        // Validate file type (images + PDF)
+        const allowedTypes = ["image/", "application/pdf"];
+        if (!allowedTypes.some(t => file.type.startsWith(t))) {
+            return NextResponse.json({ success: false, error: "Only images and PDFs are allowed" }, { status: 400 });
         }
 
         // Generate unique filename

@@ -145,6 +145,13 @@ const IssueRow = React.memo(function IssueRow({
         <span className="text-xs text-text-muted whitespace-nowrap">{issue.type}</span>
       </td>
       <td className="px-4 py-3 text-center">
+        {issue.assignedTo ? (
+          <span className="text-xs font-medium text-indigo-400">{issue.assignedTo}</span>
+        ) : (
+          <span className="text-xs text-text-muted">-</span>
+        )}
+      </td>
+      <td className="px-4 py-3 text-center">
         {issue.modifiedBy ? (
           <div className="flex flex-col items-center">
             <span className="text-xs font-medium text-text-main">{issue.modifiedBy}</span>
@@ -158,7 +165,7 @@ const IssueRow = React.memo(function IssueRow({
             </span>
           </div>
         ) : (
-          <span className="text-xs text-slate-600">-</span>
+          <span className="text-xs text-text-muted">-</span>
         )}
       </td>
       <td className="px-4 py-3 text-center">
@@ -189,18 +196,18 @@ const IssueRow = React.memo(function IssueRow({
                   top: `${menuPosition.top + 8}px`,
                   left: `${menuPosition.left - 144}px`,
                 }}
-                className="z-[9999] w-44 py-2 bg-[#1e293b] border border-white/10 rounded-xl shadow-2xl animate-in fade-in zoom-in duration-150 origin-top-right"
+                className="z-[9999] w-44 py-2 bg-card-bg border border-border-light rounded-xl shadow-2xl animate-in fade-in zoom-in duration-150 origin-top-right"
                 onClick={(e) => e.stopPropagation()}
               >
                 <button
                   role="menuitem"
                   onClick={handleEdit}
-                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-300 hover:bg-white/5 hover:text-white transition-colors"
+                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-text-muted hover:bg-bg-hover hover:text-text-main transition-colors"
                 >
                   <Edit2 className="w-4 h-4" aria-hidden="true" />
                   แก้ไขข้อมูล
                 </button>
-                <div className="my-1 border-t border-white/5" role="separator" />
+                <div className="my-1 border-t border-border-light" role="separator" />
                 <button
                   role="menuitem"
                   onClick={handleDelete}

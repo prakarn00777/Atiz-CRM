@@ -13,17 +13,23 @@ interface IssueManagerProps {
     onAdd: () => void;
     onEdit: (issue: Issue) => void;
     onDelete: (id: number) => void;
+    filterByAssignee?: string;
+    title?: string;
 }
 
-const IssueManager = React.memo(function IssueManager({ issues, customers: _customers, onAdd, onEdit, onDelete }: IssueManagerProps) {
+const IssueManager = React.memo(function IssueManager({ issues, customers: _customers, onAdd, onEdit, onDelete, filterByAssignee, title }: IssueManagerProps) {
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
     const [severityFilter, setSeverityFilter] = useState("all");
     const [dateRange, setDateRange] = useState({ start: "", end: "" });
     const [currentPage, setCurrentPage] = useState(1);
 
+    const baseIssues = useMemo(() =>
+        filterByAssignee ? issues.filter(i => i.assignedTo === filterByAssignee) : issues
+    , [issues, filterByAssignee]);
+
     const sortedIssues = useMemo(() => {
-        const filtered = issues.filter(issue => {
+        const filtered = baseIssues.filter(issue => {
             const matchesSearch =
                 issue.caseNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 issue.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -50,7 +56,7 @@ const IssueManager = React.memo(function IssueManager({ issues, customers: _cust
             const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
             return dateB - dateA;
         });
-    }, [issues, searchTerm, statusFilter, severityFilter, dateRange]);
+    }, [baseIssues, searchTerm, statusFilter, severityFilter, dateRange]);
 
     const itemsPerPage = 10;
     const totalPages = Math.ceil(sortedIssues.length / itemsPerPage);
@@ -62,7 +68,7 @@ const IssueManager = React.memo(function IssueManager({ issues, customers: _cust
     return (
         <div className="space-y-6">
             <div>
-                <h1 className="text-3xl font-bold tracking-tight mb-4 text-text-main">Issue Reporting</h1>
+                <h1 className="text-3xl font-bold tracking-tight mb-4 text-text-main">{title || "Issue Reporting"}</h1>
             </div>
 
             <div className="flex flex-col md:flex-row gap-4 items-end md:items-center justify-between">
@@ -129,12 +135,13 @@ const IssueManager = React.memo(function IssueManager({ issues, customers: _cust
                         <thead className="sticky top-0 z-10 bg-card-bg shadow-sm backdrop-blur-xl">
                             <tr className="bg-bg-hover text-text-muted text-xs uppercase tracking-wider border-b border-border-light">
                                 <th className="px-4 py-3 font-semibold w-[4%] text-center">No.</th>
-                                <th className="px-4 py-3 font-semibold w-[8%] text-center">Id</th>
-                                <th className="px-4 py-3 font-semibold w-[38%] text-center">Case Name</th>
-                                <th className="px-4 py-3 font-semibold w-[11%] text-center">Customer</th>
-                                <th className="px-4 py-3 font-semibold w-[8%] text-center">Severity</th>
+                                <th className="px-4 py-3 font-semibold w-[7%] text-center">Id</th>
+                                <th className="px-4 py-3 font-semibold w-[30%] text-center">Case Name</th>
+                                <th className="px-4 py-3 font-semibold w-[10%] text-center">Customer</th>
+                                <th className="px-4 py-3 font-semibold w-[7%] text-center">Severity</th>
                                 <th className="px-4 py-3 font-semibold w-[8%] text-center">Status</th>
-                                <th className="px-4 py-3 font-semibold w-[8%] text-center">Type</th>
+                                <th className="px-4 py-3 font-semibold w-[7%] text-center">Type</th>
+                                <th className="px-4 py-3 font-semibold w-[8%] text-center">Assigned To</th>
                                 <th className="px-4 py-3 font-semibold w-[9%] text-center">Modified By</th>
                                 <th className="px-4 py-3 font-semibold w-[6%] text-center">Actions</th>
                             </tr>
