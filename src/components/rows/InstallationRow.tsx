@@ -14,17 +14,17 @@ interface InstallationRowProps {
 
 const getStatusIcon = (status: string) => {
   switch (status) {
-    case "Pending": return <Clock className="w-4 h-4 text-amber-400" />;
-    case "Completed": return <CheckCircle2 className="w-4 h-4 text-emerald-400" />;
-    default: return <AlertCircle className="w-4 h-4 text-slate-400" />;
+    case "Pending": return <Clock className="w-4 h-4 text-amber-600" />;
+    case "Completed": return <CheckCircle2 className="w-4 h-4 text-emerald-600" />;
+    default: return <AlertCircle className="w-4 h-4 text-slate-500" />;
   }
 };
 
 const getStatusStyle = (status: string) => {
   switch (status) {
-    case "Pending": return "bg-amber-500/10 text-amber-400 border-amber-500/20";
-    case "Completed": return "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
-    default: return "bg-slate-500/10 text-slate-400 border-slate-500/20";
+    case "Pending": return "bg-amber-500/10 text-amber-600 border-amber-500/20";
+    case "Completed": return "bg-emerald-500/10 text-emerald-600 border-emerald-500/20";
+    default: return "bg-slate-500/10 text-slate-500 border-slate-500/20";
   }
 };
 
@@ -96,8 +96,8 @@ const InstallationRow = React.memo(function InstallationRow({
       <td className="px-4 py-3 text-center">
         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${
           inst.installationType === "new"
-            ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-            : "bg-sky-500/10 text-sky-400 border border-sky-500/20"
+            ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
+            : "bg-sky-500/10 text-sky-500 border border-sky-500/20"
         }`}>
           {inst.installationType === "new" ? "ลูกค้าใหม่" : "เพิ่มสาขา"}
         </span>
@@ -108,7 +108,7 @@ const InstallationRow = React.memo(function InstallationRow({
             href={displayLink.startsWith('http') ? displayLink : `https://${displayLink}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="block text-xs text-indigo-400 hover:text-indigo-300 hover:underline transition-colors max-w-[200px] truncate"
+            className="block text-xs text-indigo-500 hover:text-indigo-600 hover:underline transition-colors max-w-[200px] truncate"
             title={displayLink}
           >
             {displayLink}

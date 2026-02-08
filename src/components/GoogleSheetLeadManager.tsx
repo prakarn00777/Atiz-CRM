@@ -99,10 +99,10 @@ export default function GoogleSheetLeadManager({ leads, isLoading, onRefresh }: 
         if (!status) return null;
         const statusLower = status.toLowerCase();
         if (statusLower.includes('ปิดการขาย') || statusLower.includes('won') || statusLower.includes('สำเร็จ')) {
-            return <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">{status}</span>;
+            return <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-600 border border-emerald-500/30">{status}</span>;
         }
         if (statusLower.includes('รอ') || statusLower.includes('pending')) {
-            return <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">{status}</span>;
+            return <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-600 border border-amber-500/30">{status}</span>;
         }
         if (statusLower.includes('ยกเลิก') || statusLower.includes('lost') || statusLower.includes('cancel')) {
             return <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/20 text-rose-500 border border-rose-500/30">{status}</span>;
@@ -116,7 +116,7 @@ export default function GoogleSheetLeadManager({ leads, isLoading, onRefresh }: 
                 <div className="flex flex-col">
                     <div className="flex items-center gap-3 mb-2">
                         <h1 className="text-3xl font-bold tracking-tight text-text-main">Leads</h1>
-                        <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5">
+                        <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-600 border border-emerald-500/30 flex items-center gap-1.5">
                             <ExternalLink className="w-3 h-3" />
                             Google Sheets
                         </span>
@@ -274,7 +274,7 @@ export default function GoogleSheetLeadManager({ leads, isLoading, onRefresh }: 
                                                     <span className="text-xs text-text-muted opacity-70">{lead.date}</span>
                                                 </td>
                                                 <td className="px-3 py-2.5">
-                                                    <span className={`text-xs font-semibold ${lead.product === 'Dr.Ease' ? 'text-cyan-400' : 'text-amber-400'}`}>
+                                                    <span className={`text-xs font-semibold ${lead.product === 'Dr.Ease' ? 'text-cyan-600' : 'text-amber-600'}`}>
                                                         {lead.product}
                                                     </span>
                                                 </td>

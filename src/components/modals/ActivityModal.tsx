@@ -55,10 +55,10 @@ const ActivityModal = React.memo(function ActivityModal({
                 <div className="p-6 border-b border-white/5 shrink-0">
                     <div className="flex items-center justify-between">
                         <h2 className="text-xl font-bold flex items-center gap-2 text-white">
-                            <HistoryIcon className="w-5 h-5 text-indigo-400" />
+                            <HistoryIcon className="w-5 h-5 text-indigo-500" />
                             {editingActivity ? "Edit Task" : "Add Task"}
                         </h2>
-                        <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors p-1 hover:bg-white/5 rounded-lg">
+                        <button onClick={onClose} className="text-slate-500 hover:text-white transition-colors p-1 hover:bg-white/5 rounded-lg">
                             <X />
                         </button>
                     </div>
@@ -67,14 +67,14 @@ const ActivityModal = React.memo(function ActivityModal({
                 {/* Status Flow Bar */}
                 <div className="px-6 py-4 bg-white/[0.02] border-b border-white/5">
                     <div className="flex items-center justify-between">
-                        <span className="text-xs text-slate-400">Status:</span>
+                        <span className="text-xs text-slate-500">Status:</span>
                         <div className="flex items-center gap-2">
                             <button
                                 type="button"
                                 onClick={() => setActivityStatus("Open")}
                                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${activityStatus === "Open"
                                     ? "bg-amber-500 text-white shadow-lg shadow-amber-500/30 scale-105"
-                                    : "bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20"
+                                    : "bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 border border-amber-500/20"
                                     }`}
                             >
                                 Open
@@ -85,7 +85,7 @@ const ActivityModal = React.memo(function ActivityModal({
                                 onClick={() => setActivityStatus("In Progress")}
                                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${activityStatus === "In Progress"
                                     ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/30 scale-105"
-                                    : "bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 border border-indigo-500/20"
+                                    : "bg-indigo-500/10 text-indigo-500 hover:bg-indigo-500/20 border border-indigo-500/20"
                                     }`}
                             >
                                 In Progress
@@ -96,7 +96,7 @@ const ActivityModal = React.memo(function ActivityModal({
                                 onClick={() => setActivityStatus("Success")}
                                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${activityStatus === "Success"
                                     ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 scale-105"
-                                    : "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20"
+                                    : "bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border border-emerald-500/20"
                                     }`}
                             >
                                 Success
@@ -108,7 +108,7 @@ const ActivityModal = React.memo(function ActivityModal({
                 <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
                     <form id="task-form" onSubmit={onSave} className="space-y-5">
                         <div className="space-y-1.5">
-                            <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">ชื่อลูกค้า</label>
+                            <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">ชื่อลูกค้า</label>
                             <SearchableCustomerSelect
                                 customers={customers}
                                 value={selectedCustomerId}
@@ -120,7 +120,7 @@ const ActivityModal = React.memo(function ActivityModal({
                         </div>
 
                         <div className="space-y-1.5">
-                            <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">Summary</label>
+                            <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Summary</label>
                             <input
                                 name="title"
                                 defaultValue={editingActivity?.title}
@@ -130,7 +130,7 @@ const ActivityModal = React.memo(function ActivityModal({
                         </div>
 
                         <div className="space-y-1.5">
-                            <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">ประเภทงาน</label>
+                            <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">ประเภทงาน</label>
                             <CustomSelect
                                 value={activityType}
                                 onChange={(val) => setActivityType(val as ActivityType)}
@@ -148,7 +148,7 @@ const ActivityModal = React.memo(function ActivityModal({
                         </div>
 
                         <div className="space-y-1.5">
-                            <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">ผู้รับผิดชอบ (Assignee)</label>
+                            <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">ผู้รับผิดชอบ (Assignee)</label>
                             <CustomSelect
                                 value={activityAssignee}
                                 onChange={(val) => setActivityAssignee(val)}
@@ -157,7 +157,7 @@ const ActivityModal = React.memo(function ActivityModal({
                         </div>
 
                         <div className="space-y-1">
-                            <label className="text-xs font-medium text-slate-400">Description</label>
+                            <label className="text-xs font-medium text-slate-500">Description</label>
                             <textarea
                                 name="content"
                                 defaultValue={editingActivity?.content}
@@ -168,7 +168,7 @@ const ActivityModal = React.memo(function ActivityModal({
                 </div>
 
                 <div className="p-6 border-t border-white/5 flex gap-3 shrink-0">
-                    <button type="button" onClick={onClose} className="flex-1 btn btn-ghost py-3 rounded-xl font-bold text-slate-400 hover:bg-white/5">Cancel</button>
+                    <button type="button" onClick={onClose} className="flex-1 btn btn-ghost py-3 rounded-xl font-bold text-slate-500 hover:bg-white/5">Cancel</button>
                     <button form="task-form" type="submit" disabled={isSavingActivity} className="flex-1 btn btn-primary py-3 rounded-xl font-bold shadow-xl shadow-indigo-500/20 active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed">
                         {isSavingActivity ? (
                             <span className="flex items-center justify-center gap-2">

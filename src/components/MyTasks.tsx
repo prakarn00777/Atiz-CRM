@@ -42,7 +42,7 @@ const MyTasks = React.memo(function MyTasks({ issues, activities, currentUser, o
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="glass-card p-4 flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
-                        <Clock className="w-5 h-5 text-amber-400" />
+                        <Clock className="w-5 h-5 text-amber-600" />
                     </div>
                     <div>
                         <p className="text-2xl font-bold text-text-main">{totalPending}</p>
@@ -51,7 +51,7 @@ const MyTasks = React.memo(function MyTasks({ issues, activities, currentUser, o
                 </div>
                 <div className="glass-card p-4 flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-rose-500/10 flex items-center justify-center">
-                        <ClipboardList className="w-5 h-5 text-rose-400" />
+                        <ClipboardList className="w-5 h-5 text-rose-500" />
                     </div>
                     <div>
                         <p className="text-2xl font-bold text-text-main">{myIssues.filter(i => i.status !== "เสร็จสิ้น").length}</p>
@@ -60,7 +60,7 @@ const MyTasks = React.memo(function MyTasks({ issues, activities, currentUser, o
                 </div>
                 <div className="glass-card p-4 flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center">
-                        <Headphones className="w-5 h-5 text-indigo-400" />
+                        <Headphones className="w-5 h-5 text-indigo-500" />
                     </div>
                     <div>
                         <p className="text-2xl font-bold text-text-main">{myActivities.filter(a => a.status !== "Completed" && a.status !== "completed").length}</p>
@@ -120,12 +120,12 @@ const MyTasks = React.memo(function MyTasks({ issues, activities, currentUser, o
                                     </div>
                                     <div className="flex items-center gap-3 mt-1">
                                         <span className="text-xs text-text-muted">{issue.customerName}</span>
-                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${issue.severity === "Critical" ? "text-rose-400 bg-rose-500/10" : issue.severity === "High" ? "text-orange-400 bg-orange-500/10" : "text-text-muted bg-bg-hover"}`}>
+                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${issue.severity === "Critical" ? "text-rose-500 bg-rose-500/10" : issue.severity === "High" ? "text-orange-500 bg-orange-500/10" : "text-text-muted bg-bg-hover"}`}>
                                             {issue.severity}
                                         </span>
                                     </div>
                                 </div>
-                                <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold whitespace-nowrap ${issue.status === "เสร็จสิ้น" ? "text-emerald-400 bg-emerald-500/10" : issue.status === "กำลังดำเนินการ" ? "text-indigo-400 bg-indigo-500/10" : "text-amber-400 bg-amber-500/10"}`}>
+                                <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold whitespace-nowrap ${issue.status === "เสร็จสิ้น" ? "text-emerald-600 bg-emerald-500/10" : issue.status === "กำลังดำเนินการ" ? "text-indigo-500 bg-indigo-500/10" : "text-amber-600 bg-amber-500/10"}`}>
                                     {issue.status === "เสร็จสิ้น" ? <CheckCircle2 className="w-3 h-3" /> : issue.status === "กำลังดำเนินการ" ? <Play className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
                                     {issue.status}
                                 </div>
@@ -155,7 +155,7 @@ const MyTasks = React.memo(function MyTasks({ issues, activities, currentUser, o
                                         <span className="text-[10px] text-text-muted bg-bg-hover px-2 py-0.5 rounded-full">{activity.activityType}</span>
                                     </div>
                                 </div>
-                                <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold whitespace-nowrap ${activity.status === "Completed" || activity.status === "completed" ? "text-emerald-400 bg-emerald-500/10" : activity.status === "In Progress" ? "text-indigo-400 bg-indigo-500/10" : "text-amber-400 bg-amber-500/10"}`}>
+                                <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold whitespace-nowrap ${activity.status === "Completed" || activity.status === "completed" ? "text-emerald-600 bg-emerald-500/10" : activity.status === "In Progress" ? "text-indigo-500 bg-indigo-500/10" : "text-amber-600 bg-amber-500/10"}`}>
                                     {activity.status}
                                 </div>
                             </div>

@@ -484,21 +484,21 @@ const FollowUpPlanManager = React.memo(function FollowUpPlanManager({ customers,
                                                         const outcome = log.outcome || 'completed';
                                                         if (outcome === 'completed') {
                                                             return (
-                                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
+                                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/15 text-emerald-600 border border-emerald-500/20">
                                                                     <CheckCircle2 className="w-3 h-3" />
                                                                     ติดต่อได้
                                                                 </span>
                                                             );
                                                         } else if (outcome === 'no_answer') {
                                                             return (
-                                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-500/15 text-amber-400 border border-amber-500/20">
+                                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-500/15 text-amber-600 border border-amber-500/20">
                                                                     <Phone className="w-3 h-3" />
                                                                     ไม่รับสาย
                                                                 </span>
                                                             );
                                                         } else {
                                                             return (
-                                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-indigo-500/15 text-indigo-400 border border-indigo-500/20">
+                                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-indigo-500/15 text-indigo-500 border border-indigo-500/20">
                                                                     <Clock className="w-3 h-3" />
                                                                     นัดโทรกลับ
                                                                 </span>
@@ -684,7 +684,7 @@ const FollowUpPlanManager = React.memo(function FollowUpPlanManager({ customers,
                                         <td className="px-3 py-3">
                                             <div className="flex flex-col">
                                                 <div className="flex items-center gap-2">
-                                                    <span className="text-xs text-text-main group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition-colors truncate max-w-[140px]" title={item.customerName}>
+                                                    <span className="text-xs text-text-main group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors truncate max-w-[140px]" title={item.customerName}>
                                                         {item.customerName}
                                                     </span>
                                                     {item.branchName && (
@@ -748,7 +748,7 @@ const FollowUpPlanManager = React.memo(function FollowUpPlanManager({ customers,
                                         <td className="px-3 py-3 text-right">
                                             <div className="flex items-center justify-end gap-2">
                                                 {attempts > 0 && (
-                                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-500/15 text-amber-400 border border-amber-500/20 flex items-center gap-1">
+                                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-500/15 text-amber-600 border border-amber-500/20 flex items-center gap-1">
                                                         <Phone className="w-3 h-3" />
                                                         {attempts}
                                                     </span>
@@ -937,7 +937,7 @@ const FollowUpPlanManager = React.memo(function FollowUpPlanManager({ customers,
                                     onClick={() => setSelectedOutcome("completed")}
                                     className={`px-3 py-2.5 rounded-lg text-xs font-medium transition-all border ${
                                         selectedOutcome === "completed"
-                                            ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/50"
+                                            ? "bg-emerald-500/20 text-emerald-600 border-emerald-500/50"
                                             : "bg-bg-hover text-text-muted border-border-light hover:border-emerald-500/30"
                                     }`}
                                 >
@@ -949,7 +949,7 @@ const FollowUpPlanManager = React.memo(function FollowUpPlanManager({ customers,
                                     onClick={() => setSelectedOutcome("no_answer")}
                                     className={`px-3 py-2.5 rounded-lg text-xs font-medium transition-all border ${
                                         selectedOutcome === "no_answer"
-                                            ? "bg-amber-500/20 text-amber-400 border-amber-500/50"
+                                            ? "bg-amber-500/20 text-amber-600 border-amber-500/50"
                                             : "bg-bg-hover text-text-muted border-border-light hover:border-amber-500/30"
                                     }`}
                                 >
@@ -961,7 +961,7 @@ const FollowUpPlanManager = React.memo(function FollowUpPlanManager({ customers,
                                     onClick={() => setSelectedOutcome("callback_later")}
                                     className={`px-3 py-2.5 rounded-lg text-xs font-medium transition-all border ${
                                         selectedOutcome === "callback_later"
-                                            ? "bg-indigo-500/20 text-indigo-400 border-indigo-500/50"
+                                            ? "bg-indigo-500/20 text-indigo-500 border-indigo-500/50"
                                             : "bg-bg-hover text-text-muted border-border-light hover:border-indigo-500/30"
                                     }`}
                                 >

@@ -418,7 +418,7 @@ const InstallationManager = React.memo(function InstallationManager({
                                         }}
                                         className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${selectedInst.status === "Pending"
                                             ? "bg-amber-500 text-white shadow-lg shadow-amber-500/30 scale-105"
-                                            : "bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20"
+                                            : "bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 border border-amber-500/20"
                                             }`}
                                     >
                                         Pending
@@ -433,7 +433,7 @@ const InstallationManager = React.memo(function InstallationManager({
                                         }}
                                         className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${selectedInst.status === "Completed"
                                             ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 scale-105"
-                                            : "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20"
+                                            : "bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border border-emerald-500/20"
                                             }`}
                                     >
                                         Completed
@@ -445,7 +445,7 @@ const InstallationManager = React.memo(function InstallationManager({
                         <div className="flex-1 overflow-y-auto p-6">
                             <div className="space-y-4">
                                 <div className="space-y-1">
-                                    <label className="text-xs font-medium text-slate-400">Type</label>
+                                    <label className="text-xs font-medium text-slate-500">Type</label>
                                     <input
                                         readOnly
                                         value={selectedInst.installationType === "branch" ? "ติดตั้งสาขาใหม่" : "ติดตั้งลูกค้าใหม่"}
@@ -454,7 +454,7 @@ const InstallationManager = React.memo(function InstallationManager({
                                 </div>
 
                                 <div className="space-y-1">
-                                    <label className="text-xs font-medium text-slate-400">Customer</label>
+                                    <label className="text-xs font-medium text-slate-500">Customer</label>
                                     <input
                                         readOnly
                                         value={selectedInst.customerName}
@@ -464,7 +464,7 @@ const InstallationManager = React.memo(function InstallationManager({
 
                                 {selectedInst.branchName && (
                                     <div className="space-y-1">
-                                        <label className="text-xs font-medium text-slate-400">Branch</label>
+                                        <label className="text-xs font-medium text-slate-500">Branch</label>
                                         <input
                                             readOnly
                                             value={selectedInst.branchName}
@@ -474,7 +474,7 @@ const InstallationManager = React.memo(function InstallationManager({
                                 )}
 
                                 <div className="space-y-1">
-                                    <label className="text-xs font-medium text-slate-400">Notes</label>
+                                    <label className="text-xs font-medium text-slate-500">Notes</label>
                                     <textarea
                                         readOnly
                                         value={selectedInst.notes || "ไม่มีข้อมูล"}

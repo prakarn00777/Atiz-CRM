@@ -209,7 +209,7 @@ const LeadManager = React.memo(function LeadManager({ leads, onEdit, onDelete, o
                                             <span className="text-xs text-text-muted opacity-60">{(currentPage - 1) * itemsPerPage + index + 1}</span>
                                         </td>
                                         <td className="px-4 py-3 text-center">
-                                            <span className="text-xs font-mono text-indigo-400 font-bold">
+                                            <span className="text-xs font-mono text-indigo-500 font-bold">
                                                 {l.leadNumber}
                                             </span>
                                         </td>
@@ -231,8 +231,8 @@ const LeadManager = React.memo(function LeadManager({ leads, onEdit, onDelete, o
                                         </td>
                                         <td className="px-4 py-3">
                                             <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${l.product === "Ease POS"
-                                                ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
-                                                : "bg-indigo-500/10 text-indigo-400 border border-indigo-500/20"
+                                                ? "bg-amber-500/10 text-amber-600 border border-amber-500/20"
+                                                : "bg-indigo-500/10 text-indigo-500 border border-indigo-500/20"
                                                 }`}>
                                                 {l.product}
                                             </span>
@@ -291,7 +291,7 @@ const LeadManager = React.memo(function LeadManager({ leads, onEdit, onDelete, o
                                                         <div className="my-1 border-t border-border-light" />
                                                         <button
                                                             onClick={(e) => { e.stopPropagation(); onDelete(l.id); setActiveMenu(null); }}
-                                                            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-rose-400 hover:bg-rose-500/10 transition-colors"
+                                                            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-rose-500 hover:bg-rose-500/10 transition-colors"
                                                         >
                                                             <Trash2 className="w-3.5 h-3.5" />
                                                             ลบข้อมูลลีด

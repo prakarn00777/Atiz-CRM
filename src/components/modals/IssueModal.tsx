@@ -211,7 +211,7 @@ const IssueModal = React.memo(function IssueModal({
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <h2 id="issue-modal-title" className="text-base font-bold text-text-main">
-                  {isReadOnly ? "ดูเคส" : editingIssue ? "แก้ไขเคส" : "สร้างเคสใหม่"}
+                  {isReadOnly ? "รายละเอียด" : editingIssue ? "รายละเอียด" : "สร้างเคสใหม่"}
                 </h2>
                 {editingIssue?.caseNumber && (
                   <span className="text-[11px] text-indigo-500 font-mono bg-indigo-500/10 px-2 py-0.5 rounded-md">
@@ -323,7 +323,7 @@ const IssueModal = React.memo(function IssueModal({
                     target="_blank"
                     rel="noopener noreferrer"
                     title="Go to System"
-                    className="flex items-center gap-1.5 text-[11px] font-bold text-indigo-500 hover:text-indigo-400 transition-colors bg-indigo-500/5 px-2 py-0.5 rounded-md border border-indigo-500/10"
+                    className="flex items-center gap-1.5 text-[11px] font-bold text-indigo-500 hover:text-indigo-500 transition-colors bg-indigo-500/5 px-2 py-0.5 rounded-md border border-indigo-500/10"
                   >
                     <ExternalLink className="w-3 h-3" />
                     <span className="truncate max-w-[150px]">
@@ -357,7 +357,7 @@ const IssueModal = React.memo(function IssueModal({
             {/* Subject */}
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-text-muted uppercase tracking-wider">
-                Subject {!isReadOnly && <span className="text-rose-400">*</span>}
+                Subject {!isReadOnly && <span className="text-rose-500">*</span>}
               </label>
               <input
                 ref={titleInputRef}
@@ -533,7 +533,7 @@ const IssueModal = React.memo(function IssueModal({
                           type="button"
                           onClick={() => setSelectedFiles((prev) => prev.filter((_, i) => i !== idx))}
                           aria-label={`ลบไฟล์ ${file.name}`}
-                          className="p-2 hover:bg-rose-500/20 rounded-lg transition-colors text-rose-400/50 hover:text-rose-400"
+                          className="p-2 hover:bg-rose-500/20 rounded-lg transition-colors text-rose-500/50 hover:text-rose-500"
                         >
                           <X className="w-4 h-4" aria-hidden="true" />
                         </button>

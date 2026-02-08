@@ -165,7 +165,7 @@ export default function RoleManager({ roles, onSave, onDelete }: RoleManagerProp
                                     ].filter(Boolean).join('');
                                     return (
                                         <span key={menu.id} className="px-2 py-1 rounded-md bg-indigo-500/5 text-indigo-300 text-xs border border-indigo-500/10">
-                                            {menu.icon} {menu.label} <span className="text-indigo-400/60">({actions})</span>
+                                            {menu.icon} {menu.label} <span className="text-indigo-500/60">({actions})</span>
                                         </span>
                                     );
                                 })}

@@ -1,15 +1,16 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { Search, AlertCircle } from "lucide-react";
 import CustomSelect from "./CustomSelect";
 import CustomDatePicker from "./CustomDatePicker";
-import { Customer, Issue } from "@/types";
+import { Customer, Issue, User } from "@/types";
 import IssueRow from "./rows/IssueRow";
 
 interface IssueManagerProps {
     issues: Issue[];
     customers: Customer[];
+    users?: User[];
     onAdd: () => void;
     onEdit: (issue: Issue) => void;
     onDelete: (id: number) => void;
@@ -17,26 +18,69 @@ interface IssueManagerProps {
     title?: string;
 }
 
-const IssueManager = React.memo(function IssueManager({ issues, customers: _customers, onAdd, onEdit, onDelete, filterByAssignee, title }: IssueManagerProps) {
+const IssueManager = React.memo(function IssueManager({ issues, customers: _customers, users = [], onAdd, onEdit, onDelete, filterByAssignee, title }: IssueManagerProps) {
     const [searchTerm, setSearchTerm] = useState("");
+    const [debouncedSearch, setDebouncedSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
     const [severityFilter, setSeverityFilter] = useState("all");
+    const [assigneeFilter, setAssigneeFilter] = useState("all");
     const [dateRange, setDateRange] = useState({ start: "", end: "" });
     const [currentPage, setCurrentPage] = useState(1);
+    const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+    const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
+    const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+
+    // Debounce search — 300ms
+    useEffect(() => {
+        debounceRef.current = setTimeout(() => {
+            setDebouncedSearch(searchTerm);
+            setCurrentPage(1);
+        }, 300);
+        return () => clearTimeout(debounceRef.current);
+    }, [searchTerm]);
+
+    // Consolidated event listeners for menu
+    useEffect(() => {
+        if (openMenuId === null) return;
+        const close = () => setOpenMenuId(null);
+        const handleEscape = (e: KeyboardEvent) => { if (e.key === "Escape") close(); };
+        document.addEventListener("click", close);
+        document.addEventListener("scroll", close, true);
+        document.addEventListener("keydown", handleEscape);
+        return () => {
+            document.removeEventListener("click", close);
+            document.removeEventListener("scroll", close, true);
+            document.removeEventListener("keydown", handleEscape);
+        };
+    }, [openMenuId]);
+
+    const handleToggleMenu = useCallback((issueId: number, pos: { top: number; left: number }) => {
+        setOpenMenuId(prev => prev === issueId ? null : issueId);
+        setMenuPosition(pos);
+    }, []);
+
+    const handleCloseMenu = useCallback(() => setOpenMenuId(null), []);
 
     const baseIssues = useMemo(() =>
         filterByAssignee ? issues.filter(i => i.assignedTo === filterByAssignee) : issues
     , [issues, filterByAssignee]);
 
+    const assigneeOptions = useMemo(() => {
+        const activeUsers = users.filter(u => u.isActive !== false).sort((a, b) => a.name.localeCompare(b.name));
+        return [{ value: "all", label: "ผู้รับผิดชอบทั้งหมด" }, ...activeUsers.map(u => ({ value: u.name, label: u.name }))];
+    }, [users]);
+
     const sortedIssues = useMemo(() => {
         const filtered = baseIssues.filter(issue => {
-            const matchesSearch =
-                issue.caseNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                issue.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                issue.customerName.toLowerCase().includes(searchTerm.toLowerCase());
+            const search = debouncedSearch.toLowerCase();
+            const matchesSearch = !search ||
+                issue.caseNumber.toLowerCase().includes(search) ||
+                issue.title.toLowerCase().includes(search) ||
+                issue.customerName.toLowerCase().includes(search);
 
             const matchesStatus = statusFilter === "all" || issue.status === statusFilter;
             const matchesSeverity = severityFilter === "all" || issue.severity === severityFilter;
+            const matchesAssignee = assigneeFilter === "all" || issue.assignedTo === assigneeFilter;
 
             let matchesDate = true;
             if (dateRange.start && issue.createdAt) {
@@ -48,7 +92,7 @@ const IssueManager = React.memo(function IssueManager({ issues, customers: _cust
                 matchesDate = matchesDate && new Date(issue.createdAt) <= endDate;
             }
 
-            return matchesSearch && matchesStatus && matchesSeverity && matchesDate;
+            return matchesSearch && matchesStatus && matchesSeverity && matchesAssignee && matchesDate;
         });
 
         return [...filtered].sort((a, b) => {
@@ -56,7 +100,7 @@ const IssueManager = React.memo(function IssueManager({ issues, customers: _cust
             const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
             return dateB - dateA;
         });
-    }, [baseIssues, searchTerm, statusFilter, severityFilter, dateRange]);
+    }, [baseIssues, debouncedSearch, statusFilter, severityFilter, assigneeFilter, dateRange]);
 
     const itemsPerPage = 10;
     const totalPages = Math.ceil(sortedIssues.length / itemsPerPage);
@@ -79,7 +123,7 @@ const IssueManager = React.memo(function IssueManager({ issues, customers: _cust
                             type="text"
                             placeholder="ค้นหา..."
                             value={searchTerm}
-                            onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                            onChange={(e) => setSearchTerm(e.target.value)}
                             className="input-field pl-10 w-full"
                         />
                     </div>
@@ -108,6 +152,12 @@ const IssueManager = React.memo(function IssueManager({ issues, customers: _cust
                             onChange={(val) => { setSeverityFilter(val); setCurrentPage(1); }}
                             className="w-[160px]"
                         />
+                        <CustomSelect
+                            options={assigneeOptions}
+                            value={assigneeFilter}
+                            onChange={(val) => { setAssigneeFilter(val); setCurrentPage(1); }}
+                            className="w-[160px]"
+                        />
 
                         <div className="w-[160px]">
                             <CustomDatePicker
@@ -134,35 +184,36 @@ const IssueManager = React.memo(function IssueManager({ issues, customers: _cust
                     <table className="w-full text-left border-collapse relative">
                         <thead className="sticky top-0 z-10 bg-card-bg shadow-sm backdrop-blur-xl">
                             <tr className="bg-bg-hover text-text-muted text-xs uppercase tracking-wider border-b border-border-light">
-                                <th className="px-4 py-3 font-semibold w-[4%] text-center">No.</th>
-                                <th className="px-4 py-3 font-semibold w-[7%] text-center">Id</th>
-                                <th className="px-4 py-3 font-semibold w-[30%] text-center">Case Name</th>
-                                <th className="px-4 py-3 font-semibold w-[10%] text-center">Customer</th>
-                                <th className="px-4 py-3 font-semibold w-[7%] text-center">Severity</th>
-                                <th className="px-4 py-3 font-semibold w-[8%] text-center">Status</th>
-                                <th className="px-4 py-3 font-semibold w-[7%] text-center">Type</th>
-                                <th className="px-4 py-3 font-semibold w-[8%] text-center">Assigned To</th>
-                                <th className="px-4 py-3 font-semibold w-[9%] text-center">Modified By</th>
-                                <th className="px-4 py-3 font-semibold w-[6%] text-center">Actions</th>
+                                <th className="px-3 py-3 font-semibold w-[6%] text-center">Id</th>
+                                <th className="px-3 py-3 font-semibold w-[30%] text-left">Case Name</th>
+                                <th className="px-3 py-3 font-semibold w-[18%] text-center">Customer</th>
+                                <th className="px-3 py-3 font-semibold w-[7%] text-center">Severity</th>
+                                <th className="px-3 py-3 font-semibold w-[10%] text-center">Status</th>
+                                <th className="px-3 py-3 font-semibold w-[10%] text-center">Assigned To</th>
+                                <th className="px-3 py-3 font-semibold w-[14%] text-center">Created</th>
+                                <th className="px-3 py-3 font-semibold w-[5%] text-center"></th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-border-light">
                             {paginatedIssues.length > 0 ? (
-                                paginatedIssues.map((issue, index) => (
+                                paginatedIssues.map((issue) => (
                                     <IssueRow
                                         key={issue.id || issue.caseNumber}
                                         issue={issue}
-                                        rowNumber={(currentPage - 1) * itemsPerPage + index + 1}
                                         onEdit={onEdit}
                                         onDelete={onDelete}
+                                        isMenuOpen={openMenuId === issue.id}
+                                        menuPosition={openMenuId === issue.id ? menuPosition : null}
+                                        onToggleMenu={handleToggleMenu}
+                                        onCloseMenu={handleCloseMenu}
                                     />
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={10} className="px-4 py-12 text-center">
+                                    <td colSpan={8} className="px-3 py-12 text-center">
                                         <div className="flex flex-col items-center gap-2">
-                                            <AlertCircle className="w-12 h-12 text-slate-600" />
-                                            <p className="text-sm text-slate-500">ไม่พบข้อมูลเคส</p>
+                                            <AlertCircle className="w-12 h-12 text-text-muted opacity-40" />
+                                            <p className="text-sm text-text-muted">ไม่พบข้อมูลเคส</p>
                                         </div>
                                     </td>
                                 </tr>

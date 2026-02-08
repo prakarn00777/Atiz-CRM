@@ -1,24 +1,27 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useCallback } from "react";
 import { createPortal } from "react-dom";
-import { Edit2, Trash2, AlertCircle, AlertTriangle, Info, CheckCircle2, Clock, Play, Paperclip, MoreVertical } from "lucide-react";
+import { Eye, Trash2, AlertCircle, AlertTriangle, Info, CheckCircle2, Clock, Play, Paperclip, MoreVertical } from "lucide-react";
 import { Issue } from "@/types";
 
 interface IssueRowProps {
   issue: Issue;
-  rowNumber: number;
   onEdit: (issue: Issue) => void;
   onDelete: (id: number) => void;
+  isMenuOpen: boolean;
+  menuPosition: { top: number; left: number } | null;
+  onToggleMenu: (issueId: number, position: { top: number; left: number }) => void;
+  onCloseMenu: () => void;
 }
 
 const getSeverityColor = (severity: string) => {
   switch (severity) {
-    case "Critical": return "text-rose-400 bg-rose-500/10";
-    case "High": return "text-orange-400 bg-orange-500/10";
-    case "Medium": return "text-amber-400 bg-amber-500/10";
-    case "Low": return "text-emerald-400 bg-emerald-500/10";
-    default: return "text-slate-400 bg-slate-500/10";
+    case "Critical": return "text-rose-500 bg-rose-500/10";
+    case "High": return "text-orange-500 bg-orange-500/10";
+    case "Medium": return "text-amber-600 bg-amber-500/10";
+    case "Low": return "text-emerald-600 bg-emerald-500/10";
+    default: return "text-slate-500 bg-slate-500/10";
   }
 };
 
@@ -34,10 +37,10 @@ const getSeverityIcon = (severity: string) => {
 
 const getStatusColor = (status: string) => {
   switch (status) {
-    case "เสร็จสิ้น": return "text-emerald-400 bg-emerald-500/10";
-    case "กำลังดำเนินการ": return "text-indigo-400 bg-indigo-500/10";
-    case "แจ้งเคส": return "text-amber-400 bg-amber-500/10";
-    default: return "text-slate-400 bg-slate-500/10";
+    case "เสร็จสิ้น": return "text-emerald-600 bg-emerald-500/10";
+    case "กำลังดำเนินการ": return "text-indigo-500 bg-indigo-500/10";
+    case "แจ้งเคส": return "text-amber-600 bg-amber-500/10";
+    default: return "text-slate-500 bg-slate-500/10";
   }
 };
 
@@ -50,78 +53,73 @@ const getStatusIcon = (status: string) => {
   }
 };
 
+const getTypeColor = (type: string) => {
+  switch (type) {
+    case "Bug Report": return "text-rose-500 bg-rose-500/10";
+    case "Data Request": return "text-sky-500 bg-sky-500/10";
+    case "System Modification": return "text-purple-500 bg-purple-500/10";
+    default: return "text-text-muted bg-bg-hover";
+  }
+};
+
+const formatDate = (dateStr: string) => {
+  return new Date(dateStr).toLocaleString('th-TH', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
+
 const IssueRow = React.memo(function IssueRow({
   issue,
-  rowNumber,
   onEdit,
   onDelete,
+  isMenuOpen,
+  menuPosition,
+  onToggleMenu,
+  onCloseMenu,
 }: IssueRowProps) {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!isMenuOpen) return;
-
-    const handleClickOutside = () => setIsMenuOpen(false);
-    const handleScroll = () => setIsMenuOpen(false);
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setIsMenuOpen(false);
-    };
-
-    document.addEventListener("click", handleClickOutside);
-    document.addEventListener("scroll", handleScroll, true);
-    document.addEventListener("keydown", handleEscape);
-
-    return () => {
-      document.removeEventListener("click", handleClickOutside);
-      document.removeEventListener("scroll", handleScroll, true);
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, [isMenuOpen]);
-
   const handleMenuToggle = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     const rect = e.currentTarget.getBoundingClientRect();
-    setMenuPosition({ top: rect.bottom, left: rect.right });
-    setIsMenuOpen((prev) => !prev);
-  }, []);
+    onToggleMenu(issue.id, { top: rect.bottom, left: rect.right });
+  }, [issue.id, onToggleMenu]);
 
   const handleEdit = useCallback(() => {
     onEdit(issue);
-    setIsMenuOpen(false);
-  }, [issue, onEdit]);
+    onCloseMenu();
+  }, [issue, onEdit, onCloseMenu]);
 
   const handleDelete = useCallback(() => {
     onDelete(issue.id);
-    setIsMenuOpen(false);
-  }, [issue.id, onDelete]);
+    onCloseMenu();
+  }, [issue.id, onDelete, onCloseMenu]);
 
   return (
     <tr className="group hover:bg-bg-hover transition-colors h-14">
-      <td className="px-4 py-3 text-center">
-        <span className="text-xs text-text-muted opacity-60">{rowNumber}</span>
-      </td>
-      <td className="px-4 py-3 text-center">
+      {/* Case ID */}
+      <td className="px-3 py-3 text-center">
         <span className="text-xs font-mono text-text-muted">
           {issue.caseNumber}
         </span>
       </td>
-      <td className="px-4 py-3 text-left">
-        <div className="flex items-center justify-start gap-2">
-          <div className="font-normal text-text-main text-xs truncate max-w-[450px]" title={issue.title}>
+      {/* Case Name + Type tag + Attachment icon */}
+      <td className="px-3 py-3 text-left">
+        <div className="flex items-center gap-2">
+          <div className="font-normal text-text-main text-xs truncate" title={issue.title}>
             {issue.title}
           </div>
+          <span className={`inline-flex px-1.5 py-0.5 rounded text-[9px] font-semibold whitespace-nowrap flex-shrink-0 ${getTypeColor(issue.type)}`}>
+            {issue.type === "Bug Report" ? "Bug" : issue.type === "Data Request" ? "Data" : issue.type === "System Modification" ? "Mod" : issue.type}
+          </span>
           {issue.attachments && (typeof issue.attachments === 'string' ? issue.attachments.length > 2 : issue.attachments.length > 0) && (
             <Paperclip className="w-3 h-3 text-text-muted opacity-50 flex-shrink-0" />
           )}
         </div>
       </td>
-      <td className="px-4 py-3 text-center">
+      {/* Customer */}
+      <td className="px-3 py-3 text-center">
         <div className="flex flex-col items-center max-h-[2.5rem] overflow-hidden">
           <span className="text-xs text-text-main font-medium line-clamp-1">{issue.customerName}</span>
           {issue.branchName && (
@@ -129,63 +127,59 @@ const IssueRow = React.memo(function IssueRow({
           )}
         </div>
       </td>
-      <td className="px-4 py-3 text-center">
-        <div className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-bold ${getSeverityColor(issue.severity)}`}>
+      {/* Severity */}
+      <td className="px-3 py-3 text-center">
+        <div className={`inline-flex items-center gap-1 text-[11px] font-semibold ${getSeverityColor(issue.severity).split(' ')[0]}`}>
           {getSeverityIcon(issue.severity)}
           {issue.severity}
         </div>
       </td>
-      <td className="px-4 py-3 text-center">
-        <div className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-bold whitespace-nowrap ${getStatusColor(issue.status)}`}>
+      {/* Status */}
+      <td className="px-3 py-3 text-center">
+        <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold whitespace-nowrap ${getStatusColor(issue.status)}`}>
           {getStatusIcon(issue.status)}
           {issue.status}
         </div>
       </td>
-      <td className="px-4 py-3 text-center">
-        <span className="text-xs text-text-muted whitespace-nowrap">{issue.type}</span>
-      </td>
-      <td className="px-4 py-3 text-center">
+      {/* Assigned To */}
+      <td className="px-3 py-3 text-center">
         {issue.assignedTo ? (
-          <span className="text-xs font-medium text-indigo-400">{issue.assignedTo}</span>
+          <span className="text-xs font-medium text-indigo-500">{issue.assignedTo}</span>
         ) : (
           <span className="text-xs text-text-muted">-</span>
         )}
       </td>
-      <td className="px-4 py-3 text-center">
-        {issue.modifiedBy ? (
+      {/* Created At */}
+      <td className="px-3 py-3 text-center">
+        {issue.createdAt ? (
           <div className="flex flex-col items-center">
-            <span className="text-xs font-medium text-text-main">{issue.modifiedBy}</span>
+            {issue.createdBy && <span className="text-xs font-medium text-text-main truncate max-w-[80px]">{issue.createdBy}</span>}
             <span className="text-[10px] text-text-muted opacity-60">
-              {new Date(issue.modifiedAt!).toLocaleString('th-TH', {
-                month: 'short',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-              })}
+              {formatDate(issue.createdAt)}
             </span>
           </div>
         ) : (
           <span className="text-xs text-text-muted">-</span>
         )}
       </td>
-      <td className="px-4 py-3 text-center">
+      {/* Actions */}
+      <td className="px-3 py-3 text-center">
         <div className="flex justify-center">
           <button
             onClick={handleMenuToggle}
             aria-label="เปิดเมนูตัวเลือก"
             aria-expanded={isMenuOpen}
             aria-haspopup="menu"
-            className={`p-2.5 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center ${
+            className={`p-2 rounded-lg transition-colors min-w-[36px] min-h-[36px] flex items-center justify-center ${
               isMenuOpen
                 ? "bg-indigo-500/20 text-indigo-500 dark:text-white"
                 : "hover:bg-bg-hover text-text-muted hover:text-text-main"
             }`}
           >
-            <MoreVertical className="w-5 h-5" aria-hidden="true" />
+            <MoreVertical className="w-4 h-4" aria-hidden="true" />
           </button>
 
-          {mounted &&
-            isMenuOpen &&
+          {isMenuOpen &&
             menuPosition &&
             createPortal(
               <div
@@ -195,8 +189,9 @@ const IssueRow = React.memo(function IssueRow({
                   position: "fixed",
                   top: `${menuPosition.top + 8}px`,
                   left: `${menuPosition.left - 144}px`,
+                  backgroundColor: 'var(--modal-bg)',
                 }}
-                className="z-[9999] w-44 py-2 bg-card-bg border border-border-light rounded-xl shadow-2xl animate-in fade-in zoom-in duration-150 origin-top-right"
+                className="z-[9999] w-44 py-2 border border-border-light rounded-xl shadow-2xl animate-in fade-in zoom-in duration-150 origin-top-right"
                 onClick={(e) => e.stopPropagation()}
               >
                 <button
@@ -204,14 +199,14 @@ const IssueRow = React.memo(function IssueRow({
                   onClick={handleEdit}
                   className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-text-muted hover:bg-bg-hover hover:text-text-main transition-colors"
                 >
-                  <Edit2 className="w-4 h-4" aria-hidden="true" />
-                  แก้ไขข้อมูล
+                  <Eye className="w-4 h-4" aria-hidden="true" />
+                  ดูรายละเอียด
                 </button>
                 <div className="my-1 border-t border-border-light" role="separator" />
                 <button
                   role="menuitem"
                   onClick={handleDelete}
-                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-rose-400 hover:bg-rose-500/10 transition-colors"
+                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-rose-500 hover:bg-rose-500/10 transition-colors"
                 >
                   <Trash2 className="w-4 h-4" aria-hidden="true" />
                   ลบรายการ

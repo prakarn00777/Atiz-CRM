@@ -70,9 +70,9 @@ export default function LoginTransition({ onComplete }: LoginTransitionProps) {
 
                     {/* Main Icon */}
                     <div className="w-24 h-24 bg-slate-900/80 backdrop-blur-xl border border-white/10 rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(99,102,241,0.3)]">
-                        {phase === 'init' && <Wifi className="w-10 h-10 text-indigo-400 animate-pulse" />}
-                        {phase === 'auth' && <ShieldCheck className="w-10 h-10 text-emerald-400 animate-bounce" />}
-                        {phase === 'load' && <Server className="w-10 h-10 text-purple-400 animate-pulse" />}
+                        {phase === 'init' && <Wifi className="w-10 h-10 text-indigo-500 animate-pulse" />}
+                        {phase === 'auth' && <ShieldCheck className="w-10 h-10 text-emerald-600 animate-bounce" />}
+                        {phase === 'load' && <Server className="w-10 h-10 text-purple-500 animate-pulse" />}
                         {phase === 'complete' && <Layers className="w-12 h-12 text-white animate-[ping_1s_ease-out]" />}
                     </div>
                 </div>

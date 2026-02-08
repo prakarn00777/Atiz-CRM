@@ -17,10 +17,10 @@ export default function NotificationBell() {
 
     const getIcon = (type: string) => {
         switch (type) {
-            case 'success': return <CheckCircle2 className="w-4 h-4 text-emerald-400" />;
-            case 'warning': return <AlertTriangle className="w-4 h-4 text-amber-400" />;
-            case 'error': return <AlertCircle className="w-4 h-4 text-rose-400" />;
-            default: return <Info className="w-4 h-4 text-indigo-400" />;
+            case 'success': return <CheckCircle2 className="w-4 h-4 text-emerald-600" />;
+            case 'warning': return <AlertTriangle className="w-4 h-4 text-amber-600" />;
+            case 'error': return <AlertCircle className="w-4 h-4 text-rose-500" />;
+            default: return <Info className="w-4 h-4 text-indigo-500" />;
         }
     };
 
@@ -71,7 +71,7 @@ export default function NotificationBell() {
                             <h3 className="text-sm font-bold flex items-center gap-2">
                                 การแจ้งเตือน
                                 {unreadCount > 0 && (
-                                    <span className="px-1.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-400 text-[10px] font-bold">
+                                    <span className="px-1.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-500 text-[10px] font-bold">
                                         {unreadCount} ใหม่
                                     </span>
                                 )}
@@ -79,7 +79,7 @@ export default function NotificationBell() {
                             <div className="flex gap-2">
                                 <button
                                     onClick={(e) => { e.stopPropagation(); clearAll(); }}
-                                    className="p-1.5 hover:bg-rose-500/10 text-text-muted hover:text-rose-400 rounded-lg transition-colors"
+                                    className="p-1.5 hover:bg-rose-500/10 text-text-muted hover:text-rose-500 rounded-lg transition-colors"
                                     title="ล้างทั้งหมด"
                                 >
                                     <Trash2 className="w-4 h-4" />
@@ -136,7 +136,7 @@ export default function NotificationBell() {
                             <div className="p-2 border-t border-border-light bg-bg-hover/30">
                                 <button
                                     onClick={() => markAsRead()}
-                                    className="w-full py-2 text-[10px] font-bold text-text-muted hover:text-indigo-400 transition-colors uppercase tracking-wider"
+                                    className="w-full py-2 text-[10px] font-bold text-text-muted hover:text-indigo-500 transition-colors uppercase tracking-wider"
                                 >
                                     ทำเครื่องหมายว่าอ่านแล้วทั้งหมด
                                 </button>

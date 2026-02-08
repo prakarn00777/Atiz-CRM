@@ -229,7 +229,7 @@ export default function CustomDatePicker({
                     <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); setViewMode('years'); setYearRangeStart(Math.floor(currentMonth.getFullYear() / 12) * 12); }}
-                        className="text-sm font-semibold text-text-main hover:text-indigo-400 transition-colors cursor-pointer"
+                        className="text-sm font-semibold text-text-main hover:text-indigo-500 transition-colors cursor-pointer"
                     >
                         {currentMonth.getFullYear() + 543}
                     </button>
@@ -251,14 +251,14 @@ export default function CustomDatePicker({
                     <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); setViewMode('months'); }}
-                        className="text-sm font-semibold text-text-main hover:text-indigo-400 transition-colors cursor-pointer px-1"
+                        className="text-sm font-semibold text-text-main hover:text-indigo-500 transition-colors cursor-pointer px-1"
                     >
                         {monthNamesFull[currentMonth.getMonth()]}
                     </button>
                     <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); setViewMode('years'); setYearRangeStart(Math.floor(currentMonth.getFullYear() / 12) * 12); }}
-                        className="text-sm font-semibold text-text-main hover:text-indigo-400 transition-colors cursor-pointer px-1"
+                        className="text-sm font-semibold text-text-main hover:text-indigo-500 transition-colors cursor-pointer px-1"
                     >
                         {currentMonth.getFullYear() + 543}
                     </button>
@@ -289,7 +289,7 @@ export default function CustomDatePicker({
                             ${isSelectedYear(year)
                                 ? "bg-indigo-500 text-white font-bold shadow-lg shadow-indigo-500/20"
                                 : isCurrentYear(year)
-                                    ? "border border-indigo-500/50 text-indigo-400 hover:bg-bg-hover"
+                                    ? "border border-indigo-500/50 text-indigo-500 hover:bg-bg-hover"
                                     : "text-text-main hover:bg-bg-hover"
                             }
                         `}
@@ -314,7 +314,7 @@ export default function CustomDatePicker({
                             ${isSelectedMonth(index)
                                 ? "bg-indigo-500 text-white font-bold shadow-lg shadow-indigo-500/20"
                                 : isCurrentMonth(index)
-                                    ? "border border-indigo-500/50 text-indigo-400 hover:bg-bg-hover"
+                                    ? "border border-indigo-500/50 text-indigo-500 hover:bg-bg-hover"
                                     : "text-text-main hover:bg-bg-hover"
                             }
                         `}
@@ -363,7 +363,7 @@ export default function CustomDatePicker({
                                             ? "text-text-muted cursor-not-allowed opacity-30"
                                             : "text-text-main hover:bg-bg-hover"
                                     }
-                                    ${today && !selected ? "border border-indigo-500/50 text-indigo-500 dark:text-indigo-400" : ""}
+                                    ${today && !selected ? "border border-indigo-500/50 text-indigo-500 dark:text-indigo-500" : ""}
                                 `}
                             >
                                 {day}
@@ -389,7 +389,7 @@ export default function CustomDatePicker({
                     </span>
                 </div>
                 <ChevronDown
-                    className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-300 ease-in-out ml-1 ${isOpen ? "rotate-180" : ""}`}
+                    className={`w-4 h-4 text-slate-500 shrink-0 transition-transform duration-300 ease-in-out ml-1 ${isOpen ? "rotate-180" : ""}`}
                 />
             </button>
 

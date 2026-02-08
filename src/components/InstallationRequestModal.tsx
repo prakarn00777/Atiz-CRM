@@ -70,24 +70,24 @@ export default function InstallationRequestModal({
             <div className="w-full max-w-lg glass-card p-6 shadow-2xl border-white/20">
                 <div className="flex justify-between items-center mb-6">
                     <h2 className="text-base font-bold text-white flex items-center gap-2">
-                        <Plus className="w-4 h-4 text-indigo-400" />
+                        <Plus className="w-4 h-4 text-indigo-500" />
                         แจ้งงานติดตั้งใหม่
                     </h2>
-                    <button onClick={handleClose} className="p-1.5 hover:bg-white/5 rounded-full text-slate-400 hover:text-white transition-colors">
+                    <button onClick={handleClose} className="p-1.5 hover:bg-white/5 rounded-full text-slate-500 hover:text-white transition-colors">
                         <X className="w-4 h-4" />
                     </button>
                 </div>
 
                 <div className="space-y-4">
                     <div>
-                        <label className="block text-xs font-medium text-slate-400 mb-2">ประเภทงานติดตั้ง</label>
+                        <label className="block text-xs font-medium text-slate-500 mb-2">ประเภทงานติดตั้ง</label>
                         <div className="flex gap-2">
                             <button
                                 type="button"
                                 onClick={() => setCustomerType("new")}
                                 className={`flex-1 py-2.5 px-4 rounded-lg text-xs font-medium transition-all ${customerType === "new"
                                     ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/20"
-                                    : "bg-white/5 text-slate-400 hover:bg-white/10"
+                                    : "bg-white/5 text-slate-500 hover:bg-white/10"
                                     }`}
                             >
                                 ติดตั้งลูกค้าใหม่
@@ -97,7 +97,7 @@ export default function InstallationRequestModal({
                                 onClick={() => setCustomerType("existing")}
                                 className={`flex-1 py-2.5 px-4 rounded-lg text-xs font-medium transition-all ${customerType === "existing"
                                     ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/20"
-                                    : "bg-white/5 text-slate-400 hover:bg-white/10"
+                                    : "bg-white/5 text-slate-500 hover:bg-white/10"
                                     }`}
                             >
                                 ติดตั้งสาขาเพิ่ม
@@ -108,7 +108,7 @@ export default function InstallationRequestModal({
                     {customerType === "existing" && (
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-xs font-medium text-slate-400 mb-1.5">เลือกลูกค้า</label>
+                                <label className="block text-xs font-medium text-slate-500 mb-1.5">เลือกลูกค้า</label>
                                 <SearchableCustomerSelect
                                     customers={customers}
                                     value={newInst.customerId || null}
@@ -120,7 +120,7 @@ export default function InstallationRequestModal({
                                 <div className="space-y-3 p-4 bg-white/5 rounded-xl border border-white/10">
                                     <p className="text-xs font-medium text-slate-300">ข้อมูลสาขาใหม่</p>
                                     <div>
-                                        <label className="block text-xs font-medium text-slate-400 mb-1.5">
+                                        <label className="block text-xs font-medium text-slate-500 mb-1.5">
                                             ชื่อสาขา <span className="text-rose-500">*</span>
                                         </label>
                                         <input
@@ -139,7 +139,7 @@ export default function InstallationRequestModal({
                     {customerType === "new" && (
                         <div className="space-y-4 p-4 bg-white/5 rounded-xl border border-white/10">
                             <div>
-                                <label className="block text-xs font-medium text-slate-400 mb-1.5">
+                                <label className="block text-xs font-medium text-slate-500 mb-1.5">
                                     ชื่อคลินิก/ร้านค้า <span className="text-rose-500">*</span>
                                 </label>
                                 <input
@@ -153,7 +153,7 @@ export default function InstallationRequestModal({
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-xs font-medium text-slate-400 mb-1.5">
+                                    <label className="block text-xs font-medium text-slate-500 mb-1.5">
                                         ประเภทระบบ <span className="text-rose-500">*</span>
                                     </label>
                                     <CustomSelect
@@ -167,7 +167,7 @@ export default function InstallationRequestModal({
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-medium text-slate-400 mb-1.5">
+                                    <label className="block text-xs font-medium text-slate-500 mb-1.5">
                                         แพ็คเกจ <span className="text-rose-500">*</span>
                                     </label>
                                     <CustomSelect
@@ -184,7 +184,7 @@ export default function InstallationRequestModal({
                             </div>
 
                             <div>
-                                <label className="block text-xs font-medium text-slate-400 mb-1.5">
+                                <label className="block text-xs font-medium text-slate-500 mb-1.5">
                                     ลิงก์เข้าระบบ (System Link) <span className="text-rose-500">*</span>
                                 </label>
                                 <div className="relative">
@@ -202,7 +202,7 @@ export default function InstallationRequestModal({
                     )}
 
                     <div>
-                        <label className="block text-xs font-medium text-slate-400 mb-1.5">หมายเหตุ</label>
+                        <label className="block text-xs font-medium text-slate-500 mb-1.5">หมายเหตุ</label>
                         <textarea
                             className="input-field min-h-[80px] py-3 h-auto resize-none text-xs"
                             value={newInst.notes}

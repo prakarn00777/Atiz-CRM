@@ -88,7 +88,7 @@ const CustomerRow = React.memo(function CustomerRow({
             href={c.subdomain.startsWith("http") ? c.subdomain : `https://${c.subdomain}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="block text-xs text-indigo-400 hover:text-indigo-300 hover:underline transition-colors max-w-[220px] truncate"
+            className="block text-xs text-indigo-500 hover:text-indigo-600 hover:underline transition-colors max-w-[220px] truncate"
             title={c.subdomain}
           >
             {c.subdomain}
@@ -102,8 +102,8 @@ const CustomerRow = React.memo(function CustomerRow({
         <span
           className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${
             c.productType === "EasePos"
-              ? "bg-amber-500/10 text-amber-400"
-              : "bg-indigo-500/10 text-indigo-400"
+              ? "bg-amber-500/10 text-amber-600"
+              : "bg-indigo-500/10 text-indigo-500"
           }`}
         >
           {c.productType || "Dr.Ease"}
@@ -118,12 +118,12 @@ const CustomerRow = React.memo(function CustomerRow({
         <span
           className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${
             c.usageStatus === "Active"
-              ? "bg-emerald-500/10 text-emerald-400"
+              ? "bg-emerald-500/10 text-emerald-600"
               : c.usageStatus === "Pending"
-              ? "bg-amber-500/10 text-amber-400"
+              ? "bg-amber-500/10 text-amber-600"
               : c.usageStatus === "Training"
-              ? "bg-indigo-500/10 text-indigo-400"
-              : "bg-rose-500/10 text-rose-400"
+              ? "bg-indigo-500/10 text-indigo-500"
+              : "bg-rose-500/10 text-rose-500"
           }`}
         >
           {c.usageStatus === "Active"
@@ -140,8 +140,8 @@ const CustomerRow = React.memo(function CustomerRow({
         <span
           className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${
             c.installationStatus === "Completed"
-              ? "bg-emerald-500/10 text-emerald-400"
-              : "bg-amber-500/10 text-amber-400"
+              ? "bg-emerald-500/10 text-emerald-600"
+              : "bg-amber-500/10 text-amber-600"
           }`}
         >
           {c.installationStatus === "Completed" ? "Completed" : "Pending"}
@@ -212,7 +212,7 @@ const CustomerRow = React.memo(function CustomerRow({
                 <button
                   role="menuitem"
                   onClick={handleDelete}
-                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
                 >
                   <Trash2 className="w-4 h-4" aria-hidden="true" />
                   ลบรายการ

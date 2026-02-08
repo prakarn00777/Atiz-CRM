@@ -186,7 +186,7 @@ export default function UserManager({ users, roles, onSave, onDelete }: UserMana
                                         </td>
                                         <td className="px-4 py-3">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-full bg-indigo-500/10 flex items-center justify-center text-indigo-400">
+                                                <div className="w-8 h-8 rounded-full bg-indigo-500/10 flex items-center justify-center text-indigo-500">
                                                     <User className="w-4 h-4" />
                                                 </div>
                                                 <span className="font-semibold text-text-main text-sm">{u.name}</span>
@@ -327,7 +327,7 @@ export default function UserManager({ users, roles, onSave, onDelete }: UserMana
                             if (user) setDeleteConfirm({ id: user.id, name: user.name });
                             setActiveMenu(null);
                         }}
-                        className="w-full px-4 py-2 text-left text-sm text-rose-400 hover:bg-rose-500/10 flex items-center gap-2"
+                        className="w-full px-4 py-2 text-left text-sm text-rose-500 hover:bg-rose-500/10 flex items-center gap-2"
                     >
                         <Trash2 className="w-4 h-4" />
                         ลบ
@@ -362,8 +362,8 @@ export default function UserManager({ users, roles, onSave, onDelete }: UserMana
                             <form id="user-form" onSubmit={handleSubmit} className="space-y-5">
                                 {/* Name Field */}
                                 <div className="space-y-1.5">
-                                    <label className="text-xs font-medium text-slate-400 flex items-center gap-1">
-                                        ชื่อ-นามสกุล <span className="text-rose-400">*</span>
+                                    <label className="text-xs font-medium text-slate-500 flex items-center gap-1">
+                                        ชื่อ-นามสกุล <span className="text-rose-500">*</span>
                                     </label>
                                     <input
                                         name="name"
@@ -377,8 +377,8 @@ export default function UserManager({ users, roles, onSave, onDelete }: UserMana
                                 {/* Username & Password */}
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-1.5">
-                                        <label className="text-xs font-medium text-slate-400 flex items-center gap-1">
-                                            Username <span className="text-rose-400">*</span>
+                                        <label className="text-xs font-medium text-slate-500 flex items-center gap-1">
+                                            Username <span className="text-rose-500">*</span>
                                         </label>
                                         <input
                                             name="username"
@@ -389,8 +389,8 @@ export default function UserManager({ users, roles, onSave, onDelete }: UserMana
                                         />
                                     </div>
                                     <div className="space-y-1.5">
-                                        <label className="text-xs font-medium text-slate-400 flex items-center gap-1">
-                                            Password {editingUser ? "" : <span className="text-rose-400">*</span>}
+                                        <label className="text-xs font-medium text-slate-500 flex items-center gap-1">
+                                            Password {editingUser ? "" : <span className="text-rose-500">*</span>}
                                         </label>
                                         <input
                                             name="password"
@@ -404,7 +404,7 @@ export default function UserManager({ users, roles, onSave, onDelete }: UserMana
 
                                 {/* Role */}
                                 <div className="space-y-1.5">
-                                    <label className="text-xs font-medium text-slate-400">บทบาท</label>
+                                    <label className="text-xs font-medium text-slate-500">บทบาท</label>
                                     <CustomSelect
                                         name="role"
                                         defaultValue={editingUser?.role || (roleOptions[0]?.value)}

@@ -92,10 +92,10 @@ export default function ActivityManager({ activities, customers, users = [], onA
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case "Success": return "text-emerald-400 bg-emerald-500/10";
-            case "In Progress": return "text-indigo-400 bg-indigo-500/10";
-            case "Pending": return "text-amber-400 bg-amber-500/10";
-            default: return "text-slate-400 bg-slate-500/10";
+            case "Success": return "text-emerald-600 bg-emerald-500/10";
+            case "In Progress": return "text-indigo-500 bg-indigo-500/10";
+            case "Pending": return "text-amber-600 bg-amber-500/10";
+            default: return "text-slate-500 bg-slate-500/10";
         }
     };
 
@@ -218,7 +218,7 @@ export default function ActivityManager({ activities, customers, users = [], onA
                                             </div>
                                         </td>
                                         <td className="px-4 py-3 text-center">
-                                            <span className="text-xs text-indigo-400 font-medium">
+                                            <span className="text-xs text-indigo-500 font-medium">
                                                 {activity.assignee || "-"}
                                             </span>
                                         </td>
@@ -240,7 +240,7 @@ export default function ActivityManager({ activities, customers, users = [], onA
                                             <div className="flex justify-center">
                                                 <button
                                                     onClick={(e) => handleMenuToggle(e, activity.id!)}
-                                                    className={`p-2.5 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center ${activeMenu === activity.id ? 'bg-indigo-500/20 text-indigo-400' : 'hover:bg-bg-hover text-text-muted hover:text-text-main'}`}
+                                                    className={`p-2.5 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center ${activeMenu === activity.id ? 'bg-indigo-500/20 text-indigo-500' : 'hover:bg-bg-hover text-text-muted hover:text-text-main'}`}
                                                 >
                                                     <MoreVertical className="w-5 h-5" />
                                                 </button>
@@ -265,7 +265,7 @@ export default function ActivityManager({ activities, customers, users = [], onA
                                                         <div className="my-1 border-t border-border-light" />
                                                         <button
                                                             onClick={() => { onDelete(activity.id!); setActiveMenu(null); }}
-                                                            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-rose-400 hover:bg-rose-500/10 transition-colors"
+                                                            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-rose-500 hover:bg-rose-500/10 transition-colors"
                                                         >
                                                             <Trash2 className="w-3.5 h-3.5" />
                                                             ลบรายการ

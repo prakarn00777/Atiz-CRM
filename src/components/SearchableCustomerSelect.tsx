@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Search, ChevronDown, X } from "lucide-react";
 
 import { Customer } from "@/types";
@@ -20,22 +20,30 @@ export default function SearchableCustomerSelect({
 }: SearchableCustomerSelectProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
+    const [debouncedSearch, setDebouncedSearch] = useState("");
     const dropdownRef = useRef<HTMLDivElement>(null);
+    const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
     const selectedCustomer = customers.find(c => c.id === value);
 
+    // Debounce search — 200ms
+    useEffect(() => {
+        debounceRef.current = setTimeout(() => setDebouncedSearch(searchTerm), 200);
+        return () => clearTimeout(debounceRef.current);
+    }, [searchTerm]);
+
     const DISPLAY_LIMIT = 50;
 
-    const filteredCustomers = customers.filter(c => {
-        if (!searchTerm) return true;
+    const filteredCustomers = useMemo(() => customers.filter(c => {
+        if (!debouncedSearch) return true;
         const caseNumber = `DE${c.id.toString().padStart(4, "0")}`;
-        const searchLower = searchTerm.toLowerCase();
+        const searchLower = debouncedSearch.toLowerCase();
         return (
             caseNumber.toLowerCase().includes(searchLower) ||
             c.name.toLowerCase().includes(searchLower) ||
             (c.subdomain || "").toLowerCase().includes(searchLower)
         );
-    });
+    }), [customers, debouncedSearch]);
 
     const displayCustomers = filteredCustomers.slice(0, DISPLAY_LIMIT);
     const hasMore = filteredCustomers.length > DISPLAY_LIMIT;
@@ -73,7 +81,7 @@ export default function SearchableCustomerSelect({
                 <span className={selectedCustomer ? "text-text-main/90" : "text-text-muted"}>
                     {selectedCustomer ? (
                         <span className="flex items-center gap-2">
-                            <span className="font-mono text-indigo-400">DE{selectedCustomer.id.toString().padStart(4, "0")}</span>
+                            <span className="font-mono text-indigo-500">DE{selectedCustomer.id.toString().padStart(4, "0")}</span>
                             <span>-</span>
                             <span>{selectedCustomer.name}</span>
                         </span>
@@ -117,7 +125,7 @@ export default function SearchableCustomerSelect({
                                         className="w-full px-3 py-2 text-left hover:bg-bg-hover transition-colors border-b border-border-light last:border-0"
                                     >
                                         <div className="flex items-center gap-2">
-                                            <span className="text-xs font-mono text-indigo-400">
+                                            <span className="text-xs font-mono text-indigo-500">
                                                 DE{customer.id.toString().padStart(4, "0")}
                                             </span>
                                             <span className="text-xs text-text-main/90 flex-1 truncate">{customer.name}</span>

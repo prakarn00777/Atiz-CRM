@@ -1273,20 +1273,20 @@ export default function CRMPage() {
                 <div className="relative">
                   <div
                     onClick={() => setProfileMenuOpen(!profileMenuOpen)}
-                    className="flex items-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all cursor-pointer group"
+                    className="flex items-center gap-2 px-3 py-1.5 bg-bg-hover/60 hover:bg-bg-hover border border-border-light rounded-xl transition-all cursor-pointer group"
                   >
                     <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold shadow-lg shadow-indigo-500/20">
                       {user?.name?.charAt(0).toUpperCase() || '?'}
                     </div>
                     <div className="hidden sm:block">
-                      <p className="text-xs font-bold text-white leading-tight">{user?.name || 'User'}</p>
-                      <p className="text-[10px] text-slate-400 leading-tight">{roles.find(r => r.id === user?.role)?.name || 'Member'}</p>
+                      <p className="text-xs font-bold text-text-main leading-tight">{user?.name || 'User'}</p>
+                      <p className="text-[10px] text-text-muted leading-tight">{roles.find(r => r.id === user?.role)?.name || 'Member'}</p>
                     </div>
                   </div>
                   {profileMenuOpen && (
                     <>
                       <div className="fixed inset-0 z-[199]" onClick={() => setProfileMenuOpen(false)} />
-                      <div className="absolute top-full right-0 mt-2 w-48 py-2 bg-card-bg border border-border-light rounded-xl shadow-2xl z-[200] animate-in fade-in zoom-in-95 duration-150">
+                      <div className="absolute top-full right-0 mt-2 w-48 py-2 border border-border-light rounded-xl shadow-2xl z-[200] animate-in fade-in zoom-in-95 duration-150" style={{ backgroundColor: 'var(--modal-bg)' }}>
                         <button
                           onClick={() => { setView("my_tasks"); setProfileMenuOpen(false); }}
                           className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-text-muted hover:bg-bg-hover hover:text-text-main transition-colors"
@@ -1308,7 +1308,7 @@ export default function CRMPage() {
                         <div className="my-1 border-t border-border-light" />
                         <button
                           onClick={() => { setUser(null); safeLocalStorage.removeItem("crm_user_v2"); setProfileMenuOpen(false); }}
-                          className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors"
+                          className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-500 hover:bg-red-500/10 hover:text-red-600 transition-colors"
                         >
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
                           ออกจากระบบ
@@ -1372,7 +1372,7 @@ export default function CRMPage() {
                   }}
                 />
               ) : currentView === "issues" ? (
-                <IssueManager issues={issues} customers={customers} onAdd={handleIssueAdd} onEdit={handleIssueEdit} onDelete={handleIssueDeleteConfirm} />
+                <IssueManager issues={issues} customers={customers} users={users} onAdd={handleIssueAdd} onEdit={handleIssueEdit} onDelete={handleIssueDeleteConfirm} />
               ) : currentView === "cs_activity" ? (
                 <ActivityManager
                   activities={activities}
@@ -1513,7 +1513,7 @@ export default function CRMPage() {
                 <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setDeleteConfirm(null)} />
                 <div className="glass-card w-full max-w-sm p-6 relative border-rose-500/20 text-center">
                   <h3 className="text-lg font-bold mb-2">ยืนยันการลบ?</h3>
-                  <p className="text-sm text-slate-400 mb-6">{deleteConfirm.title}</p>
+                  <p className="text-sm text-slate-500 mb-6">{deleteConfirm.title}</p>
                   <div className="flex gap-3">
                     <button onClick={() => setDeleteConfirm(null)} className="btn btn-ghost flex-1">ยกเลิก</button>
                     <button onClick={async () => {
@@ -1619,7 +1619,7 @@ export default function CRMPage() {
                     </div>
                     <div className="space-y-2">
                       <h3 className="text-lg font-bold text-white">ยืนยันการลบ</h3>
-                      <p className="text-xs text-slate-400 leading-relaxed px-4">{deleteConfirm.title}</p>
+                      <p className="text-xs text-slate-500 leading-relaxed px-4">{deleteConfirm.title}</p>
                     </div>
                     <div className="flex gap-3 w-full">
                       <button onClick={() => setDeleteConfirm(null)} className="flex-1 btn btn-ghost py-2">ยกเลิก</button>
