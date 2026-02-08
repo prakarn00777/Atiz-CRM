@@ -139,7 +139,7 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
     const dashboardRef = useRef<HTMLDivElement>(null);
     const { theme } = useTheme();
     const [activeTab, setActiveTab] = useState<'cs' | 'business'>('cs');
-    const [timeRange, setTimeRange] = useState<'1w' | '1m' | '3m' | '6m' | '1y' | 'custom'>('1m');
+    const [timeRange, setTimeRange] = useState<'1w' | '1m' | '3m' | '6m' | '1y' | 'custom'>('3m');
     const [customStartDate, setCustomStartDate] = useState('');
     const [customEndDate, setCustomEndDate] = useState('');
     const [productFilter, setProductFilter] = useState<'all' | 'Dr.Ease' | 'Ease POS'>('all');
@@ -149,6 +149,9 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
     const [isAutoCycle, setIsAutoCycle] = useState(false);
     const [selectedMetric, setSelectedMetric] = useState('leads');
     const [renewalLines, setRenewalLines] = useState({ renewed: true, notRenewed: true, pending: true });
+    const [opsTimeRange, setOpsTimeRange] = useState<'today' | '1w' | '1m' | '3m' | '6m' | '1y' | 'custom'>('today');
+    const [opsCustomStart, setOpsCustomStart] = useState('');
+    const [opsCustomEnd, setOpsCustomEnd] = useState('');
 
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -178,19 +181,66 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
         }
     };
 
-    const csStats = useMemo(() => {
-        const activeIssues = issues.filter(i => i.status !== "เสร็จสิ้น").length;
-        const pendingInstallations = installations.filter(i => i.status !== "Completed").length;
-        const activeCustomers = customers.filter(c => c.usageStatus === "Active").length;
-        const trainingCustomers = customers.filter(c => c.usageStatus === "Training").length;
+    const filteredIssues = useMemo(() => {
+        if (opsTimeRange === 'custom') {
+            const start = opsCustomStart ? new Date(opsCustomStart) : null;
+            const end = opsCustomEnd ? new Date(opsCustomEnd + 'T23:59:59') : null;
+            return issues.filter(i => {
+                if (!i.createdAt) return false;
+                const d = new Date(i.createdAt);
+                if (start && d < start) return false;
+                if (end && d > end) return false;
+                return true;
+            });
+        }
+        const now = new Date();
+        const cutoff = new Date();
+        if (opsTimeRange === 'today') { cutoff.setHours(0, 0, 0, 0); }
+        else if (opsTimeRange === '1w') cutoff.setDate(now.getDate() - 7);
+        else if (opsTimeRange === '1m') cutoff.setMonth(now.getMonth() - 1);
+        else if (opsTimeRange === '3m') cutoff.setMonth(now.getMonth() - 3);
+        else if (opsTimeRange === '6m') cutoff.setMonth(now.getMonth() - 6);
+        else if (opsTimeRange === '1y') cutoff.setFullYear(now.getFullYear() - 1);
+        return issues.filter(i => {
+            if (!i.createdAt) return true;
+            return new Date(i.createdAt) >= cutoff;
+        });
+    }, [issues, opsTimeRange, opsCustomStart, opsCustomEnd]);
+
+    // Date range label for ops filter
+    const opsDateRangeLabel = useMemo(() => {
+        const thaiMonths = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+        const fmt = (d: Date) => `${d.getDate()} ${thaiMonths[d.getMonth()]} ${String((d.getFullYear() + 543) % 100).padStart(2, '0')}`;
+        const now = new Date();
+        if (opsTimeRange === 'today') return fmt(now);
+        if (opsTimeRange === 'custom') {
+            if (opsCustomStart && opsCustomEnd) return `${fmt(new Date(opsCustomStart))} – ${fmt(new Date(opsCustomEnd))}`;
+            return '';
+        }
+        const cutoff = new Date();
+        if (opsTimeRange === '1w') cutoff.setDate(now.getDate() - 7);
+        else if (opsTimeRange === '1m') cutoff.setMonth(now.getMonth() - 1);
+        else if (opsTimeRange === '3m') cutoff.setMonth(now.getMonth() - 3);
+        else if (opsTimeRange === '6m') cutoff.setMonth(now.getMonth() - 6);
+        else if (opsTimeRange === '1y') cutoff.setFullYear(now.getFullYear() - 1);
+        return `${fmt(cutoff)} – ${fmt(now)}`;
+    }, [opsTimeRange, opsCustomStart, opsCustomEnd]);
+
+    const opsStats = useMemo(() => {
+        const totalTickets = filteredIssues.length;
+        const openTickets = filteredIssues.filter(i => i.status !== "เสร็จสิ้น").length;
+        const criticalHigh = filteredIssues.filter(i => (i.severity === "Critical" || i.severity === "High") && i.status !== "เสร็จสิ้น").length;
+        const resolved = filteredIssues.filter(i => i.status === "เสร็จสิ้น").length;
+        const resolutionRate = totalTickets > 0 ? Math.round((resolved / totalTickets) * 100) : 0;
+        const rangeSub = opsTimeRange === 'today' ? 'today' : opsTimeRange === '1w' ? 'past week' : opsTimeRange === '1m' ? 'past month' : opsTimeRange === '3m' ? 'past quarter' : opsTimeRange === '6m' ? 'past 6 months' : opsTimeRange === '1y' ? 'past year' : 'custom range';
 
         return [
-            { label: "Active Customers", subLabel: "ลูกค้าที่กำลังใช้งาน", value: activeCustomers, sub: "Running Production", icon: Zap, color: "text-emerald-400", border: "border-emerald-500/20", bg: "from-emerald-500/10" },
-            { label: "Pending Install", subLabel: "รอดำเนินการติดตั้ง", value: pendingInstallations, sub: "In Pipeline", icon: Layers, color: "text-blue-400", border: "border-blue-500/20", bg: "from-blue-500/10" },
-            { label: "Active Issues", subLabel: "ปัญหาที่กำลังดำเนินการ", value: activeIssues, sub: "Support Needed", icon: AlertCircle, color: "text-rose-400", border: "border-rose-500/20", bg: "from-rose-500/10" },
-            { label: "Training", subLabel: "รอนัดหมายเทรนนิ่ง", value: trainingCustomers, sub: "Onboarding", icon: Users, color: "text-indigo-400", border: "border-indigo-500/20", bg: "from-indigo-500/10" },
+            { label: "Total Tickets", value: totalTickets, sub: rangeSub, icon: Layers, color: "text-blue-500" },
+            { label: "Open Tickets", value: openTickets, sub: "pending action", icon: AlertCircle, color: "text-amber-600" },
+            { label: "Critical & High", value: criticalHigh, sub: "urgent priority", icon: Zap, color: "text-rose-500" },
+            { label: "Resolution Rate", value: resolutionRate, suffix: "%", sub: `${resolved}/${totalTickets} resolved`, icon: TrendingUp, color: "text-emerald-600" },
         ];
-    }, [customers, issues, installations]);
+    }, [filteredIssues, opsTimeRange]);
 
     const businessStats = useMemo(() => {
         const getFixedWeekRange = (date: Date) => {
@@ -271,7 +321,7 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
         if (prevDemos > 0) demosWoWPercent = ((currentDemos - prevDemos) / prevDemos) * 100;
         else if (currentDemos > 0) demosWoWPercent = 100;
 
-        const wowColor = wowPercent >= 0 ? "text-emerald-400" : "text-rose-400";
+        const wowColor = wowPercent >= 0 ? "text-emerald-600" : "text-rose-500";
         const WoWTag = (
             <div className="flex items-center gap-1.5 relative">
                 <span className={`${wowColor} flex items-center gap-0.5 whitespace-nowrap text-[14px] font-bold`}>
@@ -294,7 +344,7 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
             </div>
         );
 
-        const demosWoWColor = demosWoWPercent >= 0 ? "text-emerald-400" : "text-rose-400";
+        const demosWoWColor = demosWoWPercent >= 0 ? "text-emerald-600" : "text-rose-500";
         const DemosWoWTag = (
             <div className="flex items-center gap-1.5 relative">
                 <span className={`${demosWoWColor} flex items-center gap-0.5 whitespace-nowrap text-[14px] font-bold`}>
@@ -397,7 +447,7 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
         if (prevMonthRenewals > 0) renewalsMoMPercent = ((currentMonthRenewals - prevMonthRenewals) / prevMonthRenewals) * 100;
         else if (currentMonthRenewals > 0) renewalsMoMPercent = 100;
 
-        const salesMoMColor = salesMoMPercent >= 0 ? "text-emerald-400" : "text-rose-400";
+        const salesMoMColor = salesMoMPercent >= 0 ? "text-emerald-600" : "text-rose-500";
         const SalesMoMTag = (
             <div className="flex items-center gap-1.5 relative">
                 <span className={`${salesMoMColor} flex items-center gap-0.5 whitespace-nowrap text-[14px] font-bold`}>
@@ -418,7 +468,7 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
             </div>
         );
 
-        const renewalsMoMColor = renewalsMoMPercent >= 0 ? "text-purple-400" : "text-rose-400";
+        const renewalsMoMColor = renewalsMoMPercent >= 0 ? "text-purple-500" : "text-rose-500";
         const RenewalsMoMTag = (
             <div className="flex items-center gap-1.5 relative">
                 <span className={`${renewalsMoMColor} flex items-center gap-0.5 whitespace-nowrap text-[14px] font-bold`}>
@@ -444,10 +494,10 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
         const currentMonthName = thaiMonths[currentMonth];
 
         return [
-            { id: 'leads', label: "Total Leads – This Week", subLabel: "ผู้สนใจรายสัปดาห์ (Mon-Sun)", numericValue: currentCount, prefix: "", suffix: "", sub: `Dr.Ease: ${dreaseLeads} | Ease: ${easeLeads}`, extraInfo: WoWTag, tooltip: "อัตราการเติบโตเมื่อเทียบกับสัปดาห์ก่อน (WoW): ((จำนวนสัปดาห์นี้-จำนวนสัปดาห์ก่อน) / จำนวนสัปดาห์ก่อน) x 100", icon: Briefcase, color: "text-amber-400", border: "border-amber-500/20", bg: "from-amber-500/10" },
-            { id: 'demos', label: "Weekly Demos", subLabel: "การทำ Demo รายสัปดาห์ (Mon-Sun)", numericValue: currentDemos, prefix: "", suffix: "", sub: `เข้าข่ายสัปดาห์ปัจจุบัน`, extraInfo: DemosWoWTag, icon: Monitor, color: "text-blue-400", border: "border-blue-500/20", bg: "from-blue-500/10" },
-            { id: 'sales', label: "New Sales", subLabel: `ยอดเงินปิดใหม่ (${currentMonthName} ${currentBuddhistYear.slice(-2)})`, numericValue: newSales, prefix: "฿", suffix: "", sub: prevMonthSales > 0 ? `เดือนก่อน: ฿${prevMonthSales.toLocaleString()}` : "Revenue เดือนนี้", extraInfo: SalesMoMTag, icon: DollarSign, color: "text-emerald-400", border: "border-emerald-500/20", bg: "from-emerald-500/10" },
-            { id: 'renewals', label: "Renewal", subLabel: `ยอดต่อสัญญา (${currentMonthName} ${currentBuddhistYear.slice(-2)})`, numericValue: renewal, prefix: "฿", suffix: "", sub: `ไม่ต่อ: ฿${currentMonthNotRenewed.toLocaleString()} | รอ: ฿${currentMonthPending.toLocaleString()}`, extraInfo: RenewalsMoMTag, icon: TrendingUp, color: "text-purple-400", border: "border-purple-500/20", bg: "from-purple-500/10" },
+            { id: 'leads', label: "Total Leads – This Week", subLabel: "ผู้สนใจรายสัปดาห์ (Mon-Sun)", numericValue: currentCount, prefix: "", suffix: "", sub: `Dr.Ease: ${dreaseLeads} | Ease: ${easeLeads}`, extraInfo: WoWTag, tooltip: "อัตราการเติบโตเมื่อเทียบกับสัปดาห์ก่อน (WoW): ((จำนวนสัปดาห์นี้-จำนวนสัปดาห์ก่อน) / จำนวนสัปดาห์ก่อน) x 100", icon: Briefcase, color: "text-amber-600", border: "border-amber-500/20", bg: "from-amber-500/10" },
+            { id: 'demos', label: "Weekly Demos", subLabel: "การทำ Demo รายสัปดาห์ (Mon-Sun)", numericValue: currentDemos, prefix: "", suffix: "", sub: `เข้าข่ายสัปดาห์ปัจจุบัน`, extraInfo: DemosWoWTag, icon: Monitor, color: "text-blue-500", border: "border-blue-500/20", bg: "from-blue-500/10" },
+            { id: 'sales', label: "New Sales", subLabel: `ยอดเงินปิดใหม่ (${currentMonthName} ${currentBuddhistYear.slice(-2)})`, numericValue: newSales, prefix: "฿", suffix: "", sub: prevMonthSales > 0 ? `เดือนก่อน: ฿${prevMonthSales.toLocaleString()}` : "Revenue เดือนนี้", extraInfo: SalesMoMTag, icon: DollarSign, color: "text-emerald-600", border: "border-emerald-500/20", bg: "from-emerald-500/10" },
+            { id: 'renewals', label: "Renewal", subLabel: `ยอดต่อสัญญา (${currentMonthName} ${currentBuddhistYear.slice(-2)})`, numericValue: renewal, prefix: "฿", suffix: "", sub: `ไม่ต่อ: ฿${currentMonthNotRenewed.toLocaleString()} | รอ: ฿${currentMonthPending.toLocaleString()}`, extraInfo: RenewalsMoMTag, icon: TrendingUp, color: "text-purple-500", border: "border-purple-500/20", bg: "from-purple-500/10" },
         ];
     }, [googleSheetLeads, googleSheetDemos, activities, businessMetrics, newSalesData, renewalsData]);
 
@@ -751,281 +801,412 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
             <ParticlesBackground className="absolute inset-0 z-0" />
             <style>{iconAnimationStyles}</style>
 
-            <div className={`flex flex-col md:flex-row justify-between items-start md:items-end gap-4 relative z-10 ${isFullscreen ? 'mb-4 px-1' : ''}`}>
-                <div className="flex items-center gap-4">
-                    <div>
-                        <h1 className={`text-3xl font-black tracking-tight ${activeTab === 'business' ? 'text-text-main' : 'text-text-main bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-purple-400 to-indigo-400'}`}>
-                            {activeTab === 'cs' ? 'CS Operational Center' : 'Business Insights'}
-                        </h1>
-                        <p className={`${activeTab === 'business' ? 'text-text-main opacity-90' : 'text-indigo-400'} font-bold text-[10px] uppercase tracking-widest mt-0.5`}>
-                            {activeTab === 'cs' ? 'ศูนย์ปฏิบัติการทีม CS' : 'ภาพรวมข้อมูลเชิงลึกธุรกิจ'}
-                        </p>
-                        <p className="text-text-muted mt-1 flex items-center gap-2 text-sm">
-                            <span className="relative flex h-2 w-2">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                            </span>
-                            {user.name} • {activeTab === 'cs' ? 'Command Mode' : 'Strategic Mode'}
-                        </p>
-                        <div className="flex items-center gap-3 text-text-muted mt-1.5">
-                            <div className="flex items-center gap-1.5 bg-bg-hover px-3 py-1 rounded-lg border border-border-light">
-                                <Clock className="w-3.5 h-3.5 text-indigo-400" />
-                                <span className="text-[11px] font-bold tracking-wider font-mono">{currentTime.toLocaleTimeString('th-TH', { hour12: false })}</span>
-                            </div>
-                            <span className="text-[10px] font-bold uppercase tracking-widest opacity-60 hidden sm:block">{currentTime.toLocaleDateString('en-US', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}</span>
-                        </div>
+            <div className={`flex items-center justify-between relative z-10 ${isFullscreen ? 'mb-2 px-1' : ''}`}>
+                <div>
+                    <h1 className={`font-bold tracking-tight text-text-main ${isFullscreen ? 'text-3xl' : 'text-2xl'}`}>
+                        {activeTab === 'cs' ? 'Operations Overview' : 'Business Insights'}
+                    </h1>
+                    <div className={`flex items-center gap-2 mt-1 ${isFullscreen ? 'gap-3' : ''}`}>
+                        <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                        </span>
+                        <span className={`text-text-muted ${isFullscreen ? 'text-sm' : 'text-xs'}`}>{user.name}</span>
+                        <span className="text-text-muted opacity-30">|</span>
+                        <span className={`text-text-muted font-mono ${isFullscreen ? 'text-sm' : 'text-xs'}`}>{currentTime.toLocaleTimeString('th-TH', { hour12: false })}</span>
+                        <span className={`text-text-muted opacity-50 ${isFullscreen ? 'text-xs' : 'text-[10px] hidden sm:inline'}`}>{currentTime.toLocaleDateString('en-US', { weekday: 'short', day: '2-digit', month: 'short' })}</span>
                     </div>
                 </div>
-
-                <div className="flex flex-col items-end gap-3 mr-1">
-                    {!isFullscreen && (
-                        <div className="flex items-center gap-2">
-                            <div className="flex bg-bg-hover p-1 rounded-xl border border-border mr-2">
-                                <button onClick={() => setIsAutoCycle(!isAutoCycle)} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${isAutoCycle ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'text-text-muted hover:text-text-main'}`}>
-                                    {isAutoCycle ? <Pause className="w-3 h-3" /> : <RefreshCw className="w-3 h-3" />}
-                                    {isAutoCycle ? 'AUTO-ON' : 'Cycle Off'}
-                                </button>
-                            </div>
-                            <button onClick={toggleFullscreen} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-bold transition-all shadow-lg shadow-indigo-500/20 active:scale-95">
-                                <Tv className="w-4 h-4" /> Fullscreen
-                            </button>
-                            <div className="flex bg-bg-hover p-1 rounded-xl border border-border ml-2">
-                                <button onClick={() => setActiveTab('cs')} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all px-6 ${activeTab === 'cs' ? 'bg-indigo-600 text-white shadow-lg' : 'text-text-muted hover:text-text-main hover:bg-bg-hover'}`}>
-                                    <ActivityIcon className="w-4 h-4" /> CS Insights
-                                </button>
-                                <button onClick={() => setActiveTab('business')} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all px-6 ${activeTab === 'business' ? 'bg-indigo-600 text-white shadow-lg' : 'text-text-muted hover:text-text-main hover:bg-bg-hover'}`}>
-                                    <BarChart3 className="w-4 h-4" /> Business
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                </div>
+                {isFullscreen && (
+                    <div className="flex items-center gap-2">
+                        <button onClick={() => setIsAutoCycle(!isAutoCycle)} className={`p-2.5 rounded-lg transition-all ${isAutoCycle ? 'bg-amber-500/20 text-amber-600' : 'text-text-muted hover:text-text-main hover:bg-bg-hover'}`} title={isAutoCycle ? 'Auto-cycle ON' : 'Auto-cycle OFF'}>
+                            {isAutoCycle ? <Pause className="w-5 h-5" /> : <RefreshCw className="w-5 h-5" />}
+                        </button>
+                        <button onClick={toggleFullscreen} className="p-2.5 rounded-lg text-text-muted hover:text-text-main hover:bg-bg-hover transition-all" title="Exit Fullscreen">
+                            <Tv className="w-5 h-5" />
+                        </button>
+                    </div>
+                )}
             </div>
 
+            {/* Tab Switcher + Controls — right-aligned under profile */}
+            {!isFullscreen && (
+                <div className="flex justify-end items-center gap-2 relative z-10 -mt-1">
+                    <button onClick={() => setIsAutoCycle(!isAutoCycle)} className={`p-2 rounded-lg transition-all ${isAutoCycle ? 'bg-amber-500/20 text-amber-600' : 'text-text-muted hover:text-text-main hover:bg-bg-hover'}`} title={isAutoCycle ? 'Auto-cycle ON' : 'Auto-cycle OFF'}>
+                        {isAutoCycle ? <Pause className="w-4 h-4" /> : <RefreshCw className="w-4 h-4" />}
+                    </button>
+                    <button onClick={toggleFullscreen} className="p-2 rounded-lg text-text-muted hover:text-text-main hover:bg-bg-hover transition-all" title="Fullscreen">
+                        <Tv className="w-4 h-4" />
+                    </button>
+                    <div className="w-px h-6 bg-border-light mx-0.5" />
+                    <div className="flex bg-bg-hover p-1 rounded-xl border border-border-light">
+                        <button onClick={() => setActiveTab('cs')} className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${activeTab === 'cs' ? 'bg-indigo-600 text-white shadow-md' : 'text-text-muted hover:text-text-main'}`}>
+                            <ActivityIcon className="w-3.5 h-3.5" /> Operations
+                        </button>
+                        <button onClick={() => setActiveTab('business')} className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${activeTab === 'business' ? 'bg-indigo-600 text-white shadow-md' : 'text-text-muted hover:text-text-main'}`}>
+                            <BarChart3 className="w-3.5 h-3.5" /> Business
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {activeTab === 'cs' && (
-                <div className="relative z-10 animate-in slide-in-from-left-4 duration-500 flex flex-col min-h-0 flex-1 space-y-5">
-                    {/* Enhanced Stat Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 flex-shrink-0">
-                        {csStats.map((stat, i) => (
-                            <div
-                                key={i}
-                                className={`group/stat glass-card p-5 border transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl cursor-pointer ${stat.border} dark:${stat.border}`}
-                                style={{
-                                    boxShadow: `0 0 30px ${stat.color.includes('emerald') ? 'rgba(16, 185, 129, 0.1)' : stat.color.includes('blue') ? 'rgba(59, 130, 246, 0.1)' : stat.color.includes('rose') ? 'rgba(244, 63, 94, 0.1)' : 'rgba(99, 102, 241, 0.1)'}`
-                                }}
-                            >
-                                <div className={`absolute inset-0 bg-gradient-to-br ${stat.bg} to-transparent opacity-40 group-hover/stat:opacity-60 transition-opacity duration-300`} />
-                                <div className="relative flex flex-col gap-3">
-                                    <div className="flex items-center justify-between">
-                                        <div className={`p-2.5 w-fit rounded-xl ${stat.color} transition-all duration-300 group-hover/stat:scale-110`}
-                                             style={{
-                                                 background: stat.color.includes('emerald') ? 'rgba(16, 185, 129, 0.15)' : stat.color.includes('blue') ? 'rgba(59, 130, 246, 0.15)' : stat.color.includes('rose') ? 'rgba(244, 63, 94, 0.15)' : 'rgba(99, 102, 241, 0.15)',
-                                                 boxShadow: `0 0 20px ${stat.color.includes('emerald') ? 'rgba(16, 185, 129, 0.3)' : stat.color.includes('blue') ? 'rgba(59, 130, 246, 0.3)' : stat.color.includes('rose') ? 'rgba(244, 63, 94, 0.3)' : 'rgba(99, 102, 241, 0.3)'}`
-                                             }}>
-                                            <stat.icon className="w-5 h-5" style={{ animation: `iconFloat${i} 3s ease-in-out infinite, continuousFloat 5s ease-in-out infinite` }} />
-                                        </div>
-                                        <div className="flex items-center gap-1 opacity-0 group-hover/stat:opacity-100 transition-opacity">
-                                            <div className={`w-1.5 h-1.5 rounded-full ${stat.color.replace('text-', 'bg-')} animate-pulse`} />
-                                            <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider">Live</span>
-                                        </div>
+                <div className={`relative z-10 animate-in slide-in-from-left-4 duration-500 flex flex-col min-h-0 flex-1 overflow-visible ${isFullscreen ? 'gap-2' : 'gap-6'}`}>
+                    {/* KPI Cards + Time Filter */}
+                    <div className={`flex flex-col flex-shrink-0 ${isFullscreen ? 'gap-1.5 pt-0' : 'gap-3 pt-1'}`}>
+                        <div className="flex items-center justify-end gap-2">
+                            <span className={`text-text-muted flex items-center gap-1.5 ${isFullscreen ? 'text-sm' : 'text-xs'}`}>
+                                <svg className={`${isFullscreen ? 'w-4 h-4' : 'w-3.5 h-3.5'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
+                                Period
+                            </span>
+                            <div className={`flex-shrink-0 ${isFullscreen ? 'w-40' : 'w-32'}`}>
+                                <CustomSelect
+                                    options={[
+                                        { value: 'today', label: 'Today' },
+                                        { value: '1w', label: '1 Week' },
+                                        { value: '1m', label: '1 Month' },
+                                        { value: '3m', label: '3 Months (Q)' },
+                                        { value: '6m', label: '6 Months' },
+                                        { value: '1y', label: '1 Year' },
+                                        { value: 'custom', label: 'Custom' }
+                                    ]}
+                                    value={opsTimeRange}
+                                    onChange={(val) => {
+                                        const r = val as typeof opsTimeRange;
+                                        setOpsTimeRange(r);
+                                        if (r === 'custom' && (!opsCustomStart || !opsCustomEnd)) {
+                                            const today = new Date();
+                                            const ds = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+                                            if (!opsCustomStart) setOpsCustomStart(ds);
+                                            if (!opsCustomEnd) setOpsCustomEnd(ds);
+                                        }
+                                    }}
+                                    className={isFullscreen ? 'h-11' : 'h-9'}
+                                    portalContainer={dashboardRef.current}
+                                />
+                            </div>
+                            {opsDateRangeLabel && opsTimeRange !== 'custom' && (
+                                <span className={`text-text-muted tabular-nums ${isFullscreen ? 'text-sm' : 'text-[11px]'}`}>
+                                    {opsDateRangeLabel}
+                                </span>
+                            )}
+                            {opsTimeRange === 'custom' && (
+                                <>
+                                    <div className={`flex-shrink-0 animate-in fade-in slide-in-from-right-2 duration-300 ${isFullscreen ? 'w-40' : 'w-32'}`}>
+                                        <CustomDatePicker value={opsCustomStart} onChange={setOpsCustomStart} placeholder="Start Date" className={isFullscreen ? 'h-11' : 'h-9'} portalContainer={dashboardRef.current} />
                                     </div>
-                                    <div>
-                                        <p className="text-text-muted text-xs uppercase font-bold tracking-widest">{stat.label}</p>
-                                        <p className={`${stat.color} opacity-80 text-[10px] font-bold -mt-0.5 mb-2`}>{stat.subLabel}</p>
-                                        <h3 className="text-4xl font-black text-text-main tracking-tighter leading-none">
-                                            <AnimatedNumber value={stat.value} duration={1200} />
-                                        </h3>
-                                        <p className="text-text-muted text-[10px] font-bold mt-2 line-clamp-1 opacity-70">{stat.sub}</p>
+                                    <div className={`flex-shrink-0 animate-in fade-in slide-in-from-right-2 duration-300 delay-75 ${isFullscreen ? 'w-40' : 'w-32'}`}>
+                                        <CustomDatePicker value={opsCustomEnd} onChange={setOpsCustomEnd} placeholder="End Date" className={isFullscreen ? 'h-11' : 'h-9'} portalContainer={dashboardRef.current} />
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                        <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 ${isFullscreen ? 'gap-2' : 'gap-3'}`}>
+                            {opsStats.map((stat: any, i) => (
+                                <div key={i} className={`glass-card border border-border-light transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg cursor-default relative overflow-hidden ${isFullscreen ? 'p-3' : 'p-4'}`}>
+                                    <div className="relative flex flex-col gap-1.5">
+                                        <div className="flex items-center justify-between">
+                                            <div className={`p-1.5 w-fit rounded-lg ${stat.color} transition-transform duration-300 ${
+                                                i === 0 ? 'bg-blue-50 dark:bg-blue-500/10' :
+                                                i === 1 ? 'bg-amber-50 dark:bg-amber-500/10' :
+                                                i === 2 ? 'bg-rose-50 dark:bg-rose-500/10' :
+                                                'bg-emerald-50 dark:bg-emerald-500/10'
+                                            }`}>
+                                                <stat.icon className={isFullscreen ? 'w-5 h-5' : 'w-4 h-4'} />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <p className={`text-text-muted uppercase font-semibold tracking-wider ${isFullscreen ? 'text-sm' : 'text-[11px]'}`}>{stat.label}</p>
+                                            <h3 className={`font-extrabold text-text-main tracking-tight leading-none mt-0.5 ${isFullscreen ? 'text-4xl' : 'text-3xl'}`}>
+                                                <AnimatedNumber value={stat.value} duration={1500} suffix={stat.suffix} />
+                                            </h3>
+                                            <p className={`text-text-muted mt-0.5 line-clamp-1 ${isFullscreen ? 'text-xs' : 'text-[11px]'}`}>{stat.sub}</p>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))}
+                            ))}
+                        </div>
                     </div>
 
-                    {/* Two Column Layout */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 flex-1 min-h-0">
-                        {/* Recent Issues - Main Column */}
-                        <div className="lg:col-span-2 glass-card p-6 border-border flex flex-col min-h-0">
-                            <div className="flex items-center justify-between mb-4 flex-shrink-0">
-                                <div>
-                                    <h3 className="text-text-main font-bold flex items-center gap-2">
-                                        <div className="p-1.5 rounded-lg bg-rose-500/10">
-                                            <AlertCircle className="w-4 h-4 text-rose-400" />
-                                        </div>
-                                        Active Issues
-                                    </h3>
-                                    <p className="text-text-muted opacity-60 text-[10px] font-bold uppercase tracking-widest mt-1">ปัญหาที่ต้องดำเนินการ</p>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <div className="px-3 py-1.5 rounded-lg bg-rose-500/10 border border-rose-500/20">
-                                        <span className="text-rose-400 text-sm font-bold">{issues.filter(i => i.status !== 'เสร็จสิ้น').length}</span>
-                                        <span className="text-text-muted text-xs ml-1">pending</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 min-h-0 space-y-3">
-                                {issues.filter(i => i.status !== 'เสร็จสิ้น').slice(0, 6).map((issue, i) => (
-                                    <div
-                                        key={i}
-                                        className="group/issue flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r from-bg-hover to-transparent border border-border-light hover:border-indigo-500/30 hover:from-indigo-500/5 transition-all duration-300 cursor-pointer"
-                                    >
-                                        <div className="relative">
-                                            <div className={`w-3 h-3 rounded-full ${issue.status === 'เสร็จสิ้น' ? 'bg-emerald-500' : issue.status === 'กำลังดำเนินการ' ? 'bg-amber-500' : 'bg-rose-500'}`} />
-                                            <div className={`absolute inset-0 w-3 h-3 rounded-full ${issue.status === 'เสร็จสิ้น' ? 'bg-emerald-500' : issue.status === 'กำลังดำเนินการ' ? 'bg-amber-500' : 'bg-rose-500'} animate-ping opacity-30`} />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-semibold text-text-main truncate group-hover/issue:text-indigo-300 transition-colors">{issue.title}</p>
-                                            <div className="flex items-center gap-2 mt-1">
-                                                <span className="text-[10px] text-text-muted font-medium">{issue.customerName}</span>
-                                                <span className="text-text-muted opacity-30">•</span>
-                                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                                                    issue.status === 'เสร็จสิ้น' ? 'bg-emerald-500/10 text-emerald-400' :
-                                                    issue.status === 'กำลังดำเนินการ' ? 'bg-amber-500/10 text-amber-400' :
-                                                    'bg-rose-500/10 text-rose-400'
-                                                }`}>{issue.status}</span>
+                    {/* Stat Cards with Section Headers */}
+                    <div className={`flex-1 min-h-0 ${isFullscreen ? 'flex flex-col gap-2 overflow-hidden' : 'overflow-y-auto custom-scrollbar space-y-5'}`}>
+                        {/* Section 1: Customer Overview */}
+                        <div className={isFullscreen ? 'flex-1 flex flex-col min-h-0' : ''}>
+                            {!isFullscreen && (
+                                <h4 className="text-text-muted uppercase font-semibold tracking-widest mb-3 flex items-center gap-2 text-[11px]">
+                                    <div className="w-1 h-4 rounded-full bg-emerald-500" />
+                                    Customer Overview
+                                </h4>
+                            )}
+                            <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 ${isFullscreen ? 'gap-2 flex-1' : 'gap-4'}`}>
+                                {/* Customer Health */}
+                                {(() => {
+                                    const total = customers.length || 1;
+                                    const active = customers.filter(c => c.usageStatus === 'Active').length;
+                                    const training = customers.filter(c => c.usageStatus === 'Training').length;
+                                    const pending = customers.filter(c => c.usageStatus === 'Pending').length;
+                                    const canceled = customers.filter(c => c.usageStatus === 'Canceled').length;
+                                    const inactive = customers.filter(c => c.usageStatus === 'Inactive').length;
+                                    const segments = [
+                                        { label: 'Active', count: active, color: 'bg-emerald-500' },
+                                        { label: 'Training', count: training, color: 'bg-indigo-500' },
+                                        { label: 'Pending', count: pending, color: 'bg-amber-400' },
+                                        { label: 'Canceled', count: canceled, color: 'bg-rose-400' },
+                                        { label: 'Inactive', count: inactive, color: 'bg-gray-400' },
+                                    ].filter(s => s.count > 0);
+                                    return (
+                                        <div className={`glass-card border border-border-light hover:border-emerald-500/30 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 ${isFullscreen ? 'p-4' : 'p-5'}`}>
+                                            <div className={`flex items-center gap-2 ${isFullscreen ? 'mb-2' : 'mb-3'}`}>
+                                                <div className={`p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 ${isFullscreen ? 'p-2' : ''}`}>
+                                                    <Users className={`text-emerald-600 ${isFullscreen ? 'w-5 h-5' : 'w-4 h-4'}`} />
+                                                </div>
+                                                <span className={`text-text-main font-semibold ${isFullscreen ? 'text-base' : 'text-sm'}`}>Customer Health</span>
+                                            </div>
+                                            <div className={`font-extrabold text-text-main tabular-nums leading-none ${isFullscreen ? 'text-3xl mb-2' : 'text-2xl mb-3'}`}>{total.toLocaleString()}</div>
+                                            <div className={`rounded-full overflow-hidden flex ${isFullscreen ? 'h-2.5' : 'h-2'}`} style={{ backgroundColor: 'var(--bg-hover)' }}>
+                                                {segments.map(s => (
+                                                    <div key={s.label} className={`h-full ${s.color} transition-all duration-700`} style={{ width: `${(s.count / total) * 100}%` }} />
+                                                ))}
+                                            </div>
+                                            <div className={`space-y-1 ${isFullscreen ? 'mt-2 text-sm' : 'mt-3 text-xs'}`}>
+                                                {segments.map(s => (
+                                                    <div key={s.label} className="flex items-center justify-between">
+                                                        <span className="text-text-muted flex items-center gap-1.5">
+                                                            <span className={`inline-block w-2 h-2 rounded-full ${s.color}`} />{s.label}
+                                                        </span>
+                                                        <span className="font-semibold text-text-main tabular-nums">{s.count}</span>
+                                                    </div>
+                                                ))}
                                             </div>
                                         </div>
-                                        <div className="text-right">
-                                            <div className="text-[10px] text-text-muted font-mono opacity-70">
-                                                {issue.createdAt?.split('T')[0]}
+                                    );
+                                })()}
+
+                                {/* Installation Status */}
+                                {(() => {
+                                    const total = installations.length;
+                                    const instPending = installations.filter(i => i.status === 'Pending').length;
+                                    const completed = installations.filter(i => i.status === 'Completed').length;
+                                    const now = new Date();
+                                    const weekStart = new Date(now);
+                                    const day = weekStart.getDay();
+                                    weekStart.setDate(weekStart.getDate() - (day === 0 ? 6 : day - 1));
+                                    weekStart.setHours(0, 0, 0, 0);
+                                    const thisWeek = installations.filter(i => {
+                                        if (!i.requestedAt) return false;
+                                        return new Date(i.requestedAt) >= weekStart;
+                                    }).length;
+                                    const items = [
+                                        { label: 'Pending', count: instPending, color: 'bg-amber-400', text: 'text-amber-600' },
+                                        { label: 'Completed', count: completed, color: 'bg-emerald-500', text: 'text-emerald-600' },
+                                    ];
+                                    return (
+                                        <div className={`glass-card border border-border-light hover:border-indigo-500/30 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 ${isFullscreen ? 'p-4' : 'p-5'}`}>
+                                            <div className={`flex items-center gap-2 ${isFullscreen ? 'mb-2' : 'mb-3'}`}>
+                                                <div className={`p-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 ${isFullscreen ? 'p-2' : ''}`}>
+                                                    <Monitor className={`text-indigo-500 ${isFullscreen ? 'w-5 h-5' : 'w-4 h-4'}`} />
+                                                </div>
+                                                <span className={`text-text-main font-semibold ${isFullscreen ? 'text-base' : 'text-sm'}`}>Installation Status</span>
                                             </div>
-                                            {issue.subdomain && (
-                                                <a
-                                                    href={`https://${issue.subdomain}`}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="text-[9px] text-indigo-400 hover:underline"
-                                                    onClick={(e) => e.stopPropagation()}
-                                                >
-                                                    {issue.subdomain}
-                                                </a>
-                                            )}
+                                            <div className={`flex items-end justify-between ${isFullscreen ? 'mb-2' : 'mb-3'}`}>
+                                                <div className={`font-extrabold text-text-main tabular-nums leading-none ${isFullscreen ? 'text-3xl' : 'text-2xl'}`}>{total}<span className={`font-normal text-text-muted ${isFullscreen ? 'text-sm ml-1' : 'text-sm ml-1'}`}>total</span></div>
+                                                {thisWeek > 0 && (
+                                                    <div className={`flex items-center gap-1 px-2 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 ${isFullscreen ? 'text-xs' : 'text-[10px]'}`}>
+                                                        <span className="text-indigo-600 font-bold">+{thisWeek}</span>
+                                                        <span className="text-indigo-500">สัปดาห์นี้</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className={`${isFullscreen ? 'space-y-2 text-sm' : 'space-y-3 text-xs'}`}>
+                                                {items.map(s => (
+                                                    <div key={s.label}>
+                                                        <div className="flex items-center justify-between mb-1">
+                                                            <span className="text-text-muted flex items-center gap-1.5"><span className={`inline-block w-2 h-2 rounded-full ${s.color}`} />{s.label}</span>
+                                                            <span className="font-semibold text-text-main tabular-nums">{s.count}</span>
+                                                        </div>
+                                                        <div className={`rounded-full overflow-hidden ${isFullscreen ? 'h-2' : 'h-2'}`} style={{ backgroundColor: 'var(--bg-hover)' }}>
+                                                            <div className={`h-full ${s.color} rounded-full transition-all duration-700`} style={{ width: `${total > 0 ? (s.count / total) * 100 : 0}%` }} />
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
-                                {issues.filter(i => i.status !== 'เสร็จสิ้น').length === 0 && (
-                                    <div className="flex flex-col items-center justify-center py-12 text-center">
-                                        <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center mb-4">
-                                            <Zap className="w-8 h-8 text-emerald-400" />
+                                    );
+                                })()}
+
+                                {/* Package Distribution */}
+                                {(() => {
+                                    const pkgMap: Record<string, number> = {};
+                                    customers.forEach(c => { const pkg = c.package || 'Unknown'; pkgMap[pkg] = (pkgMap[pkg] || 0) + 1; });
+                                    const sorted = Object.entries(pkgMap).sort((a, b) => b[1] - a[1]);
+                                    const total = customers.length || 1;
+                                    const pkgColors = ['bg-blue-500', 'bg-purple-500', 'bg-emerald-500', 'bg-amber-500', 'bg-rose-500', 'bg-indigo-500', 'bg-cyan-500'];
+                                    return (
+                                        <div className={`glass-card border border-border-light hover:border-blue-500/30 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 ${isFullscreen ? 'p-4' : 'p-5'}`}>
+                                            <div className={`flex items-center gap-2 ${isFullscreen ? 'mb-2' : 'mb-3'}`}>
+                                                <div className={`p-1.5 rounded-lg bg-blue-50 dark:bg-blue-500/10 ${isFullscreen ? 'p-2' : ''}`}>
+                                                    <Layers className={`text-blue-500 ${isFullscreen ? 'w-5 h-5' : 'w-4 h-4'}`} />
+                                                </div>
+                                                <span className={`text-text-main font-semibold ${isFullscreen ? 'text-base' : 'text-sm'}`}>Package</span>
+                                            </div>
+                                            <div className={`font-extrabold text-text-main tabular-nums leading-none ${isFullscreen ? 'text-3xl mb-2' : 'text-2xl mb-3'}`}>{sorted.length}<span className={`font-normal text-text-muted ${isFullscreen ? 'text-base ml-1.5' : 'text-sm ml-1'}`}>types</span></div>
+                                            <div className={`${isFullscreen ? 'space-y-1.5 text-sm' : 'space-y-2.5 text-xs'}`}>
+                                                {sorted.slice(0, isFullscreen ? 5 : 6).map(([pkg, count], idx) => (
+                                                    <div key={pkg} className="flex items-center gap-2.5">
+                                                        <div className={`w-2 h-2 rounded-full ${pkgColors[idx % pkgColors.length]} flex-shrink-0`} />
+                                                        <span className="text-text-main flex-1 truncate">{pkg}</span>
+                                                        <span className="font-semibold text-text-main tabular-nums">{count}</span>
+                                                        <div className={`w-16 rounded-full overflow-hidden ${isFullscreen ? 'h-2.5' : 'h-2'}`} style={{ backgroundColor: 'var(--bg-hover)' }}>
+                                                            <div className={`h-full ${pkgColors[idx % pkgColors.length]} rounded-full transition-all duration-700`} style={{ width: `${(count / total) * 100}%` }} />
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
-                                        <p className="text-text-main font-bold">All Clear!</p>
-                                        <p className="text-text-muted text-sm">ไม่มีปัญหาที่ต้องดำเนินการ</p>
-                                    </div>
-                                )}
+                                    );
+                                })()}
                             </div>
                         </div>
 
-                        {/* Quick Stats Sidebar */}
-                        <div className="glass-card p-6 border-border flex flex-col min-h-0">
-                            <h3 className="text-text-main font-bold flex items-center gap-2 flex-shrink-0">
-                                <div className="p-1.5 rounded-lg bg-indigo-500/10">
-                                    <BarChart3 className="w-4 h-4 text-indigo-400" />
-                                </div>
-                                Quick Stats
-                            </h3>
-                            <p className="text-text-muted opacity-60 text-[10px] font-bold uppercase tracking-widest mb-5 flex-shrink-0">สถิติภาพรวม</p>
-
-                            <div className="flex-1 space-y-5 overflow-y-auto custom-scrollbar">
-                                {/* Customer Distribution */}
-                                <div className="p-4 rounded-xl bg-bg-hover border border-border-light">
-                                    <div className="flex items-center justify-between mb-3">
-                                        <span className="text-[10px] text-text-muted uppercase font-bold tracking-widest">Usage Distribution</span>
-                                        <span className="text-xs text-text-main font-bold">{customers.length} total</span>
-                                    </div>
-                                    <div className="space-y-3">
-                                        <div>
-                                            <div className="flex justify-between text-[10px] mb-1">
-                                                <span className="text-emerald-400 font-bold">Active</span>
-                                                <span className="text-text-muted">{customers.filter(c => c.usageStatus === 'Active').length}</span>
+                        {/* Section 2: Ticket Analytics (filtered) */}
+                        <div className={isFullscreen ? 'flex-1 flex flex-col min-h-0' : ''}>
+                            {!isFullscreen && (
+                                <h4 className="text-text-muted uppercase font-semibold tracking-widest mb-3 flex items-center gap-2 text-[11px]">
+                                    <div className="w-1 h-4 rounded-full bg-amber-500" />
+                                    Ticket Analytics
+                                    <span className="px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-600 font-bold text-[10px]">
+                                        {opsTimeRange === 'today' ? 'Today' : opsTimeRange === '1w' ? '1W' : opsTimeRange === '1m' ? '1M' : opsTimeRange === '3m' ? '3M' : opsTimeRange === '6m' ? '6M' : opsTimeRange === '1y' ? '1Y' : 'Custom'}
+                                    </span>
+                                </h4>
+                            )}
+                            <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 ${isFullscreen ? 'gap-2 flex-1' : 'gap-4'}`}>
+                                {/* Ticket Status */}
+                                {(() => {
+                                    const total = Math.max(filteredIssues.length, 1);
+                                    const reported = filteredIssues.filter(i => i.status === 'แจ้งเคส').length;
+                                    const inProgress = filteredIssues.filter(i => i.status === 'กำลังดำเนินการ').length;
+                                    const resolved = filteredIssues.filter(i => i.status === 'เสร็จสิ้น').length;
+                                    const items = [
+                                        { label: 'แจ้งเคส', count: reported, color: 'bg-rose-500', text: 'text-rose-500' },
+                                        { label: 'กำลังดำเนินการ', count: inProgress, color: 'bg-amber-500', text: 'text-amber-600' },
+                                        { label: 'เสร็จสิ้น', count: resolved, color: 'bg-emerald-500', text: 'text-emerald-600' },
+                                    ];
+                                    return (
+                                        <div className={`glass-card border border-border-light hover:border-amber-500/30 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 ${isFullscreen ? 'p-4' : 'p-5'}`}>
+                                            <div className={`flex items-center gap-2 ${isFullscreen ? 'mb-2' : 'mb-3'}`}>
+                                                <div className={`p-1.5 rounded-lg bg-amber-50 dark:bg-amber-500/10 ${isFullscreen ? 'p-2' : ''}`}>
+                                                    <Briefcase className={`text-amber-600 ${isFullscreen ? 'w-5 h-5' : 'w-4 h-4'}`} />
+                                                </div>
+                                                <span className={`text-text-main font-semibold ${isFullscreen ? 'text-base' : 'text-sm'}`}>Ticket Status</span>
                                             </div>
-                                            <div className="h-2 bg-bg-pure rounded-full overflow-hidden">
-                                                <div
-                                                    className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full transition-all duration-1000"
-                                                    style={{ width: `${(customers.filter(c => c.usageStatus === 'Active').length / customers.length) * 100}%` }}
-                                                />
-                                            </div>
+                                            <div className={`font-extrabold text-text-main tabular-nums leading-none ${isFullscreen ? 'text-3xl mb-2' : 'text-2xl mb-3'}`}>{reported + inProgress}<span className={`font-normal text-text-muted ${isFullscreen ? 'text-base ml-1.5' : 'text-sm ml-1'}`}>open</span></div>
+                                            {filteredIssues.length > 0 ? (
+                                                <div className={`${isFullscreen ? 'space-y-2 text-sm' : 'space-y-3 text-xs'}`}>
+                                                    {items.map(s => (
+                                                        <div key={s.label}>
+                                                            <div className="flex items-center justify-between mb-1">
+                                                                <span className="text-text-muted flex items-center gap-1.5"><span className={`inline-block w-2 h-2 rounded-full ${s.color}`} />{s.label}</span>
+                                                                <span className="font-semibold text-text-main tabular-nums">{s.count}</span>
+                                                            </div>
+                                                            <div className={`rounded-full overflow-hidden ${isFullscreen ? 'h-2' : 'h-2'}`} style={{ backgroundColor: 'var(--bg-hover)' }}>
+                                                                <div className={`h-full ${s.color} rounded-full transition-all duration-700`} style={{ width: `${(s.count / total) * 100}%` }} />
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <div className={`flex flex-col items-center justify-center text-center ${isFullscreen ? 'py-2' : 'py-4'}`}>
+                                                    <div className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center mb-2"><Zap className="w-5 h-5 text-emerald-600" /></div>
+                                                    <p className={`text-text-muted ${isFullscreen ? 'text-sm' : 'text-xs'}`}>No tickets in this period</p>
+                                                </div>
+                                            )}
                                         </div>
-                                        <div>
-                                            <div className="flex justify-between text-[10px] mb-1">
-                                                <span className="text-indigo-400 font-bold">Training</span>
-                                                <span className="text-text-muted">{customers.filter(c => c.usageStatus === 'Training').length}</span>
-                                            </div>
-                                            <div className="h-2 bg-bg-pure rounded-full overflow-hidden">
-                                                <div
-                                                    className="h-full bg-gradient-to-r from-indigo-500 to-indigo-400 rounded-full transition-all duration-1000"
-                                                    style={{ width: `${(customers.filter(c => c.usageStatus === 'Training').length / customers.length) * 100}%` }}
-                                                />
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <div className="flex justify-between text-[10px] mb-1">
-                                                <span className="text-amber-400 font-bold">Pending</span>
-                                                <span className="text-text-muted">{customers.filter(c => c.usageStatus === 'Pending').length}</span>
-                                            </div>
-                                            <div className="h-2 bg-bg-pure rounded-full overflow-hidden">
-                                                <div
-                                                    className="h-full bg-gradient-to-r from-amber-500 to-amber-400 rounded-full transition-all duration-1000"
-                                                    style={{ width: `${(customers.filter(c => c.usageStatus === 'Pending').length / customers.length) * 100}%` }}
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                                    );
+                                })()}
 
-                                {/* Installation Progress */}
-                                <div className="p-4 rounded-xl bg-gradient-to-br from-blue-500/10 to-transparent border border-blue-500/20">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <span className="text-[10px] text-text-muted uppercase font-bold tracking-widest">Installation Rate</span>
-                                    </div>
-                                    <div className="flex items-end gap-3">
-                                        <span className="text-3xl font-black text-blue-400">
-                                            {Math.round((installations.filter(i => i.status === 'Completed').length / Math.max(installations.length, 1)) * 100)}%
-                                        </span>
-                                        <span className="text-text-muted text-xs mb-1">completed</span>
-                                    </div>
-                                    <div className="mt-3 h-2 bg-bg-pure rounded-full overflow-hidden">
-                                        <div
-                                            className="h-full bg-gradient-to-r from-blue-500 to-cyan-400 rounded-full"
-                                            style={{ width: `${(installations.filter(i => i.status === 'Completed').length / Math.max(installations.length, 1)) * 100}%` }}
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Issue Resolution */}
-                                <div className="p-4 rounded-xl bg-gradient-to-br from-emerald-500/10 to-transparent border border-emerald-500/20">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <span className="text-[10px] text-text-muted uppercase font-bold tracking-widest">Issue Resolution</span>
-                                    </div>
-                                    <div className="flex items-end gap-3">
-                                        <span className="text-3xl font-black text-emerald-400">
-                                            {Math.round((issues.filter(i => i.status === 'เสร็จสิ้น').length / Math.max(issues.length, 1)) * 100)}%
-                                        </span>
-                                        <span className="text-text-muted text-xs mb-1">resolved</span>
-                                    </div>
-                                    <div className="flex items-center gap-2 mt-3">
-                                        <div className="flex-1 h-2 bg-bg-pure rounded-full overflow-hidden">
-                                            <div
-                                                className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full"
-                                                style={{ width: `${(issues.filter(i => i.status === 'เสร็จสิ้น').length / Math.max(issues.length, 1)) * 100}%` }}
-                                            />
-                                        </div>
-                                        <span className="text-[10px] text-emerald-400 font-bold">{issues.filter(i => i.status === 'เสร็จสิ้น').length}/{issues.length}</span>
-                                    </div>
-                                </div>
-
-                                {/* Recent Activity */}
-                                <div className="p-4 rounded-xl bg-bg-hover border border-border-light">
-                                    <span className="text-[10px] text-text-muted uppercase font-bold tracking-widest">Recent Activity</span>
-                                    <div className="mt-3 space-y-2">
-                                        {activities.slice(0, 3).map((activity, i) => (
-                                            <div key={i} className="flex items-center gap-2 text-xs">
-                                                <div className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
-                                                <span className="text-text-main truncate flex-1">{activity.customerName}</span>
-                                                <span className="text-text-muted text-[10px]">{activity.activityType}</span>
+                                {/* Severity Distribution */}
+                                {(() => {
+                                    const open = filteredIssues.filter(i => i.status !== 'เสร็จสิ้น');
+                                    const total = Math.max(open.length, 1);
+                                    const critical = open.filter(i => i.severity === 'Critical').length;
+                                    const high = open.filter(i => i.severity === 'High').length;
+                                    const medium = open.filter(i => i.severity === 'Medium').length;
+                                    const low = open.filter(i => i.severity === 'Low').length;
+                                    const items = [
+                                        { label: 'Critical', count: critical, color: 'bg-rose-500' },
+                                        { label: 'High', count: high, color: 'bg-orange-500' },
+                                        { label: 'Medium', count: medium, color: 'bg-yellow-500' },
+                                        { label: 'Low', count: low, color: 'bg-gray-400' },
+                                    ];
+                                    return (
+                                        <div className={`glass-card border border-border-light hover:border-rose-500/30 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 ${isFullscreen ? 'p-4' : 'p-5'}`}>
+                                            <div className={`flex items-center gap-2 ${isFullscreen ? 'mb-2' : 'mb-3'}`}>
+                                                <div className={`p-1.5 rounded-lg bg-rose-50 dark:bg-rose-500/10 ${isFullscreen ? 'p-2' : ''}`}>
+                                                    <Zap className={`text-rose-500 ${isFullscreen ? 'w-5 h-5' : 'w-4 h-4'}`} />
+                                                </div>
+                                                <span className={`text-text-main font-semibold ${isFullscreen ? 'text-base' : 'text-sm'}`}>Severity Distribution</span>
                                             </div>
-                                        ))}
-                                    </div>
-                                </div>
+                                            <div className={`font-extrabold text-text-main tabular-nums leading-none ${isFullscreen ? 'text-3xl mb-2' : 'text-2xl mb-3'}`}>{critical + high}<span className={`font-normal text-text-muted ${isFullscreen ? 'text-base ml-1.5' : 'text-sm ml-1'}`}>urgent</span></div>
+                                            {open.length > 0 ? (
+                                                <div className={`${isFullscreen ? 'space-y-1.5 text-sm' : 'space-y-2.5 text-xs'}`}>
+                                                    {items.map(s => (
+                                                        <div key={s.label} className="flex items-center gap-2.5">
+                                                            <div className={`w-2 h-2 rounded-full ${s.color} flex-shrink-0`} />
+                                                            <span className="text-text-muted flex-1">{s.label}</span>
+                                                            <span className="font-semibold text-text-main tabular-nums">{s.count}</span>
+                                                            <div className={`w-16 rounded-full overflow-hidden ${isFullscreen ? 'h-2' : 'h-2'}`} style={{ backgroundColor: 'var(--bg-hover)' }}>
+                                                                <div className={`h-full ${s.color} rounded-full transition-all duration-700`} style={{ width: `${(s.count / total) * 100}%` }} />
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <div className={`flex flex-col items-center justify-center text-center ${isFullscreen ? 'py-2' : 'py-4'}`}>
+                                                    <div className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center mb-2"><Zap className="w-5 h-5 text-emerald-600" /></div>
+                                                    <p className={`text-text-muted ${isFullscreen ? 'text-sm' : 'text-xs'}`}>No open tickets</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })()}
+
+                                {/* Ticket Types */}
+                                {(() => {
+                                    const typeMap: Record<string, number> = {};
+                                    filteredIssues.forEach(i => { const t = i.type || 'Other'; typeMap[t] = (typeMap[t] || 0) + 1; });
+                                    const sorted = Object.entries(typeMap).sort((a, b) => b[1] - a[1]);
+                                    const typeColors = ['bg-purple-500', 'bg-blue-500', 'bg-emerald-500', 'bg-amber-500', 'bg-rose-500'];
+                                    return (
+                                        <div className={`glass-card border border-border-light hover:border-purple-500/30 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 ${isFullscreen ? 'p-4' : 'p-5'}`}>
+                                            <div className={`flex items-center gap-2 ${isFullscreen ? 'mb-2' : 'mb-3'}`}>
+                                                <div className={`p-1.5 rounded-lg bg-purple-50 dark:bg-purple-500/10 ${isFullscreen ? 'p-2' : ''}`}>
+                                                    <Layers className={`text-purple-500 ${isFullscreen ? 'w-5 h-5' : 'w-4 h-4'}`} />
+                                                </div>
+                                                <span className={`text-text-main font-semibold ${isFullscreen ? 'text-base' : 'text-sm'}`}>Ticket Types</span>
+                                            </div>
+                                            <div className={`font-extrabold text-text-main tabular-nums leading-none ${isFullscreen ? 'text-3xl mb-2' : 'text-2xl mb-3'}`}>{sorted.length}<span className={`font-normal text-text-muted ${isFullscreen ? 'text-base ml-1.5' : 'text-sm ml-1'}`}>categories</span></div>
+                                            {sorted.length > 0 ? (
+                                                <div className={`${isFullscreen ? 'space-y-1.5 text-sm' : 'space-y-2.5 text-xs'}`}>
+                                                    {sorted.slice(0, isFullscreen ? 4 : 5).map(([type, count], idx) => (
+                                                        <div key={type} className="flex items-center gap-2.5">
+                                                            <div className={`w-2 h-2 rounded-full ${typeColors[idx % typeColors.length]} flex-shrink-0`} />
+                                                            <span className="text-text-main flex-1 truncate">{type}</span>
+                                                            <span className="font-semibold text-text-main tabular-nums">{count}</span>
+                                                            <div className={`w-16 rounded-full overflow-hidden ${isFullscreen ? 'h-2' : 'h-2'}`} style={{ backgroundColor: 'var(--bg-hover)' }}>
+                                                                <div className={`h-full ${typeColors[idx % typeColors.length]} rounded-full transition-all duration-700`} style={{ width: `${(count / Math.max(filteredIssues.length, 1)) * 100}%` }} />
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <div className={`flex flex-col items-center justify-center text-center ${isFullscreen ? 'py-2' : 'py-4'}`}>
+                                                    <div className="w-10 h-10 rounded-full bg-purple-50 dark:bg-purple-500/10 flex items-center justify-center mb-2"><Layers className="w-5 h-5 text-purple-500" /></div>
+                                                    <p className={`text-text-muted ${isFullscreen ? 'text-sm' : 'text-xs'}`}>No tickets in this period</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })()}
                             </div>
                         </div>
                     </div>
@@ -1039,37 +1220,32 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
                             <div
                                 key={i}
                                 onClick={() => setSelectedMetric(stat.id)}
-                                className={`group/card glass-card p-4 border transition-all duration-300 cursor-pointer relative hover:z-50 ${selectedMetric === stat.id
-                                    ? 'border-indigo-500 ring-2 ring-indigo-500/20 translate-y-[-4px] shadow-2xl shadow-indigo-500/10 z-40'
-                                    : 'border-border hover:border-border-light hover:-translate-y-1'
+                                className={`group/card glass-card p-4 border transition-all duration-300 cursor-pointer relative overflow-hidden ${selectedMetric === stat.id
+                                    ? 'border-indigo-500/50 ring-1 ring-indigo-500/20 translate-y-[-2px] shadow-lg z-40'
+                                    : 'border-border hover:border-border-light hover:-translate-y-0.5'
                                     }`}
                             >
-                                <div className={`absolute inset-0 bg-gradient-to-br ${stat.bg} to-transparent opacity-30 transition-opacity duration-300 ${selectedMetric === stat.id ? 'opacity-60' : 'group-hover/card:opacity-50'}`} />
-                                <div className="relative flex flex-col gap-2">
+                                <div className="relative flex flex-col gap-1.5">
                                     <div className="flex items-center justify-between">
-                                        <div
-                                            className={`p-1.5 w-fit rounded-lg bg-bg-hover ${stat.color} transition-transform duration-300 ${selectedMetric === stat.id ? 'scale-110 shadow-[0_0_15px_currentColor]' : 'group-hover/card:scale-110'}`}
-                                            style={{ animation: `iconFloat${i} 3s ease-in-out infinite, continuousFloat 6s ease-in-out infinite`, animationDelay: `${i * 0.5}s` }}
-                                        >
+                                        <div className={`p-1.5 w-fit rounded-lg bg-bg-hover ${stat.color} transition-transform duration-300 ${selectedMetric === stat.id ? 'scale-110' : 'group-hover/card:scale-105'}`}>
                                             <stat.icon className="w-4 h-4" />
                                         </div>
                                         {selectedMetric === stat.id && (
-                                            <div className="animate-pulse flex items-center gap-1">
-                                                <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_#6366f1]" />
-                                                <span className="text-[10px] text-indigo-400 font-black tracking-tighter uppercase">Active View</span>
+                                            <div className="flex items-center gap-1">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                                                <span className="text-[10px] text-indigo-500 font-bold uppercase">Active</span>
                                             </div>
                                         )}
                                     </div>
                                     <div>
-                                        <p className="text-text-muted text-sm uppercase font-bold tracking-widest">{stat.label}</p>
-                                        <p className="text-indigo-400/80 text-xs font-bold -mt-0.5 mb-1">{stat.subLabel}</p>
-                                        <div className="flex items-baseline justify-between w-full mt-1">
-                                            <h3 className="text-3xl font-bold text-text-main tracking-tighter leading-none">
+                                        <p className={`text-text-muted uppercase font-semibold tracking-wider ${isFullscreen ? 'text-sm' : 'text-[11px]'}`}>{stat.label}</p>
+                                        <div className="flex items-baseline justify-between w-full mt-0.5">
+                                            <h3 className={`font-bold text-text-main tracking-tight leading-none ${isFullscreen ? 'text-4xl' : 'text-2xl'}`}>
                                                 <AnimatedNumber value={stat.numericValue} duration={1500} prefix={stat.prefix} suffix={stat.suffix} />
                                             </h3>
                                             {stat.extraInfo && <div>{stat.extraInfo}</div>}
                                         </div>
-                                        <p className="text-text-muted text-xs font-bold mt-1 line-clamp-1">{stat.sub}</p>
+                                        <p className={`text-text-muted mt-0.5 line-clamp-1 ${isFullscreen ? 'text-xs' : 'text-[10px]'}`}>{stat.sub}</p>
                                     </div>
                                 </div>
                             </div>
@@ -1080,23 +1256,23 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
                         <div className="lg:col-span-2 glass-card p-6 border-border-light flex flex-col min-h-0">
                             <div className="flex items-center justify-between mb-2">
                                 <div className="flex flex-col">
-                                    <h3 className="text-text-main text-sm font-semibold flex items-center gap-2">
-                                        <LineChart className="w-4 h-4 text-indigo-400" />
+                                    <h3 className={`text-text-main font-semibold flex items-center gap-2 ${isFullscreen ? 'text-lg' : 'text-sm'}`}>
+                                        <LineChart className={`text-indigo-500 ${isFullscreen ? 'w-5 h-5' : 'w-4 h-4'}`} />
                                         {timeRange === '1w' ? 'Weekly' : timeRange === '1m' ? 'Monthly' : timeRange === '3m' ? '3 Months' : timeRange === '6m' ? '6 Months' : timeRange === '1y' ? 'Yearly' : 'Custom'} {
                                             selectedMetric === 'leads' ? 'Leads Performance' :
                                                 selectedMetric === 'demos' ? 'Demos Performance' :
                                                     selectedMetric === 'sales' ? 'Sales Revenue Trend' : 'Renewal Revenue Trend'
                                         }
                                     </h3>
-                                    <p className="text-text-muted text-[10px]">
+                                    <p className={`text-text-muted ${isFullscreen ? 'text-sm' : 'text-[10px]'}`}>
                                         {selectedMetric === 'sales'
                                             ? `ยอดขายรายเดือน ${timeRange === '1m' ? '1 เดือนย้อนหลัง' : timeRange === '3m' ? '3 เดือนย้อนหลัง' : timeRange === '6m' ? '6 เดือนย้อนหลัง' : '1 ปีย้อนหลัง'}`
                                             : `อัตราการเติบโตของ Lead และ Demo ${timeRange === '1w' ? 'รายสัปดาห์' : 'ช่วงเวลาที่กำหนด'}`
                                         }
                                     </p>
                                 </div>
-                                <div className="flex items-center gap-2 scale-90 origin-right">
-                                    <div className="w-36 flex-shrink-0">
+                                <div className={`flex items-center ${isFullscreen ? 'gap-3' : 'gap-2'}`}>
+                                    <div className={`flex-shrink-0 ${isFullscreen ? 'w-44' : 'w-36'}`}>
                                         {selectedMetric === 'demos' ? (
                                             <CustomSelect
                                                 options={[
@@ -1106,7 +1282,7 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
                                                 ]}
                                                 value={salesFilter}
                                                 onChange={(val) => setSalesFilter(val as any)}
-                                                className="h-9"
+                                                className={isFullscreen ? 'h-11' : 'h-9'}
                                                 portalContainer={dashboardRef.current}
                                             />
                                         ) : selectedMetric === 'leads' ? (
@@ -1118,25 +1294,22 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
                                                 ]}
                                                 value={productFilter}
                                                 onChange={(val) => setProductFilter(val as any)}
-                                                className="h-9"
+                                                className={isFullscreen ? 'h-11' : 'h-9'}
                                                 portalContainer={dashboardRef.current}
                                             />
                                         ) : null}
                                     </div>
-                                    <div className="w-28 flex-shrink-0">
+                                    <div className={`flex-shrink-0 ${isFullscreen ? 'w-40' : 'w-32'}`}>
                                         <CustomSelect
-                                            options={(selectedMetric === 'sales' || selectedMetric === 'renewals') ? [
-                                                { value: '1m', label: '1 เดือน' },
-                                                { value: '3m', label: '3 เดือน (รายไตรมาส)' },
-                                                { value: '6m', label: '6 เดือน' },
-                                                { value: '1y', label: '1 ปี' }
-                                            ] : [
+                                            options={[
                                                 { value: '1w', label: '1 Week' },
                                                 { value: '1m', label: '1 Month' },
+                                                { value: '3m', label: '3 Months (Q)' },
+                                                { value: '6m', label: '6 Months' },
                                                 { value: '1y', label: '1 Year' },
                                                 { value: 'custom', label: 'Custom' }
                                             ]}
-                                            value={(selectedMetric === 'sales' || selectedMetric === 'renewals') && !['1m', '3m', '6m', '1y'].includes(timeRange) ? '3m' : timeRange}
+                                            value={timeRange}
                                             onChange={(val) => {
                                                 const newRange = val as '1w' | '1m' | '1y' | '3m' | '6m' | 'custom';
                                                 setTimeRange(newRange);
@@ -1150,28 +1323,28 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
                                                     if (!customEndDate) setCustomEndDate(dateStr);
                                                 }
                                             }}
-                                            className="h-9"
+                                            className={isFullscreen ? 'h-11' : 'h-9'}
                                             portalContainer={dashboardRef.current}
                                         />
                                     </div>
 
                                     {timeRange === 'custom' && (
                                         <>
-                                            <div className="w-32 flex-shrink-0 animate-in fade-in slide-in-from-right-2 duration-300">
+                                            <div className={`flex-shrink-0 animate-in fade-in slide-in-from-right-2 duration-300 ${isFullscreen ? 'w-40' : 'w-32'}`}>
                                                 <CustomDatePicker
                                                     value={customStartDate}
                                                     onChange={setCustomStartDate}
                                                     placeholder="Start Date"
-                                                    className="h-9"
+                                                    className={isFullscreen ? 'h-11' : 'h-9'}
                                                     portalContainer={dashboardRef.current}
                                                 />
                                             </div>
-                                            <div className="w-32 flex-shrink-0 animate-in fade-in slide-in-from-right-2 duration-300 delay-75">
+                                            <div className={`flex-shrink-0 animate-in fade-in slide-in-from-right-2 duration-300 delay-75 ${isFullscreen ? 'w-40' : 'w-32'}`}>
                                                 <CustomDatePicker
                                                     value={customEndDate}
                                                     onChange={setCustomEndDate}
                                                     placeholder="End Date"
-                                                    className="h-9"
+                                                    className={isFullscreen ? 'h-11' : 'h-9'}
                                                     portalContainer={dashboardRef.current}
                                                 />
                                             </div>
@@ -1180,216 +1353,75 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
                                 </div>
                             </div>
 
-                            <div className="flex flex-col md:flex-row gap-8 flex-1 min-h-0 mt-2">
-                                <div className="flex flex-col gap-6 pr-8 border-r border-border-light min-w-[220px] py-2">
-                                    <div className="flex flex-col">
-                                        <div className="flex items-center gap-1.5 mb-2">
-                                            <div className={`w-3 h-3 rounded-full ${selectedMetric === 'leads' ? 'bg-indigo-400 shadow-[0_0_10px_#818cf8]' : selectedMetric === 'demos' ? 'bg-blue-400 shadow-[0_0_10px_#3b82f6]' : selectedMetric === 'sales' ? 'bg-emerald-400 shadow-[0_0_10px_#10b981]' : 'bg-purple-400 shadow-[0_0_10px_#c084fc]'}`} />
-                                            <span className="text-text-main text-xs uppercase font-black tracking-widest">
-                                                {selectedMetric === 'leads' ? 'Total Leads' : selectedMetric === 'demos' ? 'Total' : selectedMetric === 'sales' ? 'Total Sales' : 'Renewal Total'}
-                                            </span>
+                            {/* Compact Breakdown Row */}
+                            <div className={`flex flex-wrap items-center mt-2 mb-1 px-1 ${isFullscreen ? 'gap-4' : 'gap-3'}`}>
+                                {selectedMetric === 'leads' && (
+                                    <>
+                                        <div className={`flex items-center gap-2 rounded-lg bg-bg-hover border border-border-light ${isFullscreen ? 'px-4 py-2' : 'px-3 py-1.5'}`}>
+                                            <div className={`rounded-full bg-[#7053E1] ${isFullscreen ? 'w-2.5 h-2.5' : 'w-2 h-2'}`} />
+                                            <span className={`text-text-muted font-semibold ${isFullscreen ? 'text-sm' : 'text-[10px]'}`}>Dr.Ease</span>
+                                            <span className={`font-bold text-text-main tabular-nums ${isFullscreen ? 'text-lg' : 'text-sm'}`}>{graphTotals.drease.toLocaleString()}</span>
                                         </div>
-                                        <p className="text-text-main text-4xl font-bold tracking-tighter tabular-nums leading-none mb-4">
-                                            {selectedMetric === 'leads'
-                                                ? (graphTotals.drease + graphTotals.ease).toLocaleString()
-                                                : selectedMetric === 'demos'
-                                                    ? filteredMasterDemos.length.toLocaleString()
-                                                    : selectedMetric === 'sales'
-                                                        ? `฿${graphTotals.sales.toLocaleString()}`
-                                                        : `฿${graphTotals.renewals.toLocaleString()}`
-                                            }
-                                        </p>
-
-                                        {selectedMetric === 'leads' ? (
-                                            <div className="relative flex flex-col gap-4 ml-1.5 pl-5 border-l border-border">
-                                                <div className="flex flex-col relative">
-                                                    <div className="absolute -left-5 top-2 w-4 h-px bg-white/10" />
-                                                    <div className="flex items-center gap-1.5 mb-1">
-                                                        <div className="w-2 h-2 rounded-full bg-[#7053E1] shadow-[0_0_8px_#7053E1]" />
-                                                        <span className="text-text-muted text-[10px] uppercase font-bold tracking-widest">Lead Dr.ease</span>
-                                                    </div>
-                                                    <p className="text-text-main text-2xl font-bold tracking-tighter tabular-nums leading-none">{graphTotals.drease.toLocaleString()}</p>
-                                                </div>
-                                                <div className="flex flex-col relative">
-                                                    <div className="absolute -left-5 top-2 w-4 h-px bg-white/10" />
-                                                    <div className="flex items-center gap-1.5 mb-1">
-                                                        <div className="w-2 h-2 rounded-full bg-[#F76D85] shadow-[0_0_8px_#F76D85]" />
-                                                        <span className="text-text-muted text-[10px] uppercase font-bold tracking-widest">Lead EasePOS</span>
-                                                    </div>
-                                                    <p className="text-text-main text-2xl font-bold tracking-tighter tabular-nums leading-none">{graphTotals.ease.toLocaleString()}</p>
-                                                </div>
-                                            </div>
-                                        ) : selectedMetric === 'demos' ? (
-                                            <div className="relative flex flex-col gap-3 ml-1.5 pl-5 border-l border-border">
-                                                {/* Demo by Salesperson */}
-                                                <div className="flex flex-col relative">
-                                                    <div className="absolute -left-5 top-2 w-4 h-px bg-white/10" />
-                                                    <div className="flex items-center gap-1.5 mb-1">
-                                                        <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_#22c55e]" />
-                                                        <span className="text-text-muted text-[10px] uppercase font-bold tracking-widest">Aoey</span>
-                                                    </div>
-                                                    <div className="flex items-baseline gap-2">
-                                                        <p className="text-text-main text-xl font-bold tracking-tighter tabular-nums leading-none">
-                                                            {filteredMasterDemos.filter(d => d.salesperson?.includes('Aoey') && d.demoStatus?.includes('Demo แล้ว')).length.toLocaleString()}
-                                                        </p>
-                                                        <span className="text-text-muted text-xs font-bold">
-                                                            / {filteredMasterDemos.filter(d => d.salesperson?.includes('Aoey')).length}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                                <div className="flex flex-col relative">
-                                                    <div className="absolute -left-5 top-2 w-4 h-px bg-white/10" />
-                                                    <div className="flex items-center gap-1.5 mb-1">
-                                                        <div className="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_8px_#f59e0b]" />
-                                                        <span className="text-text-muted text-[10px] uppercase font-bold tracking-widest">Yo</span>
-                                                    </div>
-                                                    <div className="flex items-baseline gap-2">
-                                                        <p className="text-text-main text-xl font-bold tracking-tighter tabular-nums leading-none">
-                                                            {filteredMasterDemos.filter(d => d.salesperson?.includes('Yo') && d.demoStatus?.includes('Demo แล้ว')).length.toLocaleString()}
-                                                        </p>
-                                                        <span className="text-text-muted text-xs font-bold">
-                                                            / {filteredMasterDemos.filter(d => d.salesperson?.includes('Yo')).length}
-                                                        </span>
-                                                    </div>
-                                                </div>
-
-                                                {/* Demo Status Breakdown */}
-                                                <div className="h-px bg-bg-hover w-full my-1" />
-                                                <p className="text-text-main text-sm uppercase font-bold tracking-widest mb-4">สถานะ Demo</p>
-                                                <div className="flex flex-col gap-4">
-                                                    <div className="flex items-center justify-between">
-                                                        <span className="text-sm text-text-main/80 font-medium">Demo แล้ว</span>
-                                                        <span className="text-lg text-emerald-400 font-bold">
-                                                            {filteredMasterDemos.filter(d => d.demoStatus?.includes('Demo แล้ว')).length}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex items-center justify-between">
-                                                        <span className="text-sm text-text-main/80 font-medium">ยังไม่ได้ Demo</span>
-                                                        <span className="text-lg text-amber-400 font-bold">
-                                                            {filteredMasterDemos.filter(d => d.demoStatus?.includes('ยังไม่ได้')).length}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex items-center justify-between">
-                                                        <span className="text-sm text-text-main/80 font-medium">ลูกค้าปฏิเสธ</span>
-                                                        <span className="text-lg text-rose-400 font-bold">
-                                                            {filteredMasterDemos.filter(d => d.demoStatus?.includes('ปฎิเสธ') || d.demoStatus?.includes('ปฏิเสธ')).length}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex items-center justify-between">
-                                                        <span className="text-sm text-text-main/80 font-medium">ไม่ระบุ</span>
-                                                        <span className="text-lg text-text-muted font-bold">
-                                                            {filteredMasterDemos.filter(d => !d.demoStatus || d.demoStatus.trim() === '').length}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ) : selectedMetric === 'sales' ? (
-                                            <div className="relative flex flex-col gap-3 ml-1.5 pl-5 border-l border-border max-h-[350px] overflow-y-auto custom-scrollbar">
-                                                <p className="text-text-main text-[10px] uppercase font-bold tracking-widest mb-1 opacity-70">สรุปยอดรายเดือน</p>
-                                                {[...dynamicGraphData].reverse().map((data, index) => (
-                                                    <div key={index} className="flex flex-col relative group/item">
-                                                        <div className="absolute -left-5 top-2 w-4 h-px bg-white/10 group-hover/item:bg-emerald-500/50 transition-colors" />
-                                                        <div className="flex items-center gap-1.5 mb-0.5">
-                                                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]" />
-                                                            <span className="text-text-muted text-[10px] uppercase font-bold tracking-widest">{data.name}</span>
-                                                        </div>
-                                                        <p className="text-text-main text-base font-bold tracking-tighter tabular-nums leading-none">
-                                                            ฿{(data.sales || 0).toLocaleString()}
-                                                        </p>
-                                                    </div>
-                                                ))}
-                                                {dynamicGraphData.length === 0 && (
-                                                    <p className="text-text-muted text-xs italic">ไม่มีข้อมูลในช่วงเวลานี้</p>
-                                                )}
-                                            </div>
-                                        ) : (
-                                            <div className="relative flex flex-col gap-3 ml-1.5 pl-5 border-l border-border">
-                                                {/* Renewal Toggle Lines */}
-                                                <p className="text-text-main text-[10px] uppercase font-bold tracking-widest opacity-70">แสดงเส้นกราฟ</p>
-                                                <div className="flex flex-wrap gap-1.5">
-                                                    <button
-                                                        onClick={() => setRenewalLines(prev => ({ ...prev, renewed: !prev.renewed }))}
-                                                        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer border ${renewalLines.renewed ? 'bg-purple-500/20 text-purple-400 border-purple-500/40 shadow-[0_0_10px_rgba(139,92,246,0.15)]' : 'bg-bg-hover text-text-muted border-border-light opacity-50 hover:opacity-75'}`}
-                                                    >
-                                                        <div className={`w-2 h-2 rounded-full transition-all ${renewalLines.renewed ? 'bg-purple-500 shadow-[0_0_8px_#8b5cf6]' : 'bg-text-muted/30'}`} />
-                                                        ต่อสัญญา
-                                                    </button>
-                                                    <button
-                                                        onClick={() => setRenewalLines(prev => ({ ...prev, notRenewed: !prev.notRenewed }))}
-                                                        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer border ${renewalLines.notRenewed ? 'bg-rose-500/20 text-rose-400 border-rose-500/40 shadow-[0_0_10px_rgba(244,63,94,0.15)]' : 'bg-bg-hover text-text-muted border-border-light opacity-50 hover:opacity-75'}`}
-                                                    >
-                                                        <div className={`w-2 h-2 rounded-full transition-all ${renewalLines.notRenewed ? 'bg-rose-500 shadow-[0_0_8px_#f43f5e]' : 'bg-text-muted/30'}`} />
-                                                        ไม่ต่อ
-                                                    </button>
-                                                    <button
-                                                        onClick={() => setRenewalLines(prev => ({ ...prev, pending: !prev.pending }))}
-                                                        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer border ${renewalLines.pending ? 'bg-amber-500/20 text-amber-400 border-amber-500/40 shadow-[0_0_10px_rgba(245,158,11,0.15)]' : 'bg-bg-hover text-text-muted border-border-light opacity-50 hover:opacity-75'}`}
-                                                    >
-                                                        <div className={`w-2 h-2 rounded-full transition-all ${renewalLines.pending ? 'bg-amber-500 shadow-[0_0_8px_#f59e0b]' : 'bg-text-muted/30'}`} />
-                                                        รอคำตอบ
-                                                    </button>
-                                                </div>
-
-                                                {/* Renewal Breakdown Values */}
-                                                <div className="h-px bg-bg-hover w-full my-0.5" />
-                                                <div className="flex flex-col relative">
-                                                    <div className="absolute -left-5 top-2 w-4 h-px bg-white/10" />
-                                                    <div className="flex items-center gap-1.5 mb-1">
-                                                        <div className="w-2 h-2 rounded-full bg-purple-500 shadow-[0_0_8px_#8b5cf6]" />
-                                                        <span className="text-text-muted text-[10px] uppercase font-bold tracking-widest">ต่อสัญญา</span>
-                                                    </div>
-                                                    <p className="text-text-main text-2xl font-bold tracking-tighter tabular-nums leading-none">฿{graphTotals.renewals.toLocaleString()}</p>
-                                                </div>
-                                                <div className="flex flex-col relative">
-                                                    <div className="absolute -left-5 top-2 w-4 h-px bg-white/10" />
-                                                    <div className="flex items-center gap-1.5 mb-1">
-                                                        <div className="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_8px_#f43f5e]" />
-                                                        <span className="text-text-muted text-[10px] uppercase font-bold tracking-widest">ไม่ต่อสัญญา</span>
-                                                    </div>
-                                                    <p className="text-rose-400 text-2xl font-bold tracking-tighter tabular-nums leading-none">฿{graphTotals.renewalsNotRenewed.toLocaleString()}</p>
-                                                </div>
-                                                <div className="flex flex-col relative">
-                                                    <div className="absolute -left-5 top-2 w-4 h-px bg-white/10" />
-                                                    <div className="flex items-center gap-1.5 mb-1">
-                                                        <div className="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_8px_#f59e0b]" />
-                                                        <span className="text-text-muted text-[10px] uppercase font-bold tracking-widest">รอคำตอบ</span>
-                                                    </div>
-                                                    <p className="text-amber-400 text-2xl font-bold tracking-tighter tabular-nums leading-none">฿{graphTotals.renewalsPending.toLocaleString()}</p>
-                                                </div>
-
-                                                {/* Monthly Breakdown */}
-                                                <div className="h-px bg-bg-hover w-full my-1" />
-                                                <p className="text-text-main text-[10px] uppercase font-bold tracking-widest mb-1 opacity-70">สรุปรายเดือน</p>
-                                                <div className="flex flex-col gap-2.5 max-h-[120px] overflow-y-auto custom-scrollbar">
-                                                    {[...dynamicGraphData].reverse().map((data, index) => (
-                                                        <div key={index} className="flex flex-col relative group/item">
-                                                            <div className="absolute -left-5 top-2 w-4 h-px bg-white/10 group-hover/item:bg-purple-500/50 transition-colors" />
-                                                            <div className="flex items-center gap-1.5 mb-0.5">
-                                                                <div className="w-1.5 h-1.5 rounded-full bg-purple-500 shadow-[0_0_8px_#8b5cf6]" />
-                                                                <span className="text-text-muted text-[10px] uppercase font-bold tracking-widest">{data.name}</span>
-                                                            </div>
-                                                            <div className="flex items-center gap-2 text-[10px] tabular-nums">
-                                                                <span className="text-text-main font-bold">฿{(data.renewals || 0).toLocaleString()}</span>
-                                                                <span className="text-rose-400/70">-฿{(data.renewalsNotRenewed || 0).toLocaleString()}</span>
-                                                                <span className="text-amber-400/70">?฿{(data.renewalsPending || 0).toLocaleString()}</span>
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className="h-px bg-bg-hover w-full" />
-                                    <div className="flex flex-col opacity-60">
-                                        <div className="flex items-center gap-1.5 mb-2">
-                                            <div className="w-2.5 h-2.5 rounded-full bg-white/20" />
-                                            <span className="text-text-muted text-[10px] uppercase font-bold tracking-widest">Global Status</span>
+                                        <div className={`flex items-center gap-2 rounded-lg bg-bg-hover border border-border-light ${isFullscreen ? 'px-4 py-2' : 'px-3 py-1.5'}`}>
+                                            <div className={`rounded-full bg-[#F76D85] ${isFullscreen ? 'w-2.5 h-2.5' : 'w-2 h-2'}`} />
+                                            <span className={`text-text-muted font-semibold ${isFullscreen ? 'text-sm' : 'text-[10px]'}`}>EasePOS</span>
+                                            <span className={`font-bold text-text-main tabular-nums ${isFullscreen ? 'text-lg' : 'text-sm'}`}>{graphTotals.ease.toLocaleString()}</span>
                                         </div>
-                                        <p className="text-text-muted text-xs font-bold leading-tight uppercase tracking-tighter italic">Live Data Synchronization Active</p>
-                                    </div>
-                                </div>
+                                        <span className={`text-text-muted ${isFullscreen ? 'text-base' : 'text-xs'}`}>Total: <span className="font-bold text-text-main">{(graphTotals.drease + graphTotals.ease).toLocaleString()}</span></span>
+                                    </>
+                                )}
+                                {selectedMetric === 'demos' && (
+                                    <>
+                                        <div className={`flex items-center gap-2 rounded-lg bg-bg-hover border border-border-light ${isFullscreen ? 'px-4 py-2' : 'px-3 py-1.5'}`}>
+                                            <div className={`rounded-full bg-emerald-500 ${isFullscreen ? 'w-2.5 h-2.5' : 'w-2 h-2'}`} />
+                                            <span className={`text-text-muted font-semibold ${isFullscreen ? 'text-sm' : 'text-[10px]'}`}>Aoey</span>
+                                            <span className={`font-bold text-text-main tabular-nums ${isFullscreen ? 'text-lg' : 'text-sm'}`}>{filteredMasterDemos.filter(d => d.salesperson?.includes('Aoey') && d.demoStatus?.includes('Demo แล้ว')).length}</span>
+                                            <span className={`text-text-muted ${isFullscreen ? 'text-sm' : 'text-[10px]'}`}>/ {filteredMasterDemos.filter(d => d.salesperson?.includes('Aoey')).length}</span>
+                                        </div>
+                                        <div className={`flex items-center gap-2 rounded-lg bg-bg-hover border border-border-light ${isFullscreen ? 'px-4 py-2' : 'px-3 py-1.5'}`}>
+                                            <div className={`rounded-full bg-amber-500 ${isFullscreen ? 'w-2.5 h-2.5' : 'w-2 h-2'}`} />
+                                            <span className={`text-text-muted font-semibold ${isFullscreen ? 'text-sm' : 'text-[10px]'}`}>Yo</span>
+                                            <span className={`font-bold text-text-main tabular-nums ${isFullscreen ? 'text-lg' : 'text-sm'}`}>{filteredMasterDemos.filter(d => d.salesperson?.includes('Yo') && d.demoStatus?.includes('Demo แล้ว')).length}</span>
+                                            <span className={`text-text-muted ${isFullscreen ? 'text-sm' : 'text-[10px]'}`}>/ {filteredMasterDemos.filter(d => d.salesperson?.includes('Yo')).length}</span>
+                                        </div>
+                                        <div className={`w-px bg-border-light ${isFullscreen ? 'h-6' : 'h-5'}`} />
+                                        <span className={`text-emerald-600 font-semibold ${isFullscreen ? 'text-sm' : 'text-[10px]'}`}>Done: {filteredMasterDemos.filter(d => d.demoStatus?.includes('Demo แล้ว')).length}</span>
+                                        <span className={`text-amber-600 font-semibold ${isFullscreen ? 'text-sm' : 'text-[10px]'}`}>Pending: {filteredMasterDemos.filter(d => d.demoStatus?.includes('ยังไม่ได้')).length}</span>
+                                        <span className={`text-rose-500 font-semibold ${isFullscreen ? 'text-sm' : 'text-[10px]'}`}>Rejected: {filteredMasterDemos.filter(d => d.demoStatus?.includes('ปฎิเสธ') || d.demoStatus?.includes('ปฏิเสธ')).length}</span>
+                                    </>
+                                )}
+                                {selectedMetric === 'sales' && (
+                                    <>
+                                        <span className={`text-text-muted ${isFullscreen ? 'text-base' : 'text-xs'}`}>Total: <span className={`font-bold text-emerald-600 ${isFullscreen ? 'text-lg' : 'text-sm'}`}>฿{graphTotals.sales.toLocaleString()}</span></span>
+                                        <div className={`w-px bg-border-light ${isFullscreen ? 'h-6' : 'h-5'}`} />
+                                        {[...dynamicGraphData].reverse().slice(0, 3).map((data, i) => (
+                                            <span key={i} className={`text-text-muted ${isFullscreen ? 'text-sm' : 'text-[10px]'}`}>{data.name}: <span className="font-semibold text-text-main">฿{(data.sales || 0).toLocaleString()}</span></span>
+                                        ))}
+                                    </>
+                                )}
+                                {selectedMetric === 'renewals' && (
+                                    <>
+                                        <div className={`flex items-center ${isFullscreen ? 'gap-2' : 'gap-1.5'}`}>
+                                            <button onClick={() => setRenewalLines(prev => ({ ...prev, renewed: !prev.renewed }))} className={`flex items-center gap-1.5 rounded-lg font-bold transition-all border ${isFullscreen ? 'px-3.5 py-1.5 text-xs' : 'px-2.5 py-1 text-[10px]'} ${renewalLines.renewed ? 'bg-purple-500/15 text-purple-500 border-purple-500/30' : 'bg-bg-hover text-text-muted border-border-light opacity-50'}`}>
+                                                <div className={`rounded-full ${isFullscreen ? 'w-2.5 h-2.5' : 'w-2 h-2'} ${renewalLines.renewed ? 'bg-purple-500' : 'bg-text-muted/30'}`} /> ต่อสัญญา
+                                            </button>
+                                            <button onClick={() => setRenewalLines(prev => ({ ...prev, notRenewed: !prev.notRenewed }))} className={`flex items-center gap-1.5 rounded-lg font-bold transition-all border ${isFullscreen ? 'px-3.5 py-1.5 text-xs' : 'px-2.5 py-1 text-[10px]'} ${renewalLines.notRenewed ? 'bg-rose-500/15 text-rose-500 border-rose-500/30' : 'bg-bg-hover text-text-muted border-border-light opacity-50'}`}>
+                                                <div className={`rounded-full ${isFullscreen ? 'w-2.5 h-2.5' : 'w-2 h-2'} ${renewalLines.notRenewed ? 'bg-rose-500' : 'bg-text-muted/30'}`} /> ไม่ต่อ
+                                            </button>
+                                            <button onClick={() => setRenewalLines(prev => ({ ...prev, pending: !prev.pending }))} className={`flex items-center gap-1.5 rounded-lg font-bold transition-all border ${isFullscreen ? 'px-3.5 py-1.5 text-xs' : 'px-2.5 py-1 text-[10px]'} ${renewalLines.pending ? 'bg-amber-500/15 text-amber-600 border-amber-500/30' : 'bg-bg-hover text-text-muted border-border-light opacity-50'}`}>
+                                                <div className={`rounded-full ${isFullscreen ? 'w-2.5 h-2.5' : 'w-2 h-2'} ${renewalLines.pending ? 'bg-amber-500' : 'bg-text-muted/30'}`} /> รอคำตอบ
+                                            </button>
+                                        </div>
+                                        <div className={`w-px bg-border-light ${isFullscreen ? 'h-6' : 'h-5'}`} />
+                                        <span className={`text-purple-500 font-semibold ${isFullscreen ? 'text-sm' : 'text-[10px]'}`}>฿{graphTotals.renewals.toLocaleString()}</span>
+                                        <span className={`text-rose-500 font-semibold ${isFullscreen ? 'text-sm' : 'text-[10px]'}`}>-฿{graphTotals.renewalsNotRenewed.toLocaleString()}</span>
+                                        <span className={`text-amber-600 font-semibold ${isFullscreen ? 'text-sm' : 'text-[10px]'}`}>?฿{graphTotals.renewalsPending.toLocaleString()}</span>
+                                    </>
+                                )}
+                            </div>
 
-                                <div className="flex-1 w-full min-h-0">
+                            {/* Chart - Full Width */}
+                            <div className="flex-1 w-full min-h-0 mt-1">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <AreaChart data={dynamicGraphData}>
                                             <defs>
@@ -1429,48 +1461,16 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
                                                     <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3} />
                                                     <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
                                                 </linearGradient>
-                                                <filter id="glowDrease" x="-20%" y="-20%" width="140%" height="140%">
-                                                    <feGaussianBlur stdDeviation="3" result="blur" />
-                                                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                                                </filter>
-                                                <filter id="glowEase" x="-20%" y="-20%" width="140%" height="140%">
-                                                    <feGaussianBlur stdDeviation="3" result="blur" />
-                                                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                                                </filter>
-                                                <filter id="glowSales" x="-20%" y="-20%" width="140%" height="140%">
-                                                    <feGaussianBlur stdDeviation="3" result="blur" />
-                                                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                                                </filter>
-                                                <filter id="glowRenewals" x="-20%" y="-20%" width="140%" height="140%">
-                                                    <feGaussianBlur stdDeviation="3" result="blur" />
-                                                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                                                </filter>
-                                                <filter id="glowNotRenewed" x="-20%" y="-20%" width="140%" height="140%">
-                                                    <feGaussianBlur stdDeviation="3" result="blur" />
-                                                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                                                </filter>
-                                                <filter id="glowPending" x="-20%" y="-20%" width="140%" height="140%">
-                                                    <feGaussianBlur stdDeviation="3" result="blur" />
-                                                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                                                </filter>
-                                                <filter id="glowDemos" x="-20%" y="-20%" width="140%" height="140%">
-                                                    <feGaussianBlur stdDeviation="3" result="blur" />
-                                                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                                                </filter>
-                                                <filter id="glowAoey" x="-20%" y="-20%" width="140%" height="140%">
-                                                    <feGaussianBlur stdDeviation="3" result="blur" />
-                                                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                                                </filter>
-                                                <filter id="glowYo" x="-20%" y="-20%" width="140%" height="140%">
+                                                <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
                                                     <feGaussianBlur stdDeviation="3" result="blur" />
                                                     <feComposite in="SourceGraphic" in2="blur" operator="over" />
                                                 </filter>
                                             </defs>
                                             <CartesianGrid strokeDasharray="3 3" stroke={theme === 'light' ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.06)'} />
-                                            <XAxis dataKey="name" stroke="#64748b" fontSize={10} fontWeight="bold" tickLine={false} axisLine={false} dy={10} minTickGap={20} />
+                                            <XAxis dataKey="name" stroke={theme === 'light' ? '#94a3b8' : '#64748b'} fontSize={isFullscreen ? 14 : 10} fontWeight="bold" tickLine={false} axisLine={false} dy={10} minTickGap={isFullscreen ? 30 : 20} />
                                             <YAxis
-                                                stroke="#64748b"
-                                                fontSize={10}
+                                                stroke={theme === 'light' ? '#94a3b8' : '#64748b'}
+                                                fontSize={isFullscreen ? 14 : 10}
                                                 fontWeight="bold"
                                                 tickLine={false}
                                                 axisLine={false}
@@ -1483,19 +1483,19 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
                                                 content={({ active, payload, label }) => {
                                                     if (active && payload && payload.length) {
                                                         return (
-                                                            <div className="bg-slate-900/95 backdrop-blur-xl border border-slate-700/50 p-4 rounded-2xl shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-                                                                <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-700/50">
-                                                                    <Clock className="w-3.5 h-3.5 text-indigo-400" />
-                                                                    <span className="text-slate-100 font-bold text-xs tracking-tight">{payload[0].payload.fullDate || label}</span>
+                                                            <div className={`backdrop-blur-xl border border-border-light rounded-2xl shadow-2xl animate-in fade-in zoom-in-95 duration-200 ${isFullscreen ? 'p-5' : 'p-4'}`} style={{ backgroundColor: 'var(--modal-bg)' }}>
+                                                                <div className={`flex items-center gap-2 pb-2 border-b border-border-light ${isFullscreen ? 'mb-4' : 'mb-3'}`}>
+                                                                    <Clock className={`text-indigo-500 ${isFullscreen ? 'w-4.5 h-4.5' : 'w-3.5 h-3.5'}`} />
+                                                                    <span className={`text-text-main font-bold tracking-tight ${isFullscreen ? 'text-sm' : 'text-xs'}`}>{payload[0].payload.fullDate || label}</span>
                                                                 </div>
-                                                                <div className="space-y-2.5">
+                                                                <div className={isFullscreen ? 'space-y-3' : 'space-y-2.5'}>
                                                                     {payload.map((entry, index) => (
-                                                                        <div key={index} className="flex items-center justify-between gap-8">
+                                                                        <div key={index} className={`flex items-center justify-between ${isFullscreen ? 'gap-12' : 'gap-8'}`}>
                                                                             <div className="flex items-center gap-2.5">
-                                                                                <div className="w-2 rounded-full h-2" style={{ backgroundColor: entry.color, boxShadow: `0 0 10px ${entry.color}80` }} />
-                                                                                <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">{entry.name}</span>
+                                                                                <div className={`rounded-full ${isFullscreen ? 'w-2.5 h-2.5' : 'w-2 h-2'}`} style={{ backgroundColor: entry.color, boxShadow: `0 0 10px ${entry.color}80` }} />
+                                                                                <span className={`text-text-muted font-bold uppercase tracking-wider ${isFullscreen ? 'text-xs' : 'text-[10px]'}`}>{entry.name}</span>
                                                                             </div>
-                                                                            <span className="text-white font-bold text-sm tabular-nums">{entry.value}</span>
+                                                                            <span className={`text-text-main font-bold tabular-nums ${isFullscreen ? 'text-lg' : 'text-sm'}`}>{Number(entry.value).toLocaleString()}</span>
                                                                         </div>
                                                                     ))}
                                                                 </div>
@@ -1507,132 +1507,152 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
                                             />
                                             {selectedMetric === 'leads' && (
                                                 <>
-                                                    <Area type="monotone" dataKey="drease" name="Dr.Ease" stroke="#7053E1" fill="url(#colorDrease)" strokeWidth={3} filter="url(#glowDrease)" activeDot={{ r: 6, stroke: '#7053E1', strokeWidth: 2, fill: '#fff' }} />
-                                                    <Area type="monotone" dataKey="ease" name="Ease" stroke="#F76D85" fill="url(#colorEase)" strokeWidth={3} filter="url(#glowEase)" activeDot={{ r: 6, stroke: '#F76D85', strokeWidth: 2, fill: '#fff' }} />
+                                                    <Area type="monotone" dataKey="drease" name="Dr.Ease" stroke="#7053E1" fill="url(#colorDrease)" strokeWidth={isFullscreen ? 4 : 3} filter="url(#glow)" activeDot={{ r: isFullscreen ? 8 : 6, stroke: '#7053E1', strokeWidth: isFullscreen ? 3 : 2, fill: '#fff' }} />
+                                                    <Area type="monotone" dataKey="ease" name="Ease" stroke="#F76D85" fill="url(#colorEase)" strokeWidth={isFullscreen ? 4 : 3} filter="url(#glow)" activeDot={{ r: isFullscreen ? 8 : 6, stroke: '#F76D85', strokeWidth: isFullscreen ? 3 : 2, fill: '#fff' }} />
                                                 </>
                                             )}
                                             {selectedMetric === 'demos' && (
                                                 <>
-                                                    <Area type="monotone" dataKey="demosAoey" name="Aoey" stroke="#22c55e" fill="url(#colorAoey)" strokeWidth={3} filter="url(#glowAoey)" activeDot={{ r: 6, stroke: '#22c55e', strokeWidth: 2, fill: '#fff' }} />
-                                                    <Area type="monotone" dataKey="demosYo" name="Yo" stroke="#f59e0b" fill="url(#colorYo)" strokeWidth={3} filter="url(#glowYo)" activeDot={{ r: 6, stroke: '#f59e0b', strokeWidth: 2, fill: '#fff' }} />
+                                                    <Area type="monotone" dataKey="demosAoey" name="Aoey" stroke="#22c55e" fill="url(#colorAoey)" strokeWidth={isFullscreen ? 4 : 3} filter="url(#glow)" activeDot={{ r: isFullscreen ? 8 : 6, stroke: '#22c55e', strokeWidth: isFullscreen ? 3 : 2, fill: '#fff' }} />
+                                                    <Area type="monotone" dataKey="demosYo" name="Yo" stroke="#f59e0b" fill="url(#colorYo)" strokeWidth={isFullscreen ? 4 : 3} filter="url(#glow)" activeDot={{ r: isFullscreen ? 8 : 6, stroke: '#f59e0b', strokeWidth: isFullscreen ? 3 : 2, fill: '#fff' }} />
                                                 </>
                                             )}
                                             {selectedMetric === 'sales' && (
-                                                <Area type="monotone" dataKey="sales" name="ยอดขายรวม" stroke="#10b981" fill="url(#colorSales)" strokeWidth={3} filter="url(#glowSales)" activeDot={{ r: 6, stroke: '#10b981', strokeWidth: 2, fill: '#fff' }} />
+                                                <Area type="monotone" dataKey="sales" name="ยอดขายรวม" stroke="#10b981" fill="url(#colorSales)" strokeWidth={isFullscreen ? 4 : 3} filter="url(#glow)" activeDot={{ r: isFullscreen ? 8 : 6, stroke: '#10b981', strokeWidth: isFullscreen ? 3 : 2, fill: '#fff' }} />
                                             )}
                                             {selectedMetric === 'renewals' && (
                                                 <>
-                                                    {renewalLines.renewed && <Area type="monotone" dataKey="renewals" name="ต่อสัญญา" stroke="#8b5cf6" fill="url(#colorRenewals)" strokeWidth={3} filter="url(#glowRenewals)" activeDot={{ r: 6, stroke: '#8b5cf6', strokeWidth: 2, fill: '#fff' }} />}
-                                                    {renewalLines.notRenewed && <Area type="monotone" dataKey="renewalsNotRenewed" name="ไม่ต่อสัญญา" stroke="#f43f5e" fill="url(#colorNotRenewed)" strokeWidth={2.5} filter="url(#glowNotRenewed)" activeDot={{ r: 5, stroke: '#f43f5e', strokeWidth: 2, fill: '#fff' }} />}
-                                                    {renewalLines.pending && <Area type="monotone" dataKey="renewalsPending" name="รอคำตอบ" stroke="#f59e0b" fill="url(#colorPending)" strokeWidth={2.5} filter="url(#glowPending)" activeDot={{ r: 5, stroke: '#f59e0b', strokeWidth: 2, fill: '#fff' }} />}
+                                                    {renewalLines.renewed && <Area type="monotone" dataKey="renewals" name="ต่อสัญญา" stroke="#8b5cf6" fill="url(#colorRenewals)" strokeWidth={isFullscreen ? 4 : 3} filter="url(#glow)" activeDot={{ r: isFullscreen ? 8 : 6, stroke: '#8b5cf6', strokeWidth: isFullscreen ? 3 : 2, fill: '#fff' }} />}
+                                                    {renewalLines.notRenewed && <Area type="monotone" dataKey="renewalsNotRenewed" name="ไม่ต่อสัญญา" stroke="#f43f5e" fill="url(#colorNotRenewed)" strokeWidth={isFullscreen ? 3.5 : 2.5} filter="url(#glow)" activeDot={{ r: isFullscreen ? 7 : 5, stroke: '#f43f5e', strokeWidth: isFullscreen ? 3 : 2, fill: '#fff' }} />}
+                                                    {renewalLines.pending && <Area type="monotone" dataKey="renewalsPending" name="รอคำตอบ" stroke="#f59e0b" fill="url(#colorPending)" strokeWidth={isFullscreen ? 3.5 : 2.5} filter="url(#glow)" activeDot={{ r: isFullscreen ? 7 : 5, stroke: '#f59e0b', strokeWidth: isFullscreen ? 3 : 2, fill: '#fff' }} />}
                                                 </>
                                             )}
                                         </AreaChart>
                                     </ResponsiveContainer>
                                 </div>
-                            </div>
                         </div>
 
-                        <div className="glass-card p-6 border-border-light flex flex-col min-h-0">
-                            <h3 className="text-text-main text-sm font-semibold flex items-center gap-2">
-                                <Monitor className="w-4 h-4 text-emerald-400" />
-                                Growth & Usage Metrics
+                        <div className="glass-card p-5 border-border-light flex flex-col min-h-0">
+                            <h3 className={`text-text-main font-semibold flex items-center gap-2 uppercase tracking-wider ${isFullscreen ? 'text-sm' : 'text-xs'}`}>
+                                <Monitor className={`text-emerald-600 ${isFullscreen ? 'w-4.5 h-4.5' : 'w-3.5 h-3.5'}`} />
+                                Growth & Usage
                             </h3>
-                            <p className="text-text-muted text-[10px] mb-4">สถิติการเติบโตและการใช้งาน</p>
-                            <div className={`flex-1 min-h-0 ${isFullscreen ? 'grid grid-rows-4 gap-3' : 'space-y-3 overflow-y-auto custom-scrollbar'}`}>
-                                {/* Renewal Rate Card */}
-                                <div className="p-3 rounded-xl bg-gradient-to-br from-purple-500/10 to-transparent border border-purple-500/20 hover:border-purple-500/40 transition-all group">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <div className="flex items-center gap-2.5">
-                                            <div className="p-1.5 rounded-lg bg-purple-500/20 group-hover:bg-purple-500/30 transition-colors">
-                                                <Repeat className="w-4 h-4 text-purple-400" />
+                            <div className={`flex-1 min-h-0 mt-3 ${isFullscreen ? 'grid grid-rows-4 gap-2.5' : 'space-y-2.5 overflow-y-auto custom-scrollbar'}`}>
+                                {/* Renewal Rate — Big Number + Progress Bar */}
+                                {(() => {
+                                    const rate = businessMetrics?.renewalRate ?? 50;
+                                    return (
+                                        <div className={`rounded-xl bg-bg-hover/40 border border-border-light hover:border-purple-500/30 transition-all ${isFullscreen ? 'p-4' : 'p-3'}`}>
+                                            <div className="flex items-center justify-between mb-1.5">
+                                                <div className="flex items-center gap-1.5">
+                                                    <Repeat className={`text-purple-500 ${isFullscreen ? 'w-4 h-4' : 'w-3.5 h-3.5'}`} />
+                                                    <span className={`text-text-muted font-semibold uppercase tracking-wider ${isFullscreen ? 'text-xs' : 'text-[10px]'}`}>Renewal Rate</span>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <p className="text-text-main text-sm font-semibold">Renewal Rate</p>
-                                                <p className="text-purple-400/70 text-[10px]">% ต่อสัญญา</p>
+                                            <div className={`font-bold text-text-main tabular-nums leading-none ${isFullscreen ? 'text-3xl mb-3' : 'text-2xl mb-2'}`}>{rate}%</div>
+                                            <div className={`rounded-full bg-bg-hover overflow-hidden ${isFullscreen ? 'h-1.5' : 'h-1'}`}>
+                                                <div className="h-full rounded-full bg-purple-500 transition-all duration-1000" style={{ width: `${rate}%` }} />
+                                            </div>
+                                            <div className={`flex items-center justify-between mt-1.5 ${isFullscreen ? 'text-xs' : 'text-[10px]'}`}>
+                                                <span className="text-text-muted">Dr.Ease <span className="font-semibold text-text-main tabular-nums">{(() => { const t = (businessMetrics?.merchantOnboard?.total ?? 1); const d = (businessMetrics?.merchantOnboard?.drease ?? 0); return ((d / t) * 100).toFixed(1); })()}%</span></span>
+                                                <span className="text-text-muted">Ease <span className="font-semibold text-text-main tabular-nums">{(() => { const t = (businessMetrics?.merchantOnboard?.total ?? 1); const e = (businessMetrics?.merchantOnboard?.ease ?? 0); return ((e / t) * 100).toFixed(1); })()}%</span></span>
                                             </div>
                                         </div>
-                                        <span className="text-purple-400 font-bold text-xl tabular-nums">{businessMetrics?.renewalRate ?? 50}%</span>
-                                    </div>
-                                    <div className="h-1.5 bg-bg-hover rounded-full overflow-hidden mb-2">
-                                        <div className="h-full bg-gradient-to-r from-purple-500 to-purple-400 rounded-full transition-all" style={{ width: `${businessMetrics?.renewalRate ?? 50}%` }} />
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-bg-hover/50">
-                                            <span className="text-xs text-text-muted">Dr.Ease</span>
-                                            <span className="text-sm font-semibold text-text-main">55.55%</span>
-                                        </div>
-                                        <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-bg-hover/50">
-                                            <span className="text-xs text-text-muted">Ease</span>
-                                            <span className="text-sm font-semibold text-text-main">44.44%</span>
-                                        </div>
-                                    </div>
-                                </div>
+                                    );
+                                })()}
 
-                                {/* Merchant Onboard Card */}
-                                <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-500/10 to-transparent border border-emerald-500/20 hover:border-emerald-500/40 transition-all group">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <div className="flex items-center gap-2.5">
-                                            <div className="p-1.5 rounded-lg bg-emerald-500/20 group-hover:bg-emerald-500/30 transition-colors">
-                                                <Users className="w-4 h-4 text-emerald-400" />
+                                {/* Merchant Onboard — Big Number + Thin Stacked Bar */}
+                                {(() => {
+                                    const drease = businessMetrics?.merchantOnboard?.drease ?? 420;
+                                    const ease = businessMetrics?.merchantOnboard?.ease ?? 141;
+                                    const total = businessMetrics?.merchantOnboard?.total ?? 561;
+                                    const dreaseP = total > 0 ? (drease / total) * 100 : 50;
+                                    return (
+                                        <div className={`rounded-xl bg-bg-hover/40 border border-border-light hover:border-emerald-500/30 transition-all ${isFullscreen ? 'p-4' : 'p-3'}`}>
+                                            <div className="flex items-center justify-between mb-1.5">
+                                                <div className="flex items-center gap-1.5">
+                                                    <Users className={`text-emerald-600 ${isFullscreen ? 'w-4 h-4' : 'w-3.5 h-3.5'}`} />
+                                                    <span className={`text-text-muted font-semibold uppercase tracking-wider ${isFullscreen ? 'text-xs' : 'text-[10px]'}`}>Merchant Onboard</span>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <p className="text-text-main text-sm font-semibold">Merchant Onboard</p>
-                                                <p className="text-emerald-400/70 text-[10px]">จำนวนการขึ้นระบบ</p>
+                                            <div className={`font-bold text-text-main tabular-nums leading-none ${isFullscreen ? 'text-3xl mb-3' : 'text-2xl mb-2'}`}>{total.toLocaleString()}</div>
+                                            <div className={`rounded-full overflow-hidden flex bg-bg-hover ${isFullscreen ? 'h-1.5' : 'h-1'}`}>
+                                                <div className="h-full bg-emerald-500 transition-all duration-700" style={{ width: `${dreaseP}%` }} />
+                                                <div className="h-full bg-emerald-300/70 transition-all duration-700" style={{ width: `${100 - dreaseP}%` }} />
+                                            </div>
+                                            <div className={`flex items-center justify-between mt-1.5 ${isFullscreen ? 'text-xs' : 'text-[10px]'}`}>
+                                                <div className="flex items-center gap-1">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                                    <span className="text-text-muted">Dr.Ease <span className="font-semibold text-text-main tabular-nums">{drease.toLocaleString()}</span></span>
+                                                </div>
+                                                <div className="flex items-center gap-1">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-300/70" />
+                                                    <span className="text-text-muted">Ease <span className="font-semibold text-text-main tabular-nums">{ease.toLocaleString()}</span></span>
+                                                </div>
                                             </div>
                                         </div>
-                                        <span className="text-emerald-400 font-bold text-xl tabular-nums">{(businessMetrics?.merchantOnboard?.total ?? 561).toLocaleString()}</span>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-bg-hover/50">
-                                            <span className="text-xs text-text-muted">Dr.Ease</span>
-                                            <span className="text-sm font-semibold text-emerald-400">{(businessMetrics?.merchantOnboard?.drease ?? 420).toLocaleString()}</span>
-                                        </div>
-                                        <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-bg-hover/50">
-                                            <span className="text-xs text-text-muted">Ease</span>
-                                            <span className="text-sm font-semibold text-emerald-400">{(businessMetrics?.merchantOnboard?.ease ?? 141).toLocaleString()}</span>
-                                        </div>
-                                    </div>
-                                </div>
+                                    );
+                                })()}
 
-                                {/* Ease Pay Usage Card */}
-                                <div className="p-3 rounded-xl bg-gradient-to-br from-indigo-500/10 to-transparent border border-indigo-500/20 hover:border-indigo-500/40 transition-all group">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2.5">
-                                            <div className="p-1.5 rounded-lg bg-indigo-500/20 group-hover:bg-indigo-500/30 transition-colors">
-                                                <CreditCard className="w-4 h-4 text-indigo-400" />
+                                {/* Ease Pay — Big Number + Thin Progress Bar */}
+                                {(() => {
+                                    const usage = businessMetrics?.easePayUsage ?? 850;
+                                    const total = businessMetrics?.merchantOnboard?.total ?? 561;
+                                    const pct = total > 0 ? Math.min((usage / total) * 100, 100) : 0;
+                                    return (
+                                        <div className={`rounded-xl bg-bg-hover/40 border border-border-light hover:border-indigo-500/30 transition-all ${isFullscreen ? 'p-4' : 'p-3'}`}>
+                                            <div className="flex items-center justify-between mb-1.5">
+                                                <div className="flex items-center gap-1.5">
+                                                    <CreditCard className={`text-indigo-500 ${isFullscreen ? 'w-4 h-4' : 'w-3.5 h-3.5'}`} />
+                                                    <span className={`text-text-muted font-semibold uppercase tracking-wider ${isFullscreen ? 'text-xs' : 'text-[10px]'}`}>Ease Pay</span>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <p className="text-text-main text-sm font-semibold">Ease Pay Usage</p>
-                                                <p className="text-indigo-400/70 text-[10px]">จำนวนลูกค้า Ease Pay</p>
+                                            <div className={`font-bold text-text-main tabular-nums leading-none ${isFullscreen ? 'text-3xl mb-3' : 'text-2xl mb-2'}`}>{usage.toLocaleString()}</div>
+                                            <div className={`rounded-full bg-bg-hover overflow-hidden ${isFullscreen ? 'h-1.5' : 'h-1'}`}>
+                                                <div className="h-full rounded-full bg-indigo-500 transition-all duration-1000" style={{ width: `${pct}%` }} />
+                                            </div>
+                                            <div className={`flex items-center justify-between mt-1.5 ${isFullscreen ? 'text-xs' : 'text-[10px]'}`}>
+                                                <span className="text-text-muted">transactions</span>
+                                                <span className="text-text-muted"><span className="font-semibold text-indigo-500 tabular-nums">{Math.round(pct)}%</span> of merchants</span>
                                             </div>
                                         </div>
-                                        <span className="text-indigo-400 font-bold text-xl tabular-nums">{(businessMetrics?.easePayUsage ?? 850).toLocaleString()}</span>
-                                    </div>
-                                </div>
+                                    );
+                                })()}
 
-                                {/* Online Booking Card */}
-                                <div className="p-3 rounded-xl bg-gradient-to-br from-amber-500/10 to-transparent border border-amber-500/20 hover:border-amber-500/40 transition-all group">
-                                    <div className="flex items-center gap-2.5 mb-2">
-                                        <div className="p-1.5 rounded-lg bg-amber-500/20 group-hover:bg-amber-500/30 transition-colors">
-                                            <Calendar className="w-4 h-4 text-amber-400" />
+                                {/* Online Booking — Big Numbers + Thin Bars */}
+                                {(() => {
+                                    const pages = businessMetrics?.onlineBooking?.pages ?? 320;
+                                    const bookings = businessMetrics?.onlineBooking?.bookings ?? 1240;
+                                    const maxVal = Math.max(pages, bookings, 1);
+                                    return (
+                                        <div className={`rounded-xl bg-bg-hover/40 border border-border-light hover:border-amber-500/30 transition-all ${isFullscreen ? 'p-4' : 'p-3'}`}>
+                                            <div className="flex items-center gap-1.5 mb-1.5">
+                                                <Calendar className={`text-amber-600 ${isFullscreen ? 'w-4 h-4' : 'w-3.5 h-3.5'}`} />
+                                                <span className={`text-text-muted font-semibold uppercase tracking-wider ${isFullscreen ? 'text-xs' : 'text-[10px]'}`}>Online Booking</span>
+                                            </div>
+                                            <div className={`space-y-2 ${isFullscreen ? 'space-y-3' : ''}`}>
+                                                <div>
+                                                    <div className={`flex items-baseline justify-between mb-1 ${isFullscreen ? '' : ''}`}>
+                                                        <span className={`font-bold text-text-main tabular-nums ${isFullscreen ? 'text-2xl' : 'text-lg'}`}>{pages.toLocaleString()}</span>
+                                                        <span className={`text-text-muted ${isFullscreen ? 'text-xs' : 'text-[10px]'}`}>Pages</span>
+                                                    </div>
+                                                    <div className={`rounded-full bg-bg-hover overflow-hidden ${isFullscreen ? 'h-1.5' : 'h-1'}`}>
+                                                        <div className="h-full rounded-full bg-amber-500 transition-all duration-700" style={{ width: `${(pages / maxVal) * 100}%` }} />
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <div className={`flex items-baseline justify-between mb-1 ${isFullscreen ? '' : ''}`}>
+                                                        <span className={`font-bold text-text-main tabular-nums ${isFullscreen ? 'text-2xl' : 'text-lg'}`}>{bookings.toLocaleString()}</span>
+                                                        <span className={`text-text-muted ${isFullscreen ? 'text-xs' : 'text-[10px]'}`}>Bookings</span>
+                                                    </div>
+                                                    <div className={`rounded-full bg-bg-hover overflow-hidden ${isFullscreen ? 'h-1.5' : 'h-1'}`}>
+                                                        <div className="h-full rounded-full bg-emerald-500 transition-all duration-700" style={{ width: `${(bookings / maxVal) * 100}%` }} />
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <p className="text-text-main text-sm font-semibold">Online Booking</p>
-                                            <p className="text-amber-400/70 text-[10px]">ระบบจองออนไลน์</p>
-                                        </div>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <div className="flex flex-col items-center justify-center px-2.5 py-2 rounded-lg bg-bg-hover/50">
-                                            <span className="text-[10px] text-amber-400 font-medium uppercase tracking-wider">Pages</span>
-                                            <span className="text-lg font-bold text-text-main tabular-nums">{(businessMetrics?.onlineBooking?.pages ?? 320).toLocaleString()}</span>
-                                        </div>
-                                        <div className="flex flex-col items-center justify-center px-2.5 py-2 rounded-lg bg-bg-hover/50">
-                                            <span className="text-[10px] text-emerald-400 font-medium uppercase tracking-wider">Bookings</span>
-                                            <span className="text-lg font-bold text-text-main tabular-nums">{(businessMetrics?.onlineBooking?.bookings ?? 1240).toLocaleString()}</span>
-                                        </div>
-                                    </div>
-                                </div>
+                                    );
+                                })()}
                             </div>
                         </div>
                     </div>
