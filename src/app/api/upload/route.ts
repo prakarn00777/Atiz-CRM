@@ -20,10 +20,10 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ success: false, error: "File too large (max 5MB)" }, { status: 400 });
         }
 
-        // Validate file type (images + PDF)
-        const allowedTypes = ["image/", "application/pdf"];
+        // Validate file type (images + PDF + Excel)
+        const allowedTypes = ["image/", "application/pdf", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "application/vnd.ms-excel"];
         if (!allowedTypes.some(t => file.type.startsWith(t))) {
-            return NextResponse.json({ success: false, error: "Only images and PDFs are allowed" }, { status: 400 });
+            return NextResponse.json({ success: false, error: "Only images, PDFs and Excel files are allowed" }, { status: 400 });
         }
 
         // Generate unique filename
