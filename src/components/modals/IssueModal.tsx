@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { X, Paperclip, ExternalLink, Loader2, Upload, Clock, User, CheckCircle2, Eye, UserCheck, FileText } from "lucide-react";
+import { X, Paperclip, ExternalLink, Loader2, Upload, Clock, User, CheckCircle2, Eye, UserCheck, FileText, FileSpreadsheet } from "lucide-react";
 import CustomSelect from "../CustomSelect";
 import SearchableCustomerSelect from "../SearchableCustomerSelect";
 import { Customer, Issue } from "@/types";
@@ -121,10 +121,10 @@ const IssueModal = React.memo(function IssueModal({
     setIsUploading(true);
 
     // Filter valid files first
-    const allowedTypes = ['image/', 'application/pdf'];
+    const allowedTypes = ['image/', 'application/pdf', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel'];
     const validFiles = Array.from(files).filter((file) => {
       if (!allowedTypes.some(t => file.type.startsWith(t))) {
-        setToast({ message: `ไฟล์ ${file.name} รองรับเฉพาะรูปภาพและ PDF`, type: "error" });
+        setToast({ message: `ไฟล์ ${file.name} รองรับเฉพาะรูปภาพ, PDF และ Excel`, type: "error" });
         return false;
       }
       if (file.size > 5 * 1024 * 1024) {
@@ -452,7 +452,7 @@ const IssueModal = React.memo(function IssueModal({
                     id="issue-file-input"
                     type="file"
                     multiple
-                    accept="image/*,.pdf"
+                    accept="image/*,.pdf,.xlsx,.xls"
                     className="hidden"
                     disabled={isUploading}
                     onChange={(e) => {
@@ -515,6 +515,16 @@ const IssueModal = React.memo(function IssueModal({
                           title="เปิด PDF"
                         >
                           <FileText className="w-5 h-5 text-rose-500" />
+                        </a>
+                      ) : file.type.includes('spreadsheet') || file.type.includes('ms-excel') ? (
+                        <a
+                          href={file.url || '#'}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="w-12 h-12 bg-emerald-500/10 rounded-lg flex items-center justify-center border border-border-light group-hover/file:border-emerald-500/30 hover:bg-emerald-500/20 transition-colors"
+                          title="ดาวน์โหลด Excel"
+                        >
+                          <FileSpreadsheet className="w-5 h-5 text-emerald-600" />
                         </a>
                       ) : (
                         <div className="w-12 h-12 bg-bg-hover rounded-lg flex items-center justify-center text-[11px] font-bold text-text-muted border border-border-light">
