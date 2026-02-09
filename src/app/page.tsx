@@ -872,12 +872,12 @@ export default function CRMPage() {
         if (targetCust) {
           const branches = targetCust.branches || [];
           if (!branches.some(b => b.name === newInst.branchName)) {
-            const updatedCust = {
-              ...targetCust,
-              branches: [...branches, { name: newInst.branchName, isMain: false, status: "Pending" as const }]
-            };
+            const updatedBranches = [...branches, { name: newInst.branchName, isMain: false, status: "Pending" as const }];
+            const updatedCust = { ...targetCust, branches: updatedBranches };
             const custResult = await saveCustomer(updatedCust);
             if (!custResult.success) throw new Error(custResult.error);
+            // Sync branch to local state so customer modal shows it immediately
+            setCustomers(prev => prev.map(c => c.id === finalCustomerId ? { ...c, branches: updatedBranches } : c));
           }
         }
       }
