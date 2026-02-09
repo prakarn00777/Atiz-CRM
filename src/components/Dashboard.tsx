@@ -1554,8 +1554,8 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
                                                 <div className="h-full rounded-full bg-purple-500 transition-all duration-1000" style={{ width: `${rate}%` }} />
                                             </div>
                                             <div className={`flex items-center justify-between mt-1.5 ${isFullscreen ? 'text-xs' : 'text-[10px]'}`}>
-                                                <span className="text-text-muted">Dr.Ease <span className="font-semibold text-text-main tabular-nums">{(() => { const t = (businessMetrics?.merchantOnboard?.total ?? 1); const d = (businessMetrics?.merchantOnboard?.drease ?? 0); return ((d / t) * 100).toFixed(1); })()}%</span></span>
-                                                <span className="text-text-muted">Ease <span className="font-semibold text-text-main tabular-nums">{(() => { const t = (businessMetrics?.merchantOnboard?.total ?? 1); const e = (businessMetrics?.merchantOnboard?.ease ?? 0); return ((e / t) * 100).toFixed(1); })()}%</span></span>
+                                                <span className="text-text-muted">Dr.Ease <span className="font-semibold text-text-main tabular-nums">{(() => { const t = customers.length || 1; const d = customers.filter(c => c.productType === 'Dr.Ease').length; return ((d / t) * 100).toFixed(1); })()}%</span></span>
+                                                <span className="text-text-muted">Ease <span className="font-semibold text-text-main tabular-nums">{(() => { const t = customers.length || 1; const e = customers.filter(c => c.productType === 'EasePos').length; return ((e / t) * 100).toFixed(1); })()}%</span></span>
                                             </div>
                                         </div>
                                     );
@@ -1563,9 +1563,9 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
 
                                 {/* Merchant Onboard — Big Number + Thin Stacked Bar */}
                                 {(() => {
-                                    const drease = businessMetrics?.merchantOnboard?.drease ?? 420;
-                                    const ease = businessMetrics?.merchantOnboard?.ease ?? 141;
-                                    const total = businessMetrics?.merchantOnboard?.total ?? 561;
+                                    const drease = customers.filter(c => c.productType === 'Dr.Ease').length;
+                                    const ease = customers.filter(c => c.productType === 'EasePos').length;
+                                    const total = customers.length;
                                     const dreaseP = total > 0 ? (drease / total) * 100 : 50;
                                     return (
                                         <div className={`rounded-xl bg-bg-hover/40 border border-border-light hover:border-emerald-500/30 transition-all ${isFullscreen ? 'p-4' : 'p-3'}`}>
@@ -1597,7 +1597,7 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
                                 {/* Ease Pay — Big Number + Thin Progress Bar */}
                                 {(() => {
                                     const usage = businessMetrics?.easePayUsage ?? 850;
-                                    const total = businessMetrics?.merchantOnboard?.total ?? 561;
+                                    const total = customers.length || 1;
                                     const pct = total > 0 ? Math.min((usage / total) * 100, 100) : 0;
                                     return (
                                         <div className={`rounded-xl bg-bg-hover/40 border border-border-light hover:border-indigo-500/30 transition-all ${isFullscreen ? 'p-4' : 'p-3'}`}>
