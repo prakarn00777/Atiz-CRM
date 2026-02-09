@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useCallback } from "react";
 import { createPortal } from "react-dom";
-import { Clock, CheckCircle2, User, AlertCircle, Edit2, MoreVertical } from "lucide-react";
+import { Clock, CheckCircle2, User, AlertCircle, Eye, Trash2, MoreVertical, Building2, MapPin } from "lucide-react";
 import { Customer, Installation } from "@/types";
 
 interface InstallationRowProps {
@@ -10,13 +10,18 @@ interface InstallationRowProps {
   rowNumber: number;
   customers: Customer[];
   onSelect: (installation: Installation) => void;
+  onDelete: (id: number) => void;
+  isMenuOpen: boolean;
+  menuPosition: { top: number; left: number } | null;
+  onToggleMenu: (id: number, e: React.MouseEvent) => void;
+  onCloseMenu: () => void;
 }
 
 const getStatusIcon = (status: string) => {
   switch (status) {
-    case "Pending": return <Clock className="w-4 h-4 text-amber-600" />;
-    case "Completed": return <CheckCircle2 className="w-4 h-4 text-emerald-600" />;
-    default: return <AlertCircle className="w-4 h-4 text-slate-500" />;
+    case "Pending": return <Clock className="w-3.5 h-3.5 text-amber-600" />;
+    case "Completed": return <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />;
+    default: return <AlertCircle className="w-3.5 h-3.5 text-text-muted" />;
   }
 };
 
@@ -24,7 +29,7 @@ const getStatusStyle = (status: string) => {
   switch (status) {
     case "Pending": return "bg-amber-500/10 text-amber-600 border-amber-500/20";
     case "Completed": return "bg-emerald-500/10 text-emerald-600 border-emerald-500/20";
-    default: return "bg-slate-500/10 text-slate-500 border-slate-500/20";
+    default: return "bg-bg-hover text-text-muted border-border-light";
   }
 };
 
@@ -33,59 +38,36 @@ const InstallationRow = React.memo(function InstallationRow({
   rowNumber,
   customers,
   onSelect,
+  onDelete,
+  isMenuOpen,
+  menuPosition,
+  onToggleMenu,
+  onCloseMenu,
 }: InstallationRowProps) {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
-  const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!isMenuOpen) return;
-
-    const handleClickOutside = () => setIsMenuOpen(false);
-    const handleScroll = () => setIsMenuOpen(false);
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setIsMenuOpen(false);
-    };
-
-    document.addEventListener("click", handleClickOutside);
-    document.addEventListener("scroll", handleScroll, true);
-    document.addEventListener("keydown", handleEscape);
-
-    return () => {
-      document.removeEventListener("click", handleClickOutside);
-      document.removeEventListener("scroll", handleScroll, true);
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, [isMenuOpen]);
-
-  const handleMenuToggle = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const rect = (e.target as HTMLElement).closest('button')?.getBoundingClientRect();
-    if (rect) {
-      setMenuPosition({ top: rect.bottom, left: rect.left });
-    }
-    setIsMenuOpen((prev) => !prev);
-  }, []);
+  const handleToggle = useCallback((e: React.MouseEvent) => {
+    onToggleMenu(inst.id, e);
+  }, [inst.id, onToggleMenu]);
 
   const handleSelect = useCallback(() => {
     onSelect(inst);
-    setIsMenuOpen(false);
-  }, [inst, onSelect]);
+    onCloseMenu();
+  }, [inst, onSelect, onCloseMenu]);
+
+  const handleDelete = useCallback(() => {
+    onDelete(inst.id);
+    onCloseMenu();
+  }, [inst.id, onDelete, onCloseMenu]);
 
   const cust = customers.find(c => c.id === inst.customerId);
   const displayLink = cust?.subdomain || inst.customerLink;
 
   return (
     <tr className="group hover:bg-bg-hover transition-colors h-14">
-      <td className="px-4 py-3 text-center">
+      <td className="px-3 py-3 text-center">
         <span className="text-xs text-text-muted opacity-60">{rowNumber}</span>
       </td>
-      <td className="px-4 py-3">
+      <td className="px-3 py-3">
         <div className="flex flex-col">
           <span className="font-semibold text-text-main text-xs truncate max-w-[180px]" title={inst.customerName}>
             {inst.customerName}
@@ -93,7 +75,19 @@ const InstallationRow = React.memo(function InstallationRow({
           <span className="text-[10px] text-text-muted opacity-60 font-mono">ID: {inst.customerId}</span>
         </div>
       </td>
-      <td className="px-4 py-3 text-center">
+      <td className="px-3 py-3">
+        <div className="flex items-center gap-1.5">
+          {inst.installationType === "new" ? (
+            <Building2 className="w-3.5 h-3.5 text-indigo-500 flex-shrink-0" />
+          ) : (
+            <MapPin className="w-3.5 h-3.5 text-sky-500 flex-shrink-0" />
+          )}
+          <span className="text-xs text-text-main truncate max-w-[140px]" title={inst.installationType === "new" ? "สำนักงานใหญ่" : (inst.branchName || "-")}>
+            {inst.installationType === "new" ? "สำนักงานใหญ่" : (inst.branchName || "-")}
+          </span>
+        </div>
+      </td>
+      <td className="px-3 py-3 text-center">
         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${
           inst.installationType === "new"
             ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
@@ -102,7 +96,7 @@ const InstallationRow = React.memo(function InstallationRow({
           {inst.installationType === "new" ? "ลูกค้าใหม่" : "เพิ่มสาขา"}
         </span>
       </td>
-      <td className="px-4 py-3">
+      <td className="px-3 py-3">
         {displayLink ? (
           <a
             href={displayLink.startsWith('http') ? displayLink : `https://${displayLink}`}
@@ -114,16 +108,16 @@ const InstallationRow = React.memo(function InstallationRow({
             {displayLink}
           </a>
         ) : (
-          <span className="text-xs text-slate-500 italic">-</span>
+          <span className="text-xs text-text-muted italic">-</span>
         )}
       </td>
-      <td className="px-4 py-3 text-center">
+      <td className="px-3 py-3 text-center">
         <div className={`inline-flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border ${getStatusStyle(inst.status)} w-[100px]`}>
           {getStatusIcon(inst.status)}
           {inst.status}
         </div>
       </td>
-      <td className="px-4 py-3">
+      <td className="px-3 py-3">
         {inst.requestedBy ? (
           <div className="flex items-start gap-2">
             <User className="w-3.5 h-3.5 text-text-muted opacity-50 mt-0.5 flex-shrink-0" />
@@ -143,7 +137,7 @@ const InstallationRow = React.memo(function InstallationRow({
           <span className="text-xs text-text-muted opacity-50">-</span>
         )}
       </td>
-      <td className="px-4 py-3">
+      <td className="px-3 py-3">
         {inst.modifiedBy ? (
           <div className="flex items-start gap-2">
             <Clock className="w-3.5 h-3.5 text-text-muted opacity-50 mt-0.5 flex-shrink-0" />
@@ -163,25 +157,23 @@ const InstallationRow = React.memo(function InstallationRow({
           <span className="text-xs text-text-muted opacity-50">-</span>
         )}
       </td>
-      <td className="px-4 py-3 text-right">
-        <div className="flex justify-end gap-2 relative">
+      <td className="px-3 py-3 text-right">
+        <div className="flex justify-end relative">
           <button
-            onClick={handleMenuToggle}
+            onClick={handleToggle}
             aria-label="เปิดเมนูตัวเลือก"
             aria-expanded={isMenuOpen}
             aria-haspopup="menu"
-            className={`p-2.5 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center ${
+            className={`p-1.5 rounded-lg transition-colors ${
               isMenuOpen
-                ? "bg-indigo-500/20 text-indigo-500 dark:text-white"
-                : "hover:bg-bg-hover text-text-muted hover:text-text-main"
+                ? "bg-indigo-500/20 text-indigo-500"
+                : "hover:bg-bg-hover text-text-muted hover:text-text-main opacity-0 group-hover:opacity-100"
             }`}
           >
-            <MoreVertical className="w-5 h-5" aria-hidden="true" />
+            <MoreVertical className="w-4 h-4" aria-hidden="true" />
           </button>
 
-          {mounted &&
-            isMenuOpen &&
-            menuPosition &&
+          {isMenuOpen && menuPosition &&
             createPortal(
               <div
                 role="menu"
@@ -190,8 +182,9 @@ const InstallationRow = React.memo(function InstallationRow({
                   position: "fixed",
                   top: `${menuPosition.top + 8}px`,
                   left: `${menuPosition.left - 144}px`,
+                  backgroundColor: 'var(--modal-bg)',
                 }}
-                className="z-[9999] w-48 py-2 bg-card-bg border border-border rounded-xl shadow-2xl animate-in fade-in zoom-in duration-150 origin-top-right backdrop-blur-xl"
+                className="z-[9999] w-48 py-1.5 border border-border rounded-xl shadow-2xl animate-in fade-in zoom-in duration-150 origin-top-right"
                 onClick={(e) => e.stopPropagation()}
               >
                 <button
@@ -199,8 +192,16 @@ const InstallationRow = React.memo(function InstallationRow({
                   onClick={handleSelect}
                   className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-text-main hover:bg-bg-hover transition-colors"
                 >
-                  <Edit2 className="w-4 h-4" aria-hidden="true" />
-                  แก้ไขรายละเอียด
+                  <Eye className="w-4 h-4" aria-hidden="true" />
+                  ดูรายละเอียด
+                </button>
+                <button
+                  role="menuitem"
+                  onClick={handleDelete}
+                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-rose-500 hover:bg-bg-hover transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" aria-hidden="true" />
+                  ลบรายการ
                 </button>
               </div>,
               document.body

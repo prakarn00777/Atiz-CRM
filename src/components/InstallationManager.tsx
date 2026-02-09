@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { Plus, Search, Filter, Clock, CheckCircle2, MessageSquare, X, ExternalLink } from "lucide-react";
+import React, { useState, useEffect, useCallback } from "react";
+import { Plus, Search, Filter, Clock, CheckCircle2, MessageSquare, X, ExternalLink, AlertTriangle } from "lucide-react";
 import SearchableCustomerSelect from "./SearchableCustomerSelect";
 import CustomSelect from "./CustomSelect";
 import CustomDatePicker from "./CustomDatePicker";
@@ -13,13 +13,15 @@ interface InstallationManagerProps {
     customers: Customer[];
     onAddInstallation: (installation: any) => void;
     onUpdateStatus: (id: number, status: Installation["status"]) => void;
+    onDelete: (id: number) => void;
 }
 
 const InstallationManager = React.memo(function InstallationManager({
     installations,
     customers,
     onAddInstallation,
-    onUpdateStatus
+    onUpdateStatus,
+    onDelete
 }: InstallationManagerProps) {
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -36,8 +38,66 @@ const InstallationManager = React.memo(function InstallationManager({
         newCustomerPackage: "Standard",
         branchName: "",
         branchAddress: ""
-
     });
+
+    // Parent-managed action menu state
+    const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+    const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
+
+    // Delete confirmation
+    const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
+
+    const closeMenu = useCallback(() => {
+        setOpenMenuId(null);
+        setMenuPosition(null);
+    }, []);
+
+    const handleToggleMenu = useCallback((id: number, e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (openMenuId === id) {
+            closeMenu();
+            return;
+        }
+        const rect = (e.target as HTMLElement).closest('button')?.getBoundingClientRect();
+        if (rect) {
+            setMenuPosition({ top: rect.bottom, left: rect.left });
+        }
+        setOpenMenuId(id);
+    }, [openMenuId, closeMenu]);
+
+    // Document-level handlers for closing menu
+    useEffect(() => {
+        if (openMenuId === null) return;
+
+        const handleClick = () => closeMenu();
+        const handleScroll = () => closeMenu();
+        const handleEscape = (e: KeyboardEvent) => {
+            if (e.key === "Escape") closeMenu();
+        };
+
+        document.addEventListener("click", handleClick);
+        document.addEventListener("scroll", handleScroll, true);
+        document.addEventListener("keydown", handleEscape);
+
+        return () => {
+            document.removeEventListener("click", handleClick);
+            document.removeEventListener("scroll", handleScroll, true);
+            document.removeEventListener("keydown", handleEscape);
+        };
+    }, [openMenuId, closeMenu]);
+
+    const handleDeleteRequest = useCallback((id: number) => {
+        const inst = installations.find(i => i.id === id);
+        setDeleteTarget({ id, name: inst?.customerName || `#${id}` });
+    }, [installations]);
+
+    const confirmDelete = useCallback(() => {
+        if (deleteTarget) {
+            onDelete(deleteTarget.id);
+            setDeleteTarget(null);
+        }
+    }, [deleteTarget, onDelete]);
 
     const resetModal = () => {
         setCustomerType("new");
@@ -58,13 +118,11 @@ const InstallationManager = React.memo(function InstallationManager({
         const matchesSearch = inst.customerName.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesStatus = statusFilter === "all" || inst.status === statusFilter;
 
-        // Date Range Filter logic
         let matchesDate = true;
         if (dateRange.start) {
             matchesDate = matchesDate && inst.requestedAt >= dateRange.start;
         }
         if (dateRange.end) {
-            // Add time to end date to include the entire day
             const endDate = new Date(dateRange.end);
             endDate.setHours(23, 59, 59, 999);
             matchesDate = matchesDate && new Date(inst.requestedAt) <= endDate;
@@ -154,14 +212,15 @@ const InstallationManager = React.memo(function InstallationManager({
                     <table className="w-full text-left border-collapse relative">
                         <thead className="sticky top-0 z-10 bg-card-bg shadow-sm backdrop-blur-xl">
                             <tr className="bg-bg-hover text-text-muted text-xs uppercase tracking-wider border-b border-border-light">
-                                <th className="px-4 py-3 font-semibold w-[4%] text-center">No.</th>
-                                <th className="px-4 py-3 font-semibold w-[15%]">Customer</th>
-                                <th className="px-4 py-3 font-semibold w-[10%] text-center">Type</th>
-                                <th className="px-4 py-3 font-semibold w-[18%]">Subdomain</th>
-                                <th className="px-4 py-3 font-semibold w-[9%] text-center">Status</th>
-                                <th className="px-4 py-3 font-semibold w-[13%]">Request By</th>
-                                <th className="px-4 py-3 font-semibold w-[13%]">Modified By</th>
-                                <th className="px-4 py-3 font-semibold w-[8%] text-right">Actions</th>
+                                <th className="px-3 py-3 font-semibold w-[4%] text-center">No.</th>
+                                <th className="px-3 py-3 font-semibold w-[14%]">Customer</th>
+                                <th className="px-3 py-3 font-semibold w-[10%]">Branch</th>
+                                <th className="px-3 py-3 font-semibold w-[8%] text-center">Type</th>
+                                <th className="px-3 py-3 font-semibold w-[15%]">Subdomain</th>
+                                <th className="px-3 py-3 font-semibold w-[8%] text-center">Status</th>
+                                <th className="px-3 py-3 font-semibold w-[13%]">Request By</th>
+                                <th className="px-3 py-3 font-semibold w-[13%]">Modified By</th>
+                                <th className="px-3 py-3 font-semibold w-[5%] text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-border-light">
@@ -173,11 +232,16 @@ const InstallationManager = React.memo(function InstallationManager({
                                         rowNumber={(currentPage - 1) * itemsPerPage + index + 1}
                                         customers={customers}
                                         onSelect={setSelectedInst}
+                                        onDelete={handleDeleteRequest}
+                                        isMenuOpen={openMenuId === inst.id}
+                                        menuPosition={openMenuId === inst.id ? menuPosition : null}
+                                        onToggleMenu={handleToggleMenu}
+                                        onCloseMenu={closeMenu}
                                     />
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={8} className="px-4 py-8 text-center text-slate-500 italic text-sm">
+                                    <td colSpan={9} className="px-4 py-8 text-center text-text-muted italic text-sm">
                                         ไม่พบข้อมูลงานติดตั้ง
                                     </td>
                                 </tr>
@@ -223,9 +287,10 @@ const InstallationManager = React.memo(function InstallationManager({
                 )}
             </div>
 
+            {/* Create Installation Modal */}
             {isModalOpen && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="w-full max-w-lg bg-card-bg rounded-2xl p-6 shadow-2xl border border-border">
+                    <div className="w-full max-w-lg rounded-2xl p-6 shadow-2xl border border-border" style={{ backgroundColor: 'var(--modal-bg)' }}>
                         <div className="flex justify-between items-center mb-6">
                             <h2 className="text-base font-bold text-text-main flex items-center gap-2">
                                 <Plus className="w-4 h-4 text-indigo-500" />
@@ -392,10 +457,11 @@ const InstallationManager = React.memo(function InstallationManager({
                 </div>
             )}
 
+            {/* Detail Modal */}
             {selectedInst && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="w-full max-w-lg bg-card-bg rounded-2xl p-6 shadow-2xl border border-border">
-                        <div className="flex justify-between items-start mb-0">
+                    <div className="w-full max-w-lg rounded-2xl shadow-2xl border border-border" style={{ backgroundColor: 'var(--modal-bg)' }}>
+                        <div className="flex justify-between items-start p-6 pb-0">
                             <div>
                                 <h2 className="text-xl font-bold text-text-main flex items-center gap-2">
                                     <MessageSquare className="w-5 h-5 text-indigo-500" />
@@ -408,12 +474,11 @@ const InstallationManager = React.memo(function InstallationManager({
                         </div>
 
                         {/* Status Flow Bar */}
-                        <div className="px-6 py-4 border-b border-white/5">
+                        <div className="px-6 py-4 border-b border-border-light">
                             <div className="flex items-center justify-end">
                                 <div className="flex items-center gap-2">
                                     <button
                                         onClick={() => {
-                                            // Only update local state
                                             setSelectedInst({ ...selectedInst, status: "Pending" });
                                         }}
                                         className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${selectedInst.status === "Pending"
@@ -424,11 +489,10 @@ const InstallationManager = React.memo(function InstallationManager({
                                         Pending
                                     </button>
 
-                                    <span className="text-slate-600">→</span>
+                                    <span className="text-text-muted">&rarr;</span>
 
                                     <button
                                         onClick={() => {
-                                            // Only update local state
                                             setSelectedInst({ ...selectedInst, status: "Completed" });
                                         }}
                                         className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${selectedInst.status === "Completed"
@@ -445,46 +509,44 @@ const InstallationManager = React.memo(function InstallationManager({
                         <div className="flex-1 overflow-y-auto p-6">
                             <div className="space-y-4">
                                 <div className="space-y-1">
-                                    <label className="text-xs font-medium text-slate-500">Type</label>
+                                    <label className="text-xs font-medium text-text-muted">Type</label>
                                     <input
                                         readOnly
                                         value={selectedInst.installationType === "branch" ? "ติดตั้งสาขาใหม่" : "ติดตั้งลูกค้าใหม่"}
-                                        className="input-field bg-white/5 text-slate-300 cursor-default"
+                                        className="input-field bg-bg-hover text-text-main cursor-default"
                                     />
                                 </div>
 
                                 <div className="space-y-1">
-                                    <label className="text-xs font-medium text-slate-500">Customer</label>
+                                    <label className="text-xs font-medium text-text-muted">Customer</label>
                                     <input
                                         readOnly
                                         value={selectedInst.customerName}
-                                        className="input-field bg-white/5 text-slate-300 cursor-default"
+                                        className="input-field bg-bg-hover text-text-main cursor-default"
                                     />
                                 </div>
 
-                                {selectedInst.branchName && (
-                                    <div className="space-y-1">
-                                        <label className="text-xs font-medium text-slate-500">Branch</label>
-                                        <input
-                                            readOnly
-                                            value={selectedInst.branchName}
-                                            className="input-field bg-white/5 text-slate-300 cursor-default"
-                                        />
-                                    </div>
-                                )}
+                                <div className="space-y-1">
+                                    <label className="text-xs font-medium text-text-muted">Branch</label>
+                                    <input
+                                        readOnly
+                                        value={selectedInst.installationType === "new" ? "สำนักงานใหญ่" : (selectedInst.branchName || "-")}
+                                        className="input-field bg-bg-hover text-text-main cursor-default"
+                                    />
+                                </div>
 
                                 <div className="space-y-1">
-                                    <label className="text-xs font-medium text-slate-500">Notes</label>
+                                    <label className="text-xs font-medium text-text-muted">Notes</label>
                                     <textarea
                                         readOnly
                                         value={selectedInst.notes || "ไม่มีข้อมูล"}
-                                        className="input-field min-h-[100px] text-xs py-3 resize-none bg-white/5 text-slate-300 cursor-default"
+                                        className="input-field min-h-[100px] text-xs py-3 resize-none bg-bg-hover text-text-main cursor-default"
                                     />
                                 </div>
                             </div>
                         </div>
 
-                        <div className="mt-8 pt-6 border-t border-white/10 flex justify-end">
+                        <div className="px-6 pb-6 pt-4 border-t border-border-light flex justify-end">
                             <button
                                 onClick={() => {
                                     onUpdateStatus(selectedInst.id, selectedInst.status);
@@ -497,9 +559,35 @@ const InstallationManager = React.memo(function InstallationManager({
                         </div>
                     </div>
                 </div>
-            )
-            }
-        </div >
+            )}
+
+            {/* Delete Confirmation */}
+            {deleteTarget && (
+                <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setDeleteTarget(null)} />
+                    <div className="w-full max-w-sm p-6 relative rounded-2xl border border-border shadow-2xl" style={{ backgroundColor: 'var(--modal-bg)' }}>
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="p-2 bg-rose-500/10 rounded-full">
+                                <AlertTriangle className="w-5 h-5 text-rose-500" />
+                            </div>
+                            <h3 className="text-base font-bold text-text-main">ยืนยันการลบ</h3>
+                        </div>
+                        <p className="text-sm text-text-muted mb-6">
+                            คุณต้องการลบงานติดตั้งของ <span className="font-semibold text-text-main">{deleteTarget.name}</span> ใช่หรือไม่?
+                        </p>
+                        <div className="flex gap-3">
+                            <button onClick={() => setDeleteTarget(null)} className="btn btn-ghost flex-1">ยกเลิก</button>
+                            <button
+                                onClick={confirmDelete}
+                                className="btn flex-1 bg-rose-500 hover:bg-rose-600 text-white"
+                            >
+                                ลบรายการ
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
     );
 });
 

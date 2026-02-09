@@ -84,7 +84,7 @@ const stripAttachmentsForCache = (issues: Issue[]): Issue[] => {
 import {
   importCustomersFromCSV, getCustomers, getIssues, getInstallations,
   getUsers, saveUser, deleteUser, toggleUserActive, getRoles, saveRole, deleteRole, loginUser,
-  saveIssue, deleteIssue, assignIssue, saveCustomer, deleteCustomer, saveInstallation, updateInstallationStatus,
+  saveIssue, deleteIssue, assignIssue, saveCustomer, deleteCustomer, saveInstallation, updateInstallationStatus, deleteInstallation,
   getActivities, saveActivity, deleteActivity,
   getLeads, saveLead, deleteLead, getBusinessMetrics, saveFollowUpLog
 } from "./actions";
@@ -138,7 +138,7 @@ export default function CRMPage() {
   });
   const [mounted, setMounted] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'customer' | 'issue' | 'branch' | 'activity', id?: number, index?: number, title: string } | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'customer' | 'issue' | 'branch' | 'activity' | 'installation', id?: number, index?: number, title: string } | null>(null);
   const [activities, setActivities] = useState<CSActivity[]>(() => {
     if (typeof window === 'undefined') return [];
     const cached = localStorage.getItem("crm_activities_v2");
@@ -176,7 +176,7 @@ export default function CRMPage() {
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
 
   const [showInstallationModal, setShowInstallationModal] = useState(false);
-  const [activeCustomerTab, setActiveCustomerTab] = useState<'general' | 'branches' | 'installations' | 'followup-history'>('general');
+  const [activeCustomerTab, setActiveCustomerTab] = useState<'general' | 'branches' | 'followup-history'>('general');
 
 
   // Branch states
@@ -185,7 +185,6 @@ export default function CRMPage() {
   const [modalUsageStatus, setModalUsageStatus] = useState<UsageStatus>("Active");
 
   const [modalIssueStatus, setModalIssueStatus] = useState<"แจ้งเคส" | "กำลังดำเนินการ" | "เสร็จสิ้น">("แจ้งเคส");
-  const [pendingInstallationChanges, setPendingInstallationChanges] = useState<Record<number, string>>({});
   const [modalLeadDate, setModalLeadDate] = useState("");
 
   useEffect(() => {
@@ -565,39 +564,6 @@ export default function CRMPage() {
         return;
       }
 
-      // Save pending installation status changes
-      const installationUpdates = Object.entries(pendingInstallationChanges);
-      let lastSuccessStatus = '';
-      if (installationUpdates.length > 0) {
-        for (const [instId, newStatus] of installationUpdates) {
-          const instResult = await updateInstallationStatus(Number(instId), newStatus, user?.fullName);
-          if (instResult.success) {
-            setInstallations(prev => prev.map(i =>
-              i.id === Number(instId)
-                ? { ...i, status: newStatus as Installation['status'], modifiedBy: user?.fullName, modifiedAt: new Date().toISOString() }
-                : i
-            ));
-            lastSuccessStatus = newStatus;
-          }
-        }
-        // Update customer's installationStatus in the table
-        if (lastSuccessStatus) {
-          setCustomers(prev => prev.map(c =>
-            c.id === data.id
-              ? { ...c, installationStatus: lastSuccessStatus as Customer['installationStatus'] }
-              : c
-          ));
-          // Send single desktop notification after all updates
-          pushNotification(
-            'อัปเดตสถานะติดตั้ง',
-            `งานแจ้งติดตั้งลูกค้าใหม่ ${data.name} ถูกเปลี่ยนสถานะเป็น ${lastSuccessStatus}`
-          );
-        }
-      }
-
-      // Clear pending changes
-      setPendingInstallationChanges({});
-
       setToast({ message: "บันทึกข้อมูลสำเร็จ", type: "success" });
 
     } catch (err) {
@@ -952,6 +918,21 @@ export default function CRMPage() {
     }
   }, [customers, user]);
 
+  const handleDeleteInstallation = async (id: number) => {
+    try {
+      const result = await deleteInstallation(id);
+      if (result.success) {
+        setInstallations(prev => prev.filter(i => i.id !== id));
+        setToast({ message: "ลบงานติดตั้งเรียบร้อยแล้ว", type: "success" });
+      } else {
+        setToast({ message: "เกิดข้อผิดพลาด: " + result.error, type: "error" });
+      }
+    } catch (err) {
+      console.error("Failed to delete installation:", err);
+      setToast({ message: "เกิดข้อผิดพลาดในการเชื่อมต่อ", type: "error" });
+    }
+  };
+
   const handleSaveUser = async (userData: any) => {
     try {
       const result = await saveUser(userData);
@@ -1113,7 +1094,6 @@ export default function CRMPage() {
     setModalUsageStatus("Active");
     setActiveBranchIndex(0);
     setActiveCustomerTab('general');
-    setPendingInstallationChanges({});
     setModalOpen(true);
   }, []);
 
@@ -1126,7 +1106,6 @@ export default function CRMPage() {
     setModalUsageStatus(c.usageStatus || "Active");
     setActiveBranchIndex(0);
     setActiveCustomerTab('general');
-    setPendingInstallationChanges({});
     setModalOpen(true);
   }, []);
 
@@ -1416,7 +1395,7 @@ export default function CRMPage() {
                   onDelete={handleDeleteActivity}
                 />
               ) : currentView === "installations" ? (
-                <InstallationManager installations={installations} customers={customers} onAddInstallation={handleAddInstallation} onUpdateStatus={handleUpdateInstallationStatus} />
+                <InstallationManager installations={installations} customers={customers} onAddInstallation={handleAddInstallation} onUpdateStatus={handleUpdateInstallationStatus} onDelete={handleDeleteInstallation} />
               ) : currentView === "leads" ? (
                 <GoogleSheetLeadManager
                   leads={googleSheetLeads}
@@ -1480,7 +1459,7 @@ export default function CRMPage() {
           {/* Customer Modal - Extracted to separate component */}
           <CustomerModal
             isOpen={isModalOpen}
-            onClose={() => { setModalOpen(false); setActiveCustomerTab('general'); setPendingInstallationChanges({}); }}
+            onClose={() => { setModalOpen(false); setActiveCustomerTab('general'); }}
             editingCustomer={editingCustomer}
             activeTab={activeCustomerTab}
             setActiveTab={setActiveCustomerTab}
@@ -1490,8 +1469,6 @@ export default function CRMPage() {
             setActiveBranchIndex={setActiveBranchIndex}
             modalUsageStatus={modalUsageStatus}
             setModalUsageStatus={setModalUsageStatus}
-            pendingInstallationChanges={pendingInstallationChanges}
-            setPendingInstallationChanges={setPendingInstallationChanges}
             users={users}
             installations={installations}
             onSave={handleSaveCustomer}

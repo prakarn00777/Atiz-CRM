@@ -633,6 +633,16 @@ export async function deleteIssue(id: number): Promise<ApiResponse<{ deleted: bo
     }
 }
 
+export async function deleteInstallation(id: number): Promise<ApiResponse<{ deleted: boolean }>> {
+    try {
+        const { error } = await db.from('installations').delete().eq('id', id);
+        if (error) throw error;
+        return createSuccess({ deleted: true });
+    } catch (err) {
+        return handleDbError(err, "deleteInstallation");
+    }
+}
+
 // Customer persistence
 export async function saveCustomer(customerData: Partial<Customer>): Promise<ApiResponse<Customer>> {
     try {

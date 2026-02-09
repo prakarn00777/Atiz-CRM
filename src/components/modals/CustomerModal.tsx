@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { X, Plus, Trash2, MapPin, Clock, CheckCircle2, AlertCircle, Layers, History, Loader2, Edit2, Check } from "lucide-react";
+import { X, Plus, Trash2, MapPin, Clock, CheckCircle2, AlertCircle, History, Loader2, Edit2, Check } from "lucide-react";
 import CustomSelect from "@/components/CustomSelect";
 import CustomDatePicker from "@/components/CustomDatePicker";
 import { Customer, Branch, Installation, UsageStatus, FollowUpLog } from "@/types";
@@ -11,16 +11,14 @@ interface CustomerModalProps {
   isOpen: boolean;
   onClose: () => void;
   editingCustomer: Customer | null;
-  activeTab: "general" | "branches" | "installations" | "followup-history";
-  setActiveTab: (tab: "general" | "branches" | "installations" | "followup-history") => void;
+  activeTab: "general" | "branches" | "followup-history";
+  setActiveTab: (tab: "general" | "branches" | "followup-history") => void;
   branchInputs: Branch[];
   setBranchInputs: (branches: Branch[]) => void;
   activeBranchIndex: number;
   setActiveBranchIndex: (index: number) => void;
   modalUsageStatus: UsageStatus;
   setModalUsageStatus: (status: UsageStatus) => void;
-  pendingInstallationChanges: Record<number, string>;
-  setPendingInstallationChanges: (changes: Record<number, string>) => void;
   users: any[];
   installations: Installation[];
   onSave: (e: React.FormEvent<HTMLFormElement>) => void;
@@ -39,8 +37,6 @@ const CustomerModal = React.memo(function CustomerModal({
   setActiveBranchIndex,
   modalUsageStatus,
   setModalUsageStatus,
-  pendingInstallationChanges,
-  setPendingInstallationChanges,
   users,
   installations,
   onSave,
@@ -175,12 +171,6 @@ const CustomerModal = React.memo(function CustomerModal({
     setBranchInputs(updated);
   };
 
-  const formatDateTime = (dateStr?: string) => {
-    if (!dateStr) return '-';
-    const d = new Date(dateStr);
-    return `${d.toLocaleDateString('th-TH')} ${d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}`;
-  };
-
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "Pending": return <Clock className="w-3.5 h-3.5 text-amber-600" />;
@@ -235,15 +225,6 @@ const CustomerModal = React.memo(function CustomerModal({
           >
             จัดการสาขา
           </button>
-          {editingCustomer && (
-            <button
-              type="button"
-              onClick={() => setActiveTab('installations')}
-              className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'installations' ? 'border-indigo-500 text-text-main' : 'border-transparent text-text-muted hover:text-text-main'}`}
-            >
-              งานติดตั้ง
-            </button>
-          )}
           {editingCustomer && (
             <button
               type="button"
@@ -480,68 +461,6 @@ const CustomerModal = React.memo(function CustomerModal({
                   </div>
                 </div>
               </div>
-
-              {/* Installations Tab */}
-              {editingCustomer && (
-                <div className={`border-t border-border pt-6 ${activeTab === 'installations' ? 'block' : 'hidden'}`}>
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-sm font-semibold text-text-main flex items-center gap-2">
-                      <div className="w-1 h-4 bg-indigo-500 rounded-full"></div>
-                      งานติดตั้ง
-                    </h3>
-                  </div>
-
-                  {(() => {
-                    const customerInstallations = installations.filter(i => i.customerId === editingCustomer.id);
-
-                    if (customerInstallations.length === 0) {
-                      return (
-                        <div className="text-center py-8 text-text-muted">
-                          <Layers className="w-10 h-10 mx-auto mb-2 opacity-30" />
-                          <p className="text-xs">ไม่มีงานติดตั้ง</p>
-                        </div>
-                      );
-                    }
-
-                    return (
-                      <div className="space-y-2">
-                        {customerInstallations.map((inst) => (
-                          <div key={inst.id} className="bg-bg-hover rounded-xl p-3 border border-border-light hover:border-border transition-colors">
-                            <div className="flex items-center justify-between gap-3 mb-2">
-                              <div className="flex items-center gap-2 flex-1 min-w-0">
-                                <span className={`shrink-0 px-2 py-0.5 rounded-md text-[10px] font-bold ${inst.installationType === 'new' ? 'bg-blue-500/15 text-blue-500' : 'bg-purple-500/15 text-purple-500'}`}>
-                                  {inst.installationType === 'new' ? 'NEW' : 'BRANCH'}
-                                </span>
-                                <span className="text-xs text-text-main font-medium truncate">
-                                  {inst.installationType === 'new' ? inst.customerName : inst.branchName || '-'}
-                                </span>
-                              </div>
-                              <CustomSelect
-                                name={`inst-status-${inst.id}`}
-                                value={pendingInstallationChanges[inst.id] || inst.status}
-                                onChange={(newStatus) => {
-                                  setPendingInstallationChanges({ ...pendingInstallationChanges, [inst.id]: newStatus });
-                                }}
-                                options={[
-                                  { value: 'Pending', label: 'Pending' },
-                                  { value: 'Completed', label: 'Completed' }
-                                ]}
-                                className="!w-auto !min-w-[110px]"
-                              />
-                            </div>
-                            <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-text-muted">
-                              <span>แจ้งโดย: <span className="text-text-muted">{inst.requestedBy || '-'}</span> • {formatDateTime(inst.requestedAt)}</span>
-                              {inst.modifiedBy && (
-                                <span>แก้ไขโดย: <span className="text-text-muted">{inst.modifiedBy}</span> • {formatDateTime(inst.modifiedAt)}</span>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    );
-                  })()}
-                </div>
-              )}
 
               {/* Follow-up History Tab */}
               {editingCustomer && (

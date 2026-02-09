@@ -26,6 +26,7 @@ const mainMenus = [
             { id: "customers", label: "Customers" },
             { id: "cs_followup", label: "Follow-up Plan" },
             { id: "issues", label: "Issues" },
+            { id: "installations", label: "งานติดตั้ง" },
             { id: "cs_activity", label: "CS Task" },
         ]
     },
