@@ -45,6 +45,7 @@ export default function UserManager({ users, roles, onSave, onDelete, onToggleAc
     const [menuPosition, setMenuPosition] = useState<{ top: number, left: number } | null>(null);
     const [deleteConfirm, setDeleteConfirm] = useState<{ id: number, name: string } | null>(null);
     const [mounted, setMounted] = useState(false);
+    const [togglingId, setTogglingId] = useState<number | null>(null);
 
     useEffect(() => {
         setMounted(true);
@@ -107,8 +108,9 @@ export default function UserManager({ users, roles, onSave, onDelete, onToggleAc
 
     const roleOptions = roles.map(r => ({ value: r.id, label: r.name }));
 
-    // Filtering
+    // Filtering — keep toggling row visible until animation finishes
     const filteredUsers = users.filter(u => {
+        if (u.id === togglingId) return true;
         const matchesSearch =
             u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             u.username.toLowerCase().includes(searchTerm.toLowerCase());
@@ -189,8 +191,8 @@ export default function UserManager({ users, roles, onSave, onDelete, onToggleAc
                                 <th className="px-4 py-3 font-semibold w-[20%]">ชื่อ-นามสกุล</th>
                                 <th className="px-4 py-3 font-semibold w-[15%]">Username</th>
                                 <th className="px-4 py-3 font-semibold w-[15%] text-center">บทบาท</th>
-                                <th className="px-4 py-3 font-semibold w-[10%] text-center">สถานะ</th>
                                 <th className="px-4 py-3 font-semibold w-[15%] text-center">Modified By</th>
+                                <th className="px-4 py-3 font-semibold w-[10%] text-center">สถานะ</th>
                                 <th className="px-4 py-3 font-semibold w-[8%] text-center">Actions</th>
                             </tr>
                         </thead>
@@ -218,20 +220,6 @@ export default function UserManager({ users, roles, onSave, onDelete, onToggleAc
                                             </span>
                                         </td>
                                         <td className="px-4 py-3 text-center">
-                                            <button
-                                                onClick={() => onToggleActive?.(u.id, u.is_active === false)}
-                                                className="inline-flex items-center gap-1.5 cursor-pointer group/toggle"
-                                                title={u.is_active !== false ? 'คลิกเพื่อปิดการใช้งาน' : 'คลิกเพื่อเปิดการใช้งาน'}
-                                            >
-                                                <div className={`relative w-9 h-5 rounded-full transition-colors duration-200 ${u.is_active !== false ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`}>
-                                                    <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-200 ${u.is_active !== false ? 'translate-x-4.5' : 'translate-x-0.5'}`} />
-                                                </div>
-                                                <span className={`text-xs font-medium ${u.is_active !== false ? 'text-emerald-600' : 'text-text-muted'}`}>
-                                                    {u.is_active !== false ? 'เปิด' : 'ปิด'}
-                                                </span>
-                                            </button>
-                                        </td>
-                                        <td className="px-4 py-3 text-center">
                                             {u.modifiedBy ? (
                                                 <div className="flex flex-col items-center">
                                                     <span className="text-xs font-medium text-text-main">{u.modifiedBy}</span>
@@ -248,6 +236,31 @@ export default function UserManager({ users, roles, onSave, onDelete, onToggleAc
                                             ) : (
                                                 <span className="text-xs text-text-muted opacity-50">-</span>
                                             )}
+                                        </td>
+                                        <td className="px-4 py-3 text-center">
+                                            {(() => {
+                                                const isToggling = togglingId === u.id;
+                                                const visualActive = isToggling ? (u.is_active === false) : (u.is_active !== false);
+                                                return (
+                                                    <button
+                                                        onClick={() => {
+                                                            if (togglingId) return;
+                                                            setTogglingId(u.id);
+                                                            setTimeout(() => {
+                                                                onToggleActive?.(u.id, u.is_active === false);
+                                                                setTimeout(() => setTogglingId(null), 100);
+                                                            }, 400);
+                                                        }}
+                                                        disabled={isToggling}
+                                                        className={`inline-flex items-center gap-2 cursor-pointer group/toggle hover:opacity-80 active:scale-95 transition-all duration-150 ${isToggling ? 'opacity-60 pointer-events-none' : ''}`}
+                                                        title={visualActive ? 'คลิกเพื่อปิดการใช้งาน' : 'คลิกเพื่อเปิดการใช้งาน'}
+                                                    >
+                                                        <div className={`relative w-10 h-[22px] rounded-full transition-all duration-300 ease-in-out ${visualActive ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-gray-300 dark:bg-gray-600'}`}>
+                                                            <div className={`absolute top-[3px] w-4 h-4 rounded-full bg-white shadow-md transition-all duration-300 ease-[cubic-bezier(0.68,-0.30,0.32,1.30)] ${visualActive ? 'translate-x-[21px]' : 'translate-x-[3px]'}`} />
+                                                        </div>
+                                                    </button>
+                                                );
+                                            })()}
                                         </td>
                                         <td className="px-4 py-3 text-center">
                                             <button

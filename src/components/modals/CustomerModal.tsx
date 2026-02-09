@@ -193,7 +193,7 @@ const CustomerModal = React.memo(function CustomerModal({
     switch (status) {
       case "Pending": return "bg-amber-500/15 text-amber-600 border-amber-500/20";
       case "Completed": return "bg-emerald-500/15 text-emerald-600 border-emerald-500/20";
-      default: return "bg-slate-500/15 text-text-muted border-slate-500/20";
+      default: return "bg-bg-hover text-text-muted border-border-light";
     }
   };
 
@@ -205,8 +205,8 @@ const CustomerModal = React.memo(function CustomerModal({
       aria-labelledby="customer-modal-title"
       onKeyDown={(e) => e.key === "Escape" && onClose()}
     >
-      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
-      <div className="glass-card w-full max-w-4xl max-h-[90vh] flex flex-col relative shadow-2xl border-border">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
+      <div className="glass-card w-full max-w-4xl max-h-[90vh] flex flex-col relative shadow-2xl border-border" style={{ backgroundColor: 'var(--modal-bg)' }}>
         {/* Header */}
         <div className="p-6 border-b border-border-light flex items-center justify-between shrink-0">
           <h2 id="customer-modal-title" className="text-xl font-bold">{editingCustomer ? "แก้ไขข้อมูลลูกค้า" : "เพิ่มข้อมูลลูกค้า"}</h2>
@@ -224,14 +224,14 @@ const CustomerModal = React.memo(function CustomerModal({
           <button
             type="button"
             onClick={() => setActiveTab('general')}
-            className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'general' ? 'border-indigo-500 text-white' : 'border-transparent text-text-muted hover:text-slate-200'}`}
+            className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'general' ? 'border-indigo-500 text-text-main' : 'border-transparent text-text-muted hover:text-text-main'}`}
           >
             ข้อมูลทั่วไป
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('branches')}
-            className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'branches' ? 'border-indigo-500 text-white' : 'border-transparent text-text-muted hover:text-slate-200'}`}
+            className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'branches' ? 'border-indigo-500 text-text-main' : 'border-transparent text-text-muted hover:text-text-main'}`}
           >
             จัดการสาขา
           </button>
@@ -239,7 +239,7 @@ const CustomerModal = React.memo(function CustomerModal({
             <button
               type="button"
               onClick={() => setActiveTab('installations')}
-              className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'installations' ? 'border-indigo-500 text-white' : 'border-transparent text-text-muted hover:text-slate-200'}`}
+              className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'installations' ? 'border-indigo-500 text-text-main' : 'border-transparent text-text-muted hover:text-text-main'}`}
             >
               งานติดตั้ง
             </button>
@@ -248,7 +248,7 @@ const CustomerModal = React.memo(function CustomerModal({
             <button
               type="button"
               onClick={() => setActiveTab('followup-history')}
-              className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors flex items-center justify-center gap-1.5 ${activeTab === 'followup-history' ? 'border-purple-500 text-purple-500' : 'border-transparent text-text-muted hover:text-slate-200'}`}
+              className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors flex items-center justify-center gap-1.5 ${activeTab === 'followup-history' ? 'border-indigo-500 text-text-main' : 'border-transparent text-text-muted hover:text-text-main'}`}
             >
               <History className="w-3.5 h-3.5" />
               ประวัติการติดตาม
@@ -257,12 +257,12 @@ const CustomerModal = React.memo(function CustomerModal({
         </div>
 
         {/* Content */}
-        <div className="overflow-y-auto p-6 custom-scrollbar flex-1 min-h-[500px]">
+        <div className="overflow-y-auto p-6 custom-scrollbar flex-1 min-h-0">
           <form id="save-customer-form" onSubmit={handleFormSave}>
             <div className="space-y-6">
               {/* General Tab */}
               <div className={activeTab === 'general' ? 'block' : 'hidden'}>
-                <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-text-main mb-3 flex items-center gap-2">
                   <div className="w-1 h-4 bg-indigo-500 rounded-full"></div>
                   ข้อมูลพื้นฐาน
                 </h3>
@@ -336,7 +336,7 @@ const CustomerModal = React.memo(function CustomerModal({
               {/* Branches Tab */}
               <div className={`border-t border-border pt-6 ${activeTab === 'branches' ? 'block' : 'hidden'}`}>
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-text-main flex items-center gap-2">
                     <div className="w-1 h-4 bg-emerald-500 rounded-full"></div>
                     จัดการสาขา ({branchInputs.length})
                   </h3>
@@ -350,7 +350,7 @@ const CustomerModal = React.memo(function CustomerModal({
                   </button>
                 </div>
 
-                <div className="flex flex-col md:flex-row gap-6 h-[320px] bg-slate-900/40 rounded-xl border border-border-light p-4">
+                <div className="flex flex-col md:flex-row gap-6 h-[320px] bg-bg-hover/40 rounded-xl border border-border-light p-4">
                   {/* Left: Branch List */}
                   <div className="w-full md:w-1/3 flex flex-col border-r border-border-light pr-4">
                     <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2">
@@ -366,11 +366,11 @@ const CustomerModal = React.memo(function CustomerModal({
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                              <div className={`w-6 h-6 rounded flex items-center justify-center text-[10px] font-bold ${idx === activeBranchIndex ? "bg-indigo-500 text-white" : "bg-slate-700 text-text-muted"}`}>
+                              <div className={`w-6 h-6 rounded flex items-center justify-center text-[10px] font-bold ${idx === activeBranchIndex ? "bg-indigo-500 text-white" : "bg-bg-hover text-text-muted"}`}>
                                 {idx + 1}
                               </div>
                               <div className="flex flex-col">
-                                <span className={`text-xs font-semibold truncate max-w-[120px] ${idx === activeBranchIndex ? "text-white" : "text-text-muted group-hover:text-slate-200"}`}>
+                                <span className={`text-xs font-semibold truncate max-w-[120px] ${idx === activeBranchIndex ? "text-text-main" : "text-text-muted group-hover:text-text-main"}`}>
                                   {branch.name || "ระบุชื่อสาขา..."}
                                 </span>
                                 {branch.isMain && (
@@ -379,7 +379,7 @@ const CustomerModal = React.memo(function CustomerModal({
                               </div>
                             </div>
                           </div>
-                          <div className={`absolute right-3 top-3 w-1.5 h-1.5 rounded-full ${branch.status === "Completed" ? "bg-emerald-500" : "bg-slate-600"}`} />
+                          <div className={`absolute right-3 top-3 w-1.5 h-1.5 rounded-full ${branch.status === "Completed" ? "bg-emerald-500" : "bg-text-muted/40"}`} />
                         </button>
                       ))}
                     </div>
@@ -391,7 +391,7 @@ const CustomerModal = React.memo(function CustomerModal({
                       <div className="h-full flex flex-col animate-in fade-in slide-in-from-right-2 duration-200">
                         <div className="flex items-center justify-between mb-6 pb-4 border-b border-border-light">
                           <div>
-                            <h4 className="text-sm font-semibold text-white">รายละเอียดสาขา</h4>
+                            <h4 className="text-sm font-semibold text-text-main">รายละเอียดสาขา</h4>
                             <p className="text-[10px] text-text-muted">แก้ไขข้อมูลและจัดการสถานะของสาขาที่เลือก</p>
                           </div>
                           {!branchInputs[activeBranchIndex].isMain && (
@@ -485,7 +485,7 @@ const CustomerModal = React.memo(function CustomerModal({
               {editingCustomer && (
                 <div className={`border-t border-border pt-6 ${activeTab === 'installations' ? 'block' : 'hidden'}`}>
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    <h3 className="text-sm font-semibold text-text-main flex items-center gap-2">
                       <div className="w-1 h-4 bg-indigo-500 rounded-full"></div>
                       งานติดตั้ง
                     </h3>
@@ -512,7 +512,7 @@ const CustomerModal = React.memo(function CustomerModal({
                                 <span className={`shrink-0 px-2 py-0.5 rounded-md text-[10px] font-bold ${inst.installationType === 'new' ? 'bg-blue-500/15 text-blue-500' : 'bg-purple-500/15 text-purple-500'}`}>
                                   {inst.installationType === 'new' ? 'NEW' : 'BRANCH'}
                                 </span>
-                                <span className="text-xs text-white font-medium truncate">
+                                <span className="text-xs text-text-main font-medium truncate">
                                   {inst.installationType === 'new' ? inst.customerName : inst.branchName || '-'}
                                 </span>
                               </div>
@@ -547,15 +547,15 @@ const CustomerModal = React.memo(function CustomerModal({
               {editingCustomer && (
                 <div className={`border-t border-border pt-6 ${activeTab === 'followup-history' ? 'block' : 'hidden'}`}>
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                      <div className="w-1 h-4 bg-purple-500 rounded-full"></div>
+                    <h3 className="text-sm font-semibold text-text-main flex items-center gap-2">
+                      <div className="w-1 h-4 bg-indigo-500 rounded-full"></div>
                       ประวัติการติดตาม
                     </h3>
                   </div>
 
                   {isLoadingHistory ? (
                     <div className="flex items-center justify-center py-12">
-                      <Loader2 className="w-6 h-6 text-purple-500 animate-spin" />
+                      <Loader2 className="w-6 h-6 text-indigo-500 animate-spin" />
                     </div>
                   ) : followUpLogs.length === 0 ? (
                     <div className="text-center py-12 text-text-muted">
@@ -574,7 +574,7 @@ const CustomerModal = React.memo(function CustomerModal({
                                 Day {log.round}
                               </span>
                               {log.branchName && (
-                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-700/50 text-text-muted">
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-bg-hover text-text-muted">
                                   {log.branchName}
                                 </span>
                               )}
@@ -621,7 +621,7 @@ const CustomerModal = React.memo(function CustomerModal({
                                 <button
                                   type="button"
                                   onClick={handleCancelEdit}
-                                  className="px-2 py-1 text-[10px] rounded bg-slate-600/50 text-text-muted hover:bg-slate-600 transition-colors"
+                                  className="px-2 py-1 text-[10px] rounded bg-bg-hover text-text-muted hover:opacity-80 transition-colors"
                                 >
                                   ยกเลิก
                                 </button>
@@ -657,7 +657,7 @@ const CustomerModal = React.memo(function CustomerModal({
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t border-border-light bg-[#1e293b]/50 backdrop-blur-sm shrink-0">
+        <div className="p-6 border-t border-border-light bg-bg-hover/50 shrink-0">
           <div className="flex gap-3">
             <button type="button" onClick={onClose} className="btn btn-ghost flex-1">ยกเลิก</button>
             <button type="submit" form="save-customer-form" className="btn btn-primary flex-1">บันทึก</button>
