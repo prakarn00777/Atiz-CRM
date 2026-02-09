@@ -271,4 +271,4 @@ npm run build  # ดู errors ทั้งหมด
 ---
 
 *Last Updated: 2026-01-22*
-*System Version: crm-app@0.1.0*
+*System Version: atizdesk@0.1.0*

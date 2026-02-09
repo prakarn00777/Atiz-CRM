@@ -1205,8 +1205,7 @@ export default function CRMPage() {
                   />
                 </div>
               </div>
-              <h1 className="text-3xl font-bold text-text-main tracking-tight">Atiz CRM</h1>
-              <p className="text-text-muted mt-2 text-sm italic">Advanced Management Console</p>
+              <h1 className="text-3xl font-bold text-text-main tracking-tight">AtizDesk</h1>
             </div>
             <form className="space-y-6" onSubmit={handleLogin}>
               <div>

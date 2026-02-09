@@ -79,7 +79,7 @@ export default function LoginTransition({ onComplete }: LoginTransitionProps) {
 
                 {/* Text Scramble / Status */}
                 <h2 className="text-2xl font-bold text-white tracking-widest mb-2 text-center animate-in fade-in zoom-in duration-300">
-                    ATIZ CRM <span className="text-indigo-500">v2.0</span>
+                    ATIZDESK <span className="text-indigo-500">v2.0</span>
                 </h2>
 
                 <div className="h-6 mb-8 flex items-center justify-center">

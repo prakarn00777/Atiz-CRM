@@ -19,8 +19,8 @@ const prompt = Prompt({
 });
 
 export const metadata: Metadata = {
-  title: "Atiz CRM",
-  description: "Atiz Customer Relationship Management System",
+  title: "AtizDesk",
+  description: "AtizDesk — Customer Management Platform",
   icons: {
     icon: "/favicon-32x32.png",
     apple: "/favicon-32x32.png",
