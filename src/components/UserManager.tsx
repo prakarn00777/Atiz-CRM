@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Plus, Edit2, Trash2, User, X, Search, MoreVertical, Filter, AlertTriangle } from "lucide-react";
+import { Plus, Edit2, Trash2, User, X, Search, MoreVertical, Filter, AlertTriangle, ToggleLeft, ToggleRight } from "lucide-react";
 import CustomSelect from "./CustomSelect";
 
 interface UserData {
@@ -26,13 +26,15 @@ interface UserManagerProps {
     roles: RoleData[];
     onSave: (user: UserData) => void;
     onDelete: (id: number) => void;
+    onToggleActive?: (id: number, isActive: boolean) => void;
 }
 
-export default function UserManager({ users, roles, onSave, onDelete }: UserManagerProps) {
+export default function UserManager({ users, roles, onSave, onDelete, onToggleActive }: UserManagerProps) {
     const [isModalOpen, setModalOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<UserData | null>(null);
     const [searchTerm, setSearchTerm] = useState("");
     const [roleFilter, setRoleFilter] = useState("all");
+    const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("active");
 
     // Pagination
     const [currentPage, setCurrentPage] = useState(1);
@@ -111,7 +113,8 @@ export default function UserManager({ users, roles, onSave, onDelete }: UserMana
             u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             u.username.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesRole = roleFilter === "all" || u.role === roleFilter;
-        return matchesSearch && matchesRole;
+        const matchesStatus = statusFilter === "all" || (statusFilter === "active" ? u.is_active !== false : u.is_active === false);
+        return matchesSearch && matchesRole && matchesStatus;
     });
 
     // Pagination
@@ -139,6 +142,19 @@ export default function UserManager({ users, roles, onSave, onDelete }: UserMana
                             value={searchTerm}
                             onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
                             className="input-field pl-10 w-full"
+                        />
+                    </div>
+                    <div className="relative shrink-0">
+                        <CustomSelect
+                            options={[
+                                { value: "active", label: "ใช้งานอยู่" },
+                                { value: "inactive", label: "ปิดการใช้งาน" },
+                                { value: "all", label: "ทั้งหมด" },
+                            ]}
+                            value={statusFilter}
+                            onChange={(val) => { setStatusFilter(val as any); setCurrentPage(1); }}
+                            className="w-[160px]"
+                            placeholder="สถานะ"
                         />
                     </div>
                     <div className="relative shrink-0">
@@ -173,8 +189,9 @@ export default function UserManager({ users, roles, onSave, onDelete }: UserMana
                                 <th className="px-4 py-3 font-semibold w-[20%]">ชื่อ-นามสกุล</th>
                                 <th className="px-4 py-3 font-semibold w-[15%]">Username</th>
                                 <th className="px-4 py-3 font-semibold w-[15%] text-center">บทบาท</th>
-                                <th className="px-4 py-3 font-semibold w-[20%] text-center">Modified By</th>
-                                <th className="px-4 py-3 font-semibold w-[10%] text-center">Actions</th>
+                                <th className="px-4 py-3 font-semibold w-[10%] text-center">สถานะ</th>
+                                <th className="px-4 py-3 font-semibold w-[15%] text-center">Modified By</th>
+                                <th className="px-4 py-3 font-semibold w-[8%] text-center">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-border-light">
@@ -198,6 +215,14 @@ export default function UserManager({ users, roles, onSave, onDelete }: UserMana
                                         <td className="px-4 py-3 text-center">
                                             <span className="px-3 py-1 rounded-full bg-indigo-500/10 text-xs text-indigo-300 font-medium border border-indigo-500/20">
                                                 {roles.find(r => r.id === u.role)?.name || u.role}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3 text-center">
+                                            <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${u.is_active !== false
+                                                ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
+                                                : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
+                                            }`}>
+                                                {u.is_active !== false ? 'ใช้งาน' : 'ปิดใช้งาน'}
                                             </span>
                                         </td>
                                         <td className="px-4 py-3 text-center">
@@ -230,7 +255,7 @@ export default function UserManager({ users, roles, onSave, onDelete }: UserMana
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={6} className="px-4 py-12 text-center text-text-muted opacity-60">
+                                    <td colSpan={7} className="px-4 py-12 text-center text-text-muted opacity-60">
                                         ไม่พบข้อมูลผู้ใช้งาน
                                     </td>
                                 </tr>
@@ -321,6 +346,22 @@ export default function UserManager({ users, roles, onSave, onDelete }: UserMana
                         <Edit2 className="w-4 h-4 text-indigo-500" />
                         แก้ไข
                     </button>
+                    {onToggleActive && (() => {
+                        const user = users.find(u => u.id === activeMenu);
+                        const isActive = user?.is_active !== false;
+                        return (
+                            <button
+                                onClick={() => {
+                                    if (user) onToggleActive(user.id, !isActive);
+                                    setActiveMenu(null);
+                                }}
+                                className={`w-full px-4 py-2 text-left text-sm hover:bg-bg-hover flex items-center gap-2 ${isActive ? 'text-amber-500' : 'text-emerald-500'}`}
+                            >
+                                {isActive ? <ToggleLeft className="w-4 h-4" /> : <ToggleRight className="w-4 h-4" />}
+                                {isActive ? 'ปิดการใช้งาน' : 'เปิดการใช้งาน'}
+                            </button>
+                        );
+                    })()}
                     <button
                         onClick={() => {
                             const user = users.find(u => u.id === activeMenu);

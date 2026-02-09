@@ -83,7 +83,7 @@ const stripAttachmentsForCache = (issues: Issue[]): Issue[] => {
 };
 import {
   importCustomersFromCSV, getCustomers, getIssues, getInstallations,
-  getUsers, saveUser, deleteUser, getRoles, saveRole, deleteRole, loginUser,
+  getUsers, saveUser, deleteUser, toggleUserActive, getRoles, saveRole, deleteRole, loginUser,
   saveIssue, deleteIssue, assignIssue, saveCustomer, deleteCustomer, saveInstallation, updateInstallationStatus,
   getActivities, saveActivity, deleteActivity,
   getLeads, saveLead, deleteLead, getBusinessMetrics, saveFollowUpLog
@@ -974,9 +974,22 @@ export default function CRMPage() {
     try {
       const result = await deleteUser(id);
       if (result.success) {
-        const updated = users.filter(u => u.id !== id);
-        setUsers(updated);
-        setToast({ message: "ลบผู้ใช้งานเรียบร้อยแล้ว", type: "success" });
+        setUsers(prev => prev.map(u => u.id === id ? { ...u, is_active: false } : u));
+        setToast({ message: "ปิดการใช้งานผู้ใช้เรียบร้อยแล้ว", type: "success" });
+      } else {
+        setToast({ message: "เกิดข้อผิดพลาด: " + result.error, type: "error" });
+      }
+    } catch (err: any) {
+      setToast({ message: "เกิดข้อผิดพลาดในการเชื่อมต่อ", type: "error" });
+    }
+  };
+
+  const handleToggleUserActive = async (id: number, isActive: boolean) => {
+    try {
+      const result = await toggleUserActive(id, isActive);
+      if (result.success) {
+        setUsers(prev => prev.map(u => u.id === id ? { ...u, is_active: isActive } : u));
+        setToast({ message: isActive ? "เปิดการใช้งานเรียบร้อย" : "ปิดการใช้งานเรียบร้อย", type: "success" });
       } else {
         setToast({ message: "เกิดข้อผิดพลาด: " + result.error, type: "error" });
       }
@@ -1350,7 +1363,7 @@ export default function CRMPage() {
                 />
                 )
               ) : currentView === "user_management" ? (
-                <UserManager users={users} roles={roles} onSave={handleSaveUser} onDelete={handleDeleteUser} />
+                <UserManager users={users} roles={roles} onSave={handleSaveUser} onDelete={handleDeleteUser} onToggleActive={handleToggleUserActive} />
               ) : currentView === "role_management" ? (
                 <RoleManager roles={roles} onSave={handleSaveRole} onDelete={handleDeleteRole} />
               ) : currentView === "my_tasks" ? (

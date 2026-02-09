@@ -288,7 +288,7 @@ export async function getUsers(): Promise<User[]> {
     try {
         const { data, error } = await db
             .from('users')
-            .select('id, name, username, role_id, created_at')
+            .select('id, name, username, role_id, is_active, created_at')
             .order('id', { ascending: true });
 
         if (error) {
@@ -301,7 +301,7 @@ export async function getUsers(): Promise<User[]> {
             name: String(u.name),
             username: String(u.username),
             role: String(u.role_id),
-            isActive: true,
+            isActive: u.is_active !== false,
             createdAt: u.created_at ? String(u.created_at) : undefined,
         }));
     } catch (err) {
@@ -421,6 +421,16 @@ export async function deleteUser(id: number): Promise<ApiResponse<{ deleted: boo
         return createSuccess({ deleted: true });
     } catch (err) {
         return handleDbError(err, "deleteUser");
+    }
+}
+
+export async function toggleUserActive(id: number, isActive: boolean): Promise<ApiResponse<{ id: number; isActive: boolean }>> {
+    try {
+        const { error } = await db.from('users').update({ is_active: isActive }).eq('id', id);
+        if (error) throw error;
+        return createSuccess({ id, isActive });
+    } catch (err) {
+        return handleDbError(err, "toggleUserActive");
     }
 }
 
