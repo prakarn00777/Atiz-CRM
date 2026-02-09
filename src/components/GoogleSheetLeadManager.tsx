@@ -274,7 +274,7 @@ export default function GoogleSheetLeadManager({ leads, isLoading, onRefresh }: 
                                                     <span className="text-xs text-text-muted opacity-70">{lead.date}</span>
                                                 </td>
                                                 <td className="px-3 py-2.5">
-                                                    <span className={`text-xs font-semibold ${lead.product === 'Dr.Ease' ? 'text-cyan-600' : 'text-amber-600'}`}>
+                                                    <span className={`text-xs font-semibold ${lead.product === 'Dr.Ease' ? 'text-[#6239FC]' : 'text-[#F76D85]'}`}>
                                                         {lead.product}
                                                     </span>
                                                 </td>

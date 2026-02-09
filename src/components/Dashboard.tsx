@@ -1358,7 +1358,7 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
                                 {selectedMetric === 'leads' && (
                                     <>
                                         <div className={`flex items-center gap-2 rounded-lg bg-bg-hover border border-border-light ${isFullscreen ? 'px-4 py-2' : 'px-3 py-1.5'}`}>
-                                            <div className={`rounded-full bg-[#7053E1] ${isFullscreen ? 'w-2.5 h-2.5' : 'w-2 h-2'}`} />
+                                            <div className={`rounded-full bg-[#6239FC] ${isFullscreen ? 'w-2.5 h-2.5' : 'w-2 h-2'}`} />
                                             <span className={`text-text-muted font-semibold ${isFullscreen ? 'text-sm' : 'text-[10px]'}`}>Dr.Ease</span>
                                             <span className={`font-bold text-text-main tabular-nums ${isFullscreen ? 'text-lg' : 'text-sm'}`}>{graphTotals.drease.toLocaleString()}</span>
                                         </div>
@@ -1426,8 +1426,8 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
                                         <AreaChart data={dynamicGraphData}>
                                             <defs>
                                                 <linearGradient id="colorDrease" x1="0" y1="0" x2="0" y2="1">
-                                                    <stop offset="5%" stopColor="#7053E1" stopOpacity={0.3} />
-                                                    <stop offset="95%" stopColor="#7053E1" stopOpacity={0} />
+                                                    <stop offset="5%" stopColor="#6239FC" stopOpacity={0.3} />
+                                                    <stop offset="95%" stopColor="#6239FC" stopOpacity={0} />
                                                 </linearGradient>
                                                 <linearGradient id="colorEase" x1="0" y1="0" x2="0" y2="1">
                                                     <stop offset="5%" stopColor="#F76D85" stopOpacity={0.3} />
@@ -1507,7 +1507,7 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
                                             />
                                             {selectedMetric === 'leads' && (
                                                 <>
-                                                    <Area type="monotone" dataKey="drease" name="Dr.Ease" stroke="#7053E1" fill="url(#colorDrease)" strokeWidth={isFullscreen ? 4 : 3} filter="url(#glow)" activeDot={{ r: isFullscreen ? 8 : 6, stroke: '#7053E1', strokeWidth: isFullscreen ? 3 : 2, fill: '#fff' }} />
+                                                    <Area type="monotone" dataKey="drease" name="Dr.Ease" stroke="#6239FC" fill="url(#colorDrease)" strokeWidth={isFullscreen ? 4 : 3} filter="url(#glow)" activeDot={{ r: isFullscreen ? 8 : 6, stroke: '#6239FC', strokeWidth: isFullscreen ? 3 : 2, fill: '#fff' }} />
                                                     <Area type="monotone" dataKey="ease" name="Ease" stroke="#F76D85" fill="url(#colorEase)" strokeWidth={isFullscreen ? 4 : 3} filter="url(#glow)" activeDot={{ r: isFullscreen ? 8 : 6, stroke: '#F76D85', strokeWidth: isFullscreen ? 3 : 2, fill: '#fff' }} />
                                                 </>
                                             )}

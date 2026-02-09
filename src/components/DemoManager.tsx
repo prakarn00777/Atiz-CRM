@@ -264,7 +264,7 @@ export default function DemoManager({ demos, isLoading, onRefresh }: DemoManager
                                                     <span className="text-xs text-text-muted opacity-70">{demo.date}</span>
                                                 </td>
                                                 <td className="px-3 py-2.5">
-                                                    <span className={`text-xs font-semibold ${demo.product === 'Dr.Ease' ? 'text-cyan-600' : 'text-amber-600'}`}>
+                                                    <span className={`text-xs font-semibold ${demo.product === 'Dr.Ease' ? 'text-[#6239FC]' : 'text-[#F76D85]'}`}>
                                                         {demo.product}
                                                     </span>
                                                 </td>

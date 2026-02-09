@@ -102,8 +102,8 @@ const CustomerRow = React.memo(function CustomerRow({
         <span
           className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${
             c.productType === "EasePos"
-              ? "bg-amber-500/10 text-amber-600"
-              : "bg-indigo-500/10 text-indigo-500"
+              ? "bg-[#F76D85]/10 text-[#F76D85]"
+              : "bg-[#6239FC]/10 text-[#6239FC]"
           }`}
         >
           {c.productType || "Dr.Ease"}

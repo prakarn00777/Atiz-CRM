@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Plus, Edit2, Trash2, User, X, Search, MoreVertical, Filter, AlertTriangle, ToggleLeft, ToggleRight } from "lucide-react";
+import { Plus, Edit2, Trash2, User, X, Search, MoreVertical, Filter, AlertTriangle } from "lucide-react";
 import CustomSelect from "./CustomSelect";
 
 interface UserData {
@@ -218,12 +218,18 @@ export default function UserManager({ users, roles, onSave, onDelete, onToggleAc
                                             </span>
                                         </td>
                                         <td className="px-4 py-3 text-center">
-                                            <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${u.is_active !== false
-                                                ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
-                                                : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
-                                            }`}>
-                                                {u.is_active !== false ? 'ใช้งาน' : 'ปิดใช้งาน'}
-                                            </span>
+                                            <button
+                                                onClick={() => onToggleActive?.(u.id, u.is_active === false)}
+                                                className="inline-flex items-center gap-1.5 cursor-pointer group/toggle"
+                                                title={u.is_active !== false ? 'คลิกเพื่อปิดการใช้งาน' : 'คลิกเพื่อเปิดการใช้งาน'}
+                                            >
+                                                <div className={`relative w-9 h-5 rounded-full transition-colors duration-200 ${u.is_active !== false ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`}>
+                                                    <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-200 ${u.is_active !== false ? 'translate-x-4.5' : 'translate-x-0.5'}`} />
+                                                </div>
+                                                <span className={`text-xs font-medium ${u.is_active !== false ? 'text-emerald-600' : 'text-text-muted'}`}>
+                                                    {u.is_active !== false ? 'เปิด' : 'ปิด'}
+                                                </span>
+                                            </button>
                                         </td>
                                         <td className="px-4 py-3 text-center">
                                             {u.modifiedBy ? (
@@ -346,22 +352,6 @@ export default function UserManager({ users, roles, onSave, onDelete, onToggleAc
                         <Edit2 className="w-4 h-4 text-indigo-500" />
                         แก้ไข
                     </button>
-                    {onToggleActive && (() => {
-                        const user = users.find(u => u.id === activeMenu);
-                        const isActive = user?.is_active !== false;
-                        return (
-                            <button
-                                onClick={() => {
-                                    if (user) onToggleActive(user.id, !isActive);
-                                    setActiveMenu(null);
-                                }}
-                                className={`w-full px-4 py-2 text-left text-sm hover:bg-bg-hover flex items-center gap-2 ${isActive ? 'text-amber-500' : 'text-emerald-500'}`}
-                            >
-                                {isActive ? <ToggleLeft className="w-4 h-4" /> : <ToggleRight className="w-4 h-4" />}
-                                {isActive ? 'ปิดการใช้งาน' : 'เปิดการใช้งาน'}
-                            </button>
-                        );
-                    })()}
                     <button
                         onClick={() => {
                             const user = users.find(u => u.id === activeMenu);

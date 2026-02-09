@@ -231,8 +231,8 @@ const LeadManager = React.memo(function LeadManager({ leads, onEdit, onDelete, o
                                         </td>
                                         <td className="px-4 py-3">
                                             <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${l.product === "Ease POS"
-                                                ? "bg-amber-500/10 text-amber-600 border border-amber-500/20"
-                                                : "bg-indigo-500/10 text-indigo-500 border border-indigo-500/20"
+                                                ? "bg-[#F76D85]/10 text-[#F76D85] border border-[#F76D85]/20"
+                                                : "bg-[#6239FC]/10 text-[#6239FC] border border-[#6239FC]/20"
                                                 }`}>
                                                 {l.product}
                                             </span>
