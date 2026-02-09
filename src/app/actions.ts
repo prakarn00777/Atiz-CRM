@@ -550,7 +550,28 @@ export async function saveIssue(issueData: Partial<Issue>): Promise<ApiResponse<
             return createError("No data returned from database", 'DATABASE_ERROR');
         }
 
-        return createSuccess(result as Issue);
+        // Map snake_case DB result to camelCase Issue
+        const mapped: Issue = {
+            id: Number(result.id),
+            customerId: result.customer_id ? Number(result.customer_id) : 0,
+            customerName: rest.customerName || '',
+            branchName: result.branch_name ? String(result.branch_name) : undefined,
+            caseNumber: result.case_number ? String(result.case_number) : '',
+            title: String(result.title),
+            description: result.description ? String(result.description) : undefined,
+            type: String(result.type),
+            severity: String(result.severity) as Issue['severity'],
+            status: String(result.status) as Issue['status'],
+            assignedTo: result.assigned_to ? String(result.assigned_to) : undefined,
+            assignedAt: result.assigned_at ? String(result.assigned_at) : undefined,
+            createdBy: result.created_by ? String(result.created_by) : undefined,
+            createdAt: result.created_at ? String(result.created_at) : undefined,
+            modifiedBy: result.modified_by ? String(result.modified_by) : undefined,
+            modifiedAt: result.modified_at ? String(result.modified_at) : undefined,
+            attachments: result.attachments ? (typeof result.attachments === 'string' ? result.attachments : JSON.stringify(result.attachments)) : "[]",
+        };
+
+        return createSuccess(mapped);
     } catch (err) {
         return handleDbError(err, "saveIssue");
     }
