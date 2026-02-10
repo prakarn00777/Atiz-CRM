@@ -200,3 +200,51 @@
     opacity: 0;
   }
 }
+
+/* Cat celebration — sprite sheet animation (backup) */
+.celebrate-cat {
+  width: 100px;
+  height: 87px;
+  background: url('/cat-run-sprite.png') left center;
+  background-size: 800px 87px;
+  image-rendering: auto;
+  animation:
+    cat-sprite 0.8s steps(8) infinite,
+    cat-move 8s linear forwards;
+}
+
+/* Ricardo celebration — GIF animation */
+.celebrate-ricardo {
+  animation: ricardo-move 8s linear forwards;
+}
+
+@keyframes cat-sprite {
+  from { background-position-x: 0; }
+  to { background-position-x: -800px; }
+}
+
+@keyframes cat-move {
+  0% {
+    transform: translateX(-120px);
+    opacity: 0;
+  }
+  3% { opacity: 1; }
+  95% { opacity: 1; }
+  100% {
+    transform: translateX(calc(100vw + 120px));
+    opacity: 0;
+  }
+}
+
+@keyframes ricardo-move {
+  0% {
+    transform: translateX(-150px);
+    opacity: 0;
+  }
+  3% { opacity: 1; }
+  95% { opacity: 1; }
+  100% {
+    transform: translateX(calc(100vw + 150px));
+    opacity: 0;
+  }
+}

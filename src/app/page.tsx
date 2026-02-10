@@ -724,7 +724,7 @@ export default function CRMPage() {
 
     if (modalIssueStatus === "เสร็จสิ้น") {
       setShowConfetti(true);
-      setTimeout(() => setShowConfetti(false), 3000);
+      setTimeout(() => setShowConfetti(false), 9000);
       setToast({ message: "🎉 ยินดี! แก้ไขเคสเสร็จสิ้นแล้ว", type: "success" });
     } else {
       setToast({ message: "บันทึกข้อมูลเคสเรียบร้อยแล้ว", type: "success" });
@@ -1541,13 +1541,14 @@ export default function CRMPage() {
             )
           }
 
-          {/* Confetti Effect */}
+          {/* Confetti + Unicorn Celebration Effect */}
           {
             showConfetti && (
               <div className="fixed inset-0 z-[300] pointer-events-none overflow-hidden">
+                {/* Confetti particles */}
                 {[...Array(50)].map((_, i) => (
                   <div
-                    key={i}
+                    key={`confetti-${i}`}
                     className="absolute animate-confetti"
                     style={{
                       left: `${Math.random() * 100}%`,
@@ -1561,6 +1562,9 @@ export default function CRMPage() {
                     }}
                   />
                 ))}
+
+                {/* Ricardo running across screen — GIF */}
+                <img src="/ricardo-ricardo-flick.gif" alt="" className="celebrate-ricardo" style={{ position: 'absolute', bottom: '25%', zIndex: 310, height: '150px' }} />
               </div>
             )
           }
