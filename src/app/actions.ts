@@ -1130,13 +1130,42 @@ export async function updateInstallationStatus(id: number, status: string, modif
         const { data, error } = await db.from('installations').update({
             status,
             modified_by: modifiedBy,
-            modified_at: new Date().toISOString()
+            modified_at: new Date().toISOString(),
+            ...(status === "Completed" ? { completed_at: new Date().toISOString() } : { completed_at: null })
         }).eq('id', id).select();
 
         if (error) throw error;
 
         const row = data?.[0];
         if (!row) return createSuccess(null);
+
+        // Sync branch status in branches table
+        if (row.customer_id) {
+            if (row.installation_type === "branch" && row.branch_name) {
+                await db.from('branches')
+                    .update({ status })
+                    .eq('customer_id', row.customer_id)
+                    .eq('name', row.branch_name);
+            } else {
+                // "new" or undefined → update main branch
+                await db.from('branches')
+                    .update({ status })
+                    .eq('customer_id', row.customer_id)
+                    .eq('is_main', true);
+            }
+
+            // Recompute customer-level installation_status from all branches
+            const { data: allBranches } = await db.from('branches')
+                .select('status')
+                .eq('customer_id', row.customer_id);
+
+            const allCompleted = allBranches && allBranches.length > 0
+                && allBranches.every(b => b.status === "Completed");
+
+            await db.from('customers').update({
+                installation_status: allCompleted ? "Completed" : "Pending"
+            }).eq('id', row.customer_id);
+        }
 
         const installation: Installation = {
             id: Number(row.id),

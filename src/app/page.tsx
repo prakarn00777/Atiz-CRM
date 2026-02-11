@@ -894,33 +894,14 @@ export default function CRMPage() {
       }
 
       const result = await updateInstallationStatus(id, status, user?.name);
-      if (result.success && result.data) {
-        const inst = result.data;
-
-        // If installation completed, also update customer/branch status
-        if (status === "Completed") {
-          const targetCust = customers.find(c => c.id === inst.customerId);
-          if (targetCust) {
-            const updatedBranches = (targetCust.branches || []).map(b => {
-              if (inst.installationType === "branch" && b.name === inst.branchName) {
-                return { ...b, status: status as any };
-              }
-              if (inst.installationType === "new" && b.isMain) {
-                return { ...b, status: status as any };
-              }
-              return b;
-            });
-            const allCompleted = updatedBranches.every(b => b.status === "Completed");
-            const updatedCust = {
-              ...targetCust,
-              installationStatus: allCompleted ? "Completed" : "Pending",
-              branches: updatedBranches
-            };
-            await saveCustomer(updatedCust);
-          }
-        }
-
-        // State will be synchronized via real-time subscription
+      if (result.success) {
+        // Backend already synced branches + customer status — just re-fetch fresh data
+        const [freshCustomers, freshInstallations] = await Promise.all([
+          getCustomers(),
+          getInstallations()
+        ]);
+        setCustomers(freshCustomers);
+        setInstallations(freshInstallations);
         setToast({ message: "อัปเดตสถานะงานติดตั้งเรียบร้อยแล้ว", type: "success" });
       } else {
         setToast({ message: "เกิดข้อผิดพลาด: " + (result as any).error, type: "error" });
@@ -929,7 +910,7 @@ export default function CRMPage() {
       console.error("Failed to update installation status:", err);
       setToast({ message: "เกิดข้อผิดพลาดในการเชื่อมต่อ", type: "error" });
     }
-  }, [customers, user]);
+  }, [user]);
 
   const handleDeleteInstallation = async (id: number) => {
     try {
