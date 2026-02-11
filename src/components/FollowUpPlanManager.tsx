@@ -211,7 +211,7 @@ const FollowUpPlanManager = React.memo(function FollowUpPlanManager({ customers,
         today.setHours(0, 0, 0, 0);
 
         customers.forEach(customer => {
-            if (customer.usageStatus === "Canceled") return;
+            if (customer.usageStatus === "Canceled" || customer.usageStatus === "Inactive") return;
 
             // Iterate through branches (if no branches, treat customer as one virtual branch)
             const branchList = customer.branches && customer.branches.length > 0

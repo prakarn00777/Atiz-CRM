@@ -59,7 +59,7 @@ export const generateUUID = (): UUID => {
 // ============================================
 // Domain Types
 // ============================================
-export type UsageStatus = "Active" | "Pending" | "Training" | "Canceled";
+export type UsageStatus = "Active" | "Pending" | "Training" | "Canceled" | "Inactive";
 export type InstallationStatus = "Pending" | "Completed";
 export type ProductType = "Dr.Ease" | "EasePos";
 

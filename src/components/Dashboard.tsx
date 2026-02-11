@@ -1555,7 +1555,7 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
                                             </div>
                                             <div className={`flex items-center justify-between mt-1.5 ${isFullscreen ? 'text-xs' : 'text-[10px]'}`}>
                                                 <span className="text-text-muted">Dr.Ease <span className="font-semibold text-text-main tabular-nums">{(() => { const t = customers.length || 1; const d = customers.filter(c => c.productType === 'Dr.Ease').length; return ((d / t) * 100).toFixed(1); })()}%</span></span>
-                                                <span className="text-text-muted">Ease <span className="font-semibold text-text-main tabular-nums">{(() => { const t = customers.length || 1; const e = customers.filter(c => c.productType === 'EasePos').length; return ((e / t) * 100).toFixed(1); })()}%</span></span>
+                                                <span className="text-text-muted">Ease <span className="font-semibold text-text-main tabular-nums">{(() => { const t = customers.length || 1; const d = customers.filter(c => c.productType === 'Dr.Ease').length; return (((t - d) / t) * 100).toFixed(1); })()}%</span></span>
                                             </div>
                                         </div>
                                     );
@@ -1564,8 +1564,8 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
                                 {/* Merchant Onboard — Big Number + Thin Stacked Bar */}
                                 {(() => {
                                     const drease = customers.filter(c => c.productType === 'Dr.Ease').length;
-                                    const ease = customers.filter(c => c.productType === 'EasePos').length;
                                     const total = customers.length;
+                                    const ease = total - drease;
                                     const dreaseP = total > 0 ? (drease / total) * 100 : 50;
                                     return (
                                         <div className={`rounded-xl bg-bg-hover/40 border border-border-light hover:border-emerald-500/30 transition-all ${isFullscreen ? 'p-4' : 'p-3'}`}>
