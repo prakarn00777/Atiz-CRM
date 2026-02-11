@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useCallback } from "react";
 import { createPortal } from "react-dom";
 import { Edit2, Trash2, Clock, MoreVertical } from "lucide-react";
 import { Customer } from "@/types";
@@ -10,6 +10,10 @@ interface CustomerRowProps {
   rowNumber: number;
   onEdit: (customer: Customer) => void;
   onDelete: (id: number) => void;
+  isMenuOpen: boolean;
+  menuPosition: { top: number; left: number } | null;
+  onToggleMenu: (customerId: number, position: { top: number; left: number }) => void;
+  onCloseMenu: () => void;
 }
 
 const CustomerRow = React.memo(function CustomerRow({
@@ -17,51 +21,26 @@ const CustomerRow = React.memo(function CustomerRow({
   rowNumber,
   onEdit,
   onDelete,
+  isMenuOpen,
+  menuPosition,
+  onToggleMenu,
+  onCloseMenu,
 }: CustomerRowProps) {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!isMenuOpen) return;
-
-    const handleClickOutside = () => setIsMenuOpen(false);
-    const handleScroll = () => setIsMenuOpen(false);
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setIsMenuOpen(false);
-    };
-
-    document.addEventListener("click", handleClickOutside);
-    document.addEventListener("scroll", handleScroll, true);
-    document.addEventListener("keydown", handleEscape);
-
-    return () => {
-      document.removeEventListener("click", handleClickOutside);
-      document.removeEventListener("scroll", handleScroll, true);
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, [isMenuOpen]);
-
   const handleMenuToggle = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     const rect = e.currentTarget.getBoundingClientRect();
-    setMenuPosition({ top: rect.bottom, left: rect.right });
-    setIsMenuOpen((prev) => !prev);
-  }, []);
+    onToggleMenu(c.id, { top: rect.bottom, left: rect.right });
+  }, [c.id, onToggleMenu]);
 
   const handleEdit = useCallback(() => {
     onEdit(c);
-    setIsMenuOpen(false);
-  }, [c, onEdit]);
+    onCloseMenu();
+  }, [c, onEdit, onCloseMenu]);
 
   const handleDelete = useCallback(() => {
     onDelete(c.id);
-    setIsMenuOpen(false);
-  }, [c.id, onDelete]);
+    onCloseMenu();
+  }, [c.id, onDelete, onCloseMenu]);
 
   return (
     <tr className="group hover:bg-bg-hover transition-colors h-14">
@@ -102,8 +81,8 @@ const CustomerRow = React.memo(function CustomerRow({
         <span
           className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${
             c.productType === "EasePos"
-              ? "bg-[#F76D85]/10 text-[#F76D85]"
-              : "bg-[#6239FC]/10 text-[#6239FC]"
+              ? "bg-rose-500/10 text-rose-500"
+              : "bg-indigo-500/10 text-indigo-500"
           }`}
         >
           {c.productType || "Dr.Ease"}
@@ -113,39 +92,48 @@ const CustomerRow = React.memo(function CustomerRow({
       <td className="px-3 py-3 text-center">
         <span className="text-xs text-text-main font-medium">{c.package}</span>
       </td>
-      {/* Usage Status */}
+      {/* Usage Status (aggregate from branches) */}
       <td className="px-3 py-3 text-center">
-        <span
-          className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${
-            c.usageStatus === "Active"
-              ? "bg-emerald-500/10 text-emerald-600"
-              : c.usageStatus === "Pending"
-              ? "bg-amber-500/10 text-amber-600"
-              : c.usageStatus === "Training"
-              ? "bg-indigo-500/10 text-indigo-500"
-              : "bg-rose-500/10 text-rose-500"
-          }`}
-        >
-          {c.usageStatus === "Active"
-            ? "ใช้งานแล้ว"
-            : c.usageStatus === "Pending"
-            ? "รอใช้งาน"
-            : c.usageStatus === "Training"
-            ? "เทรนนิ่ง"
-            : "ยกเลิก"}
-        </span>
+        {(() => {
+          const branches = c.branches || [];
+          const total = Math.max(branches.length, 1);
+          const active = branches.filter(b => (b.usageStatus || "Active") === "Active").length;
+          const training = branches.filter(b => b.usageStatus === "Training").length;
+          const pending = branches.filter(b => b.usageStatus === "Pending").length;
+          const canceled = branches.filter(b => b.usageStatus === "Canceled").length;
+          const inactive = branches.filter(b => b.usageStatus === "Inactive").length;
+
+          // Determine label & color based on dominant status
+          let label: string; let color: string;
+          if (active === total) { label = `${active}/${total} ใช้งาน`; color = "bg-emerald-500/10 text-emerald-600"; }
+          else if (training === total) { label = `${training}/${total} เทรนนิ่ง`; color = "bg-indigo-500/10 text-indigo-500"; }
+          else if (pending === total) { label = `${pending}/${total} รอใช้งาน`; color = "bg-amber-500/10 text-amber-600"; }
+          else if (canceled === total) { label = `${canceled}/${total} ยกเลิก`; color = "bg-rose-500/10 text-rose-500"; }
+          else if (inactive === total) { label = `${inactive}/${total} ไม่ใช้งาน`; color = "bg-gray-500/10 text-gray-500"; }
+          else { label = `${active}/${total} ใช้งาน`; color = "bg-amber-500/10 text-amber-600"; }
+
+          return (
+            <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${color}`}>
+              {label}
+            </span>
+          );
+        })()}
       </td>
-      {/* Installation Status */}
+      {/* Installation Status (aggregate from branches) */}
       <td className="px-3 py-3 text-center">
-        <span
-          className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${
-            c.installationStatus === "Completed"
-              ? "bg-emerald-500/10 text-emerald-600"
-              : "bg-amber-500/10 text-amber-600"
-          }`}
-        >
-          {c.installationStatus === "Completed" ? "Completed" : "Pending"}
-        </span>
+        {(() => {
+          const branches = c.branches || [];
+          const total = Math.max(branches.length, 1);
+          const completed = branches.filter(b => b.status === "Completed").length;
+          const color = completed === total ? "bg-emerald-500/10 text-emerald-600"
+            : completed > 0 ? "bg-amber-500/10 text-amber-600"
+            : "bg-rose-500/10 text-rose-500";
+          return (
+            <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${color}`}>
+              {completed}/{total} ติดตั้ง
+            </span>
+          );
+        })()}
       </td>
       {/* Modified By */}
       <td className="px-3 py-3">
@@ -178,15 +166,14 @@ const CustomerRow = React.memo(function CustomerRow({
             aria-haspopup="menu"
             className={`p-2.5 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center cursor-pointer focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:outline-none ${
               isMenuOpen
-                ? "bg-indigo-500/20 text-indigo-500 dark:text-white"
+                ? "bg-indigo-500/20 text-indigo-500"
                 : "hover:bg-bg-hover text-text-muted hover:text-text-main"
             }`}
           >
             <MoreVertical className="w-5 h-5" aria-hidden="true" />
           </button>
 
-          {mounted &&
-            isMenuOpen &&
+          {isMenuOpen &&
             menuPosition &&
             createPortal(
               <div
@@ -196,8 +183,9 @@ const CustomerRow = React.memo(function CustomerRow({
                   position: "fixed",
                   top: `${menuPosition.top + 8}px`,
                   left: `${menuPosition.left - 144}px`,
+                  backgroundColor: 'var(--modal-bg)',
                 }}
-                className="z-[9999] w-44 py-2 bg-card-bg border border-border rounded-xl shadow-2xl animate-in fade-in zoom-in duration-150 origin-top-right backdrop-blur-xl"
+                className="z-[9999] w-44 py-2 border border-border rounded-xl shadow-2xl animate-in fade-in zoom-in duration-150 origin-top-right"
                 onClick={(e) => e.stopPropagation()}
               >
                 <button

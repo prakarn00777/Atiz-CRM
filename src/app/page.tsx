@@ -86,7 +86,7 @@ import {
   getUsers, saveUser, deleteUser, toggleUserActive, getRoles, saveRole, deleteRole, loginUser,
   saveIssue, deleteIssue, assignIssue, saveCustomer, deleteCustomer, saveInstallation, updateInstallationStatus, deleteInstallation,
   getActivities, saveActivity, deleteActivity,
-  getLeads, saveLead, deleteLead, getBusinessMetrics, saveFollowUpLog
+  getLeads, saveLead, deleteLead, getBusinessMetrics, saveFollowUpLog, logoutUser, ensureSession
 } from "./actions";
 
 export default function CRMPage() {
@@ -373,6 +373,11 @@ export default function CRMPage() {
       setNotificationPermission(Notification.permission);
     }
 
+    // Ensure session cookie exists (migrate localStorage session → httpOnly cookie)
+    if (user?.id) {
+      ensureSession(user.id).catch(() => {});
+    }
+
     // 2. Background Revalidation (Fetch from Supabase)
     fetchData();
 
@@ -522,8 +527,15 @@ export default function CRMPage() {
       subdomain: formData.get("subdomain") as string,
       productType: formData.get("product") as any,
       package: formData.get("package") as string,
-      usageStatus: modalUsageStatus,
-      installationStatus: editingCustomer ? editingCustomer.installationStatus : "Pending",
+      usageStatus: (() => {
+        const statuses = branchInputs.map(b => b.usageStatus || "Active");
+        if (statuses.includes("Active")) return "Active" as const;
+        if (statuses.includes("Training")) return "Training" as const;
+        if (statuses.includes("Pending")) return "Pending" as const;
+        if (statuses.every(s => s === "Canceled")) return "Canceled" as const;
+        return "Inactive" as const;
+      })(),
+      installationStatus: branchInputs.every(b => b.status === "Completed") ? "Completed" : "Pending",
       clientCode: formData.get("clientCode") as string || (editingCustomer ? editingCustomer.clientCode : undefined),
       salesName: formData.get("salesName") as string,
       contractStart: formData.get("contractStart") as string,
@@ -898,9 +910,10 @@ export default function CRMPage() {
               }
               return b;
             });
+            const allCompleted = updatedBranches.every(b => b.status === "Completed");
             const updatedCust = {
               ...targetCust,
-              installationStatus: status as any,
+              installationStatus: allCompleted ? "Completed" : "Pending",
               branches: updatedBranches
             };
             await saveCustomer(updatedCust);
@@ -1090,7 +1103,7 @@ export default function CRMPage() {
   // Memoized callbacks for child components to prevent unnecessary re-renders
   const handleCustomerAdd = useCallback(() => {
     setEditingCustomer(null);
-    setBranchInputs([{ name: "สำนักงานใหญ่", isMain: true, address: "", status: "Pending" }]);
+    setBranchInputs([{ name: "สำนักงานใหญ่", isMain: true, address: "", status: "Pending", usageStatus: "Active" }]);
     setModalUsageStatus("Active");
     setActiveBranchIndex(0);
     setActiveCustomerTab('general');
@@ -1298,7 +1311,7 @@ export default function CRMPage() {
                         </button>
                         <div className="my-1 border-t border-border-light" />
                         <button
-                          onClick={() => { setUser(null); safeLocalStorage.removeItem("crm_user_v2"); setProfileMenuOpen(false); }}
+                          onClick={async () => { await logoutUser(); setUser(null); safeLocalStorage.removeItem("crm_user_v2"); setProfileMenuOpen(false); }}
                           className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-500 hover:bg-red-500/10 hover:text-red-600 transition-colors"
                         >
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>

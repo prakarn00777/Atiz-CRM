@@ -7,6 +7,8 @@ import {
     Installation, Issue, Activity, BusinessMetrics, generateUUID, FollowUpLog
 } from "@/types";
 import bcrypt from "bcryptjs";
+import { cookies } from "next/headers";
+import crypto from "crypto";
 
 // ============================================
 // Environment & Logging Utilities
@@ -17,6 +19,118 @@ const log = {
     info: (...args: unknown[]) => isDev && console.log('[INFO]', ...args),
     error: (...args: unknown[]) => console.error('[ERROR]', ...args),
 };
+
+// ============================================
+// Session Management (httpOnly cookie)
+// ============================================
+const SESSION_COOKIE = 'crm_session';
+const SESSION_SECRET = process.env.SESSION_SECRET || 'atizdesk-default-secret-change-in-production';
+const SESSION_MAX_AGE = 60 * 60 * 24; // 24 hours in seconds
+
+interface SessionPayload {
+    userId: number;
+    name: string;
+    role: string;
+    permissions?: Record<string, unknown>;
+    exp: number;
+}
+
+function signSession(payload: SessionPayload): string {
+    const data = Buffer.from(JSON.stringify(payload)).toString('base64url');
+    const sig = crypto.createHmac('sha256', SESSION_SECRET).update(data).digest('base64url');
+    return `${data}.${sig}`;
+}
+
+function verifySession(token: string): SessionPayload | null {
+    const parts = token.split('.');
+    if (parts.length !== 2) return null;
+    const [data, sig] = parts;
+    const expectedSig = crypto.createHmac('sha256', SESSION_SECRET).update(data).digest('base64url');
+    if (sig !== expectedSig) return null;
+    try {
+        const payload = JSON.parse(Buffer.from(data, 'base64url').toString()) as SessionPayload;
+        if (payload.exp < Date.now()) return null; // expired
+        return payload;
+    } catch {
+        return null;
+    }
+}
+
+async function setSessionCookie(payload: Omit<SessionPayload, 'exp'>): Promise<void> {
+    const session: SessionPayload = { ...payload, exp: Date.now() + SESSION_MAX_AGE * 1000 };
+    const token = signSession(session);
+    const cookieStore = await cookies();
+    cookieStore.set(SESSION_COOKIE, token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: SESSION_MAX_AGE,
+        path: '/',
+    });
+}
+
+async function clearSessionCookie(): Promise<void> {
+    const cookieStore = await cookies();
+    cookieStore.delete(SESSION_COOKIE);
+}
+
+async function getServerSession(): Promise<SessionPayload | null> {
+    try {
+        const cookieStore = await cookies();
+        const token = cookieStore.get(SESSION_COOKIE)?.value;
+        if (!token) return null;
+        return verifySession(token);
+    } catch {
+        return null;
+    }
+}
+
+async function requireAuth(): Promise<SessionPayload> {
+    const session = await getServerSession();
+    if (!session) {
+        throw new AuthError("กรุณาเข้าสู่ระบบก่อนใช้งาน");
+    }
+    return session;
+}
+
+class AuthError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'AuthError';
+    }
+}
+
+// Ensure session cookie exists — called on page load for localStorage→cookie migration
+export async function ensureSession(userId: number): Promise<ApiResponse<{ ok: boolean }>> {
+    try {
+        // Already has valid cookie? Skip
+        const existing = await getServerSession();
+        if (existing) return createSuccess({ ok: true });
+
+        // Verify user exists and is active in DB
+        const { data, error } = await db
+            .from('users')
+            .select('id, name, role_id, is_active, roles(permissions)')
+            .eq('id', userId)
+            .maybeSingle();
+
+        if (error || !data || !data.is_active) {
+            return createError("Session ไม่ถูกต้อง กรุณาเข้าสู่ระบบใหม่", 'UNAUTHORIZED');
+        }
+
+        // Set cookie
+        await setSessionCookie({
+            userId: Number(data.id),
+            name: String(data.name),
+            role: String(data.role_id),
+            permissions: (data.roles as { permissions?: Record<string, unknown> })?.permissions,
+        });
+
+        return createSuccess({ ok: true });
+    } catch (err) {
+        return handleDbError(err, "ensureSession");
+    }
+}
 
 // ============================================
 // Error Handling Utilities
@@ -30,23 +144,14 @@ function createSuccess<T>(data: T, meta?: PaginationMeta): ApiResponse<T> {
 }
 
 function handleDbError(err: unknown, context: string): ApiResponse<never> {
-    let message = 'Unknown database error';
-
-    if (err instanceof Error) {
-        message = err.message;
-    } else if (typeof err === 'object' && err !== null) {
-        // Supabase errors are often plain objects with message/code/details
-        const e = err as Record<string, any>;
-        message = e.message || e.error || e.details || JSON.stringify(err);
-        if (e.code) {
-            message = `[${e.code}] ${message}`;
-        }
-    } else if (typeof err === 'string') {
-        message = err;
+    // Handle auth errors separately
+    if (err instanceof AuthError) {
+        return createError(err.message, 'UNAUTHORIZED');
     }
-
-    log.error(`${context}:`, message, err);
-    return createError(message, 'DATABASE_ERROR');
+    // Log full error details server-side only
+    log.error(`${context}:`, err);
+    // Return generic message to client — never expose DB internals
+    return createError("เกิดข้อผิดพลาดในระบบ กรุณาลองอีกครั้ง", 'DATABASE_ERROR');
 }
 
 // ============================================
@@ -86,6 +191,7 @@ function isTemporaryId(id: number | string | undefined): boolean {
 
 export async function importCustomersFromCSV(data: any[]): Promise<ApiResponse<{ count: number }>> {
     try {
+        await requireAuth();
         const customers = data.map((row) => {
             const name = row['ชื่อคลินิก/ร้าน (ไทย)'] || row['ชื่อคลินิก/ร้าน (English)'] || row['ชื่อคลินิก/ร้าน "สำหรับใช้ค้นหาตอนแจ้งเคส"'];
 
@@ -153,7 +259,7 @@ export async function getCustomers(params?: PaginationParams): Promise<Customer[
         try {
             const { data: branchesData } = await db
                 .from('branches')
-                .select('id, customer_id, name, is_main, status, address, contract_start, cs_owner');
+                .select('id, customer_id, name, is_main, status, usage_status, address, contract_start, cs_owner');
 
             if (branchesData) {
                 branchesData.forEach(b => {
@@ -166,34 +272,55 @@ export async function getCustomers(params?: PaginationParams): Promise<Customer[
             console.warn("[getCustomers] Failed to fetch branches:", branchErr);
         }
 
-        return (data || []).map(row => ({
-            id: Number(row.id),
-            name: String(row.name),
-            clientCode: row.client_code ? String(row.client_code) : undefined,
-            subdomain: row.subdomain ? String(row.subdomain) : undefined,
-            productType: (row.product_type as ProductType) || "Dr.Ease",
-            package: String(row.package || 'Standard'),
-            usageStatus: (row.usage_status as UsageStatus) || "Active",
-            contractStart: row.contract_start ? String(row.contract_start) : undefined,
-            contractEnd: row.contract_end ? String(row.contract_end) : undefined,
-            csOwner: row.cs_owner ? String(row.cs_owner) : undefined,
-            contactName: row.contact_name ? String(row.contact_name) : undefined,
-            contactPhone: row.contact_phone ? String(row.contact_phone) : undefined,
-            salesName: row.sales_name ? String(row.sales_name) : undefined,
-            note: row.note ? String(row.note) : undefined,
-            installationStatus: row.installation_status ? String(row.installation_status) : undefined,
-            modifiedBy: row.modified_by ? String(row.modified_by) : undefined,
-            modifiedAt: row.modified_at ? String(row.modified_at) : undefined,
-            branches: (branchesMap[row.id] || []).map(b => ({
+        return (data || []).map(row => {
+            const mappedBranches = (branchesMap[row.id] || []).map(b => ({
                 id: Number(b.id),
                 name: String(b.name),
                 isMain: Boolean(b.is_main),
                 status: b.status as any,
+                usageStatus: (b.usage_status as UsageStatus) || "Active",
                 address: b.address,
                 contractStart: b.contract_start,
                 csOwner: b.cs_owner ? String(b.cs_owner) : undefined
-            }))
-        })) as Customer[];
+            }));
+
+            // Compute customer-level statuses from branches
+            const hasAnyBranch = mappedBranches.length > 0;
+            let computedUsage: UsageStatus = (row.usage_status as UsageStatus) || "Active";
+            let computedInstall: string | undefined = row.installation_status ? String(row.installation_status) : undefined;
+
+            if (hasAnyBranch) {
+                const branchUsages = mappedBranches.map(b => b.usageStatus || "Active");
+                if (branchUsages.includes("Active")) computedUsage = "Active";
+                else if (branchUsages.includes("Training")) computedUsage = "Training";
+                else if (branchUsages.includes("Pending")) computedUsage = "Pending";
+                else if (branchUsages.every(s => s === "Canceled")) computedUsage = "Canceled";
+                else computedUsage = "Inactive";
+
+                computedInstall = mappedBranches.every(b => b.status === "Completed") ? "Completed" : "Pending";
+            }
+
+            return {
+                id: Number(row.id),
+                name: String(row.name),
+                clientCode: row.client_code ? String(row.client_code) : undefined,
+                subdomain: row.subdomain ? String(row.subdomain) : undefined,
+                productType: (row.product_type as ProductType) || "Dr.Ease",
+                package: String(row.package || 'Standard'),
+                usageStatus: computedUsage,
+                contractStart: row.contract_start ? String(row.contract_start) : undefined,
+                contractEnd: row.contract_end ? String(row.contract_end) : undefined,
+                csOwner: row.cs_owner ? String(row.cs_owner) : undefined,
+                contactName: row.contact_name ? String(row.contact_name) : undefined,
+                contactPhone: row.contact_phone ? String(row.contact_phone) : undefined,
+                salesName: row.sales_name ? String(row.sales_name) : undefined,
+                note: row.note ? String(row.note) : undefined,
+                installationStatus: computedInstall,
+                modifiedBy: row.modified_by ? String(row.modified_by) : undefined,
+                modifiedAt: row.modified_at ? String(row.modified_at) : undefined,
+                branches: mappedBranches,
+            };
+        }) as Customer[];
     } catch (err) {
         console.error("[getCustomers] Critical error:", err);
         return [];
@@ -312,6 +439,7 @@ export async function getUsers(): Promise<User[]> {
 
 export async function saveUser(userData: Partial<User> & { password?: string }): Promise<ApiResponse<User>> {
     try {
+        await requireAuth();
         const { id, ...rest } = userData;
 
         let hashedPassword = rest.password;
@@ -378,7 +506,7 @@ export async function loginUser(username: string, password: string): Promise<Api
 
         if (error) {
             log.error("Database error during login:", error);
-            return createError(`Database Error: ${error.message}`, 'DATABASE_ERROR');
+            return createError("เกิดข้อผิดพลาดในระบบ กรุณาลองอีกครั้ง", 'DATABASE_ERROR');
         }
 
         if (!data) {
@@ -387,17 +515,11 @@ export async function loginUser(username: string, password: string): Promise<Api
 
         const isValid = await bcrypt.compare(password, data.password);
 
-        // Fallback for migration: allow plain text match for 'admin:1234' if hash compare fails
-        let isMatch = isValid;
-        if (!isMatch && username === 'admin' && password === data.password) {
-            isMatch = true;
-            const newHash = await bcrypt.hash(password, 10);
-            await db.from('users').update({ password: newHash }).eq('id', data.id);
-        }
-
-        if (!isMatch) {
+        if (!isValid) {
             return createError("รหัสผ่านไม่ถูกต้อง", 'UNAUTHORIZED');
         }
+
+        const permissions = (data.roles as { permissions?: Record<string, unknown> })?.permissions;
 
         const user: User & { permissions?: Record<string, unknown> } = {
             id: Number(data.id),
@@ -405,8 +527,16 @@ export async function loginUser(username: string, password: string): Promise<Api
             username: String(data.username),
             role: String(data.role_id),
             isActive: true,
-            permissions: (data.roles as { permissions?: Record<string, unknown> })?.permissions,
+            permissions,
         };
+
+        // Set httpOnly session cookie
+        await setSessionCookie({
+            userId: user.id,
+            name: user.name,
+            role: user.role,
+            permissions,
+        });
 
         return createSuccess(user);
     } catch (err) {
@@ -414,8 +544,18 @@ export async function loginUser(username: string, password: string): Promise<Api
     }
 }
 
+export async function logoutUser(): Promise<ApiResponse<{ loggedOut: boolean }>> {
+    try {
+        await clearSessionCookie();
+        return createSuccess({ loggedOut: true });
+    } catch (err) {
+        return handleDbError(err, "logoutUser");
+    }
+}
+
 export async function deleteUser(id: number): Promise<ApiResponse<{ deleted: boolean }>> {
     try {
+        await requireAuth();
         const { error } = await db.from('users').update({ is_active: false }).eq('id', id);
         if (error) throw error;
         return createSuccess({ deleted: true });
@@ -426,6 +566,7 @@ export async function deleteUser(id: number): Promise<ApiResponse<{ deleted: boo
 
 export async function toggleUserActive(id: number, isActive: boolean): Promise<ApiResponse<{ id: number; isActive: boolean }>> {
     try {
+        await requireAuth();
         const { error } = await db.from('users').update({ is_active: isActive }).eq('id', id);
         if (error) throw error;
         return createSuccess({ id, isActive });
@@ -460,6 +601,7 @@ export async function getRoles(): Promise<Role[]> {
 
 export async function saveRole(roleData: Partial<Role>): Promise<ApiResponse<Role>> {
     try {
+        await requireAuth();
         const { id, ...rest } = roleData;
 
         // Generate UUID for new roles if id looks temporary
@@ -492,6 +634,7 @@ export async function saveRole(roleData: Partial<Role>): Promise<ApiResponse<Rol
 
 export async function deleteRole(id: string): Promise<ApiResponse<{ deleted: boolean }>> {
     try {
+        await requireAuth();
         const { error } = await db.from('roles').delete().eq('id', id);
         if (error) throw error;
         return createSuccess({ deleted: true });
@@ -519,6 +662,7 @@ async function generateNextCaseNumber(): Promise<string> {
 // Issue persistence
 export async function saveIssue(issueData: Partial<Issue>): Promise<ApiResponse<Issue>> {
     try {
+        await requireAuth();
         const { id, ...rest } = issueData;
         const isNew = isTemporaryId(id);
 
@@ -625,6 +769,7 @@ export async function assignIssue(issueId: number, assignedTo: string, modifiedB
 
 export async function deleteIssue(id: number): Promise<ApiResponse<{ deleted: boolean }>> {
     try {
+        await requireAuth();
         const { error } = await db.from('issues').delete().eq('id', id);
         if (error) throw error;
         return createSuccess({ deleted: true });
@@ -635,6 +780,7 @@ export async function deleteIssue(id: number): Promise<ApiResponse<{ deleted: bo
 
 export async function deleteInstallation(id: number): Promise<ApiResponse<{ deleted: boolean }>> {
     try {
+        await requireAuth();
         const { error } = await db.from('installations').delete().eq('id', id);
         if (error) throw error;
         return createSuccess({ deleted: true });
@@ -643,9 +789,56 @@ export async function deleteInstallation(id: number): Promise<ApiResponse<{ dele
     }
 }
 
+// Validation helpers
+const VALID_USAGE_STATUSES: UsageStatus[] = ["Active", "Pending", "Training", "Canceled", "Inactive"];
+const VALID_INSTALLATION_STATUSES: InstallationStatus[] = ["Pending", "Completed"];
+const VALID_PRODUCT_TYPES: ProductType[] = ["Dr.Ease", "EasePos"];
+const VALID_PACKAGES = ["Starter", "Standard", "Elite"];
+
+function validateCustomerInput(data: Partial<Customer>): string | null {
+    if (!data.name || typeof data.name !== 'string' || data.name.trim().length === 0) {
+        return "กรุณาระบุชื่อลูกค้า";
+    }
+    if (data.name.trim().length > 200) {
+        return "ชื่อลูกค้ายาวเกินไป (สูงสุด 200 ตัวอักษร)";
+    }
+    if (data.productType && !VALID_PRODUCT_TYPES.includes(data.productType)) {
+        return `ประเภทสินค้าไม่ถูกต้อง: ${data.productType}`;
+    }
+    if (data.package && !VALID_PACKAGES.includes(data.package)) {
+        return `แพ็คเกจไม่ถูกต้อง: ${data.package}`;
+    }
+    if (data.usageStatus && !VALID_USAGE_STATUSES.includes(data.usageStatus)) {
+        return `สถานะการใช้งานไม่ถูกต้อง: ${data.usageStatus}`;
+    }
+    if (data.installationStatus && !VALID_INSTALLATION_STATUSES.includes(data.installationStatus as InstallationStatus)) {
+        return `สถานะการติดตั้งไม่ถูกต้อง: ${data.installationStatus}`;
+    }
+    // Validate branches
+    if (data.branches) {
+        for (let i = 0; i < data.branches.length; i++) {
+            const b = data.branches[i];
+            if (!b.name || typeof b.name !== 'string' || b.name.trim().length === 0) {
+                return `สาขาที่ ${i + 1}: กรุณาระบุชื่อสาขา`;
+            }
+            if (b.usageStatus && !VALID_USAGE_STATUSES.includes(b.usageStatus)) {
+                return `สาขา "${b.name}": สถานะการใช้งานไม่ถูกต้อง`;
+            }
+        }
+    }
+    return null; // valid
+}
+
 // Customer persistence
 export async function saveCustomer(customerData: Partial<Customer>): Promise<ApiResponse<Customer>> {
     try {
+        await requireAuth();
+        // Input validation
+        const validationError = validateCustomerInput(customerData);
+        if (validationError) {
+            return createError(validationError, 'VALIDATION_ERROR');
+        }
+
         const { id, ...rest } = customerData;
         const toNull = (val: any) => (val === "" || val === undefined) ? null : val;
 
@@ -728,36 +921,56 @@ export async function saveCustomer(customerData: Partial<Customer>): Promise<Api
                 }
             }
 
-            // 3. Upsert incoming branches
+            // 3. Update existing + insert new branches
+            // (branches.id is GENERATED ALWAYS — can't upsert with explicit id)
             if (incomingBranches.length > 0) {
-                const branchesToUpsert = incomingBranches.map(b => {
-                    const data: any = {
+                const existingToUpdate = incomingBranches.filter(b => b.id && !isTemporaryId(b.id));
+                const newToInsert = incomingBranches.filter(b => !b.id || isTemporaryId(b.id));
+
+                // Update existing branches one by one
+                for (const b of existingToUpdate) {
+                    const { error: updateErr } = await db.from('branches').update({
+                        name: b.name,
+                        is_main: b.isMain,
+                        status: b.status,
+                        usage_status: b.usageStatus || "Active",
+                        address: b.address,
+                        contract_start: b.contractStart,
+                        cs_owner: b.csOwner || null
+                    }).eq('id', b.id);
+                    if (updateErr) {
+                        log.error("saveCustomer: Error updating branch:", b.id, updateErr);
+                        throw updateErr;
+                    }
+                }
+
+                // Insert new branches (no id — let DB auto-generate)
+                if (newToInsert.length > 0) {
+                    const insertData = newToInsert.map(b => ({
                         customer_id: customerId,
                         name: b.name,
                         is_main: b.isMain,
                         status: b.status,
+                        usage_status: b.usageStatus || "Active",
                         address: b.address,
                         contract_start: b.contractStart,
                         cs_owner: b.csOwner || null
-                    };
-                    // Only include ID if it's not a temporary/new one
-                    if (b.id && !isTemporaryId(b.id)) {
-                        data.id = b.id;
+                    }));
+                    const { error: insertErr } = await db.from('branches').insert(insertData);
+                    if (insertErr) {
+                        log.error("saveCustomer: Error inserting branches:", insertErr);
+                        throw insertErr;
                     }
-                    return data;
-                });
-
-                log.info("saveCustomer: Upserting branches:", branchesToUpsert.length);
-                const { error: branchError } = await db.from('branches').upsert(branchesToUpsert);
-                if (branchError) {
-                    log.error("saveCustomer: Error upserting branches:", branchError);
-                    throw branchError;
                 }
-                log.info("saveCustomer: Branches upsert successful");
+
+                log.info("saveCustomer: Branches save successful (updated:", existingToUpdate.length, "inserted:", newToInsert.length, ")");
             }
         } catch (branchErr: any) {
             log.error("saveCustomer: Branch management failed for customer:", customerId, branchErr);
-            // We don't fail the whole customer save, but log it
+            return createError(
+                "บันทึกข้อมูลลูกค้าสำเร็จ แต่จัดการสาขาล้มเหลว กรุณาลองบันทึกอีกครั้ง",
+                'DATABASE_ERROR'
+            );
         }
 
         // Fetch the customer again to return complete data
@@ -781,14 +994,45 @@ export async function saveCustomer(customerData: Partial<Customer>): Promise<Api
         log.info("saveCustomer: Fetching branches for customer:", customerId);
         const { data: branchesData, error: branchFetchError } = await db
             .from('branches')
-            .select('id, name, is_main, status, address, contract_start, cs_owner')
+            .select('id, name, is_main, status, usage_status, address, contract_start, cs_owner')
             .eq('customer_id', customerId);
 
         if (branchFetchError) {
             log.error("saveCustomer: Error fetching branches:", branchFetchError);
         }
 
-        // Map back to Customer type
+        // Map branches and compute customer-level statuses
+        const mappedBranches = (branchesData || []).map(b => ({
+            id: Number(b.id),
+            name: String(b.name),
+            isMain: Boolean(b.is_main),
+            status: b.status as any,
+            usageStatus: (b.usage_status as UsageStatus) || "Active",
+            address: b.address,
+            contractStart: b.contract_start,
+            csOwner: b.cs_owner ? String(b.cs_owner) : undefined
+        }));
+
+        // Compute aggregate statuses from branches
+        let computedUsage: UsageStatus = finalData.usage_status as UsageStatus || "Active";
+        let computedInstall: InstallationStatus = finalData.installation_status as InstallationStatus || "Pending";
+        if (mappedBranches.length > 0) {
+            const branchUsages = mappedBranches.map(b => b.usageStatus || "Active");
+            if (branchUsages.includes("Active")) computedUsage = "Active";
+            else if (branchUsages.includes("Training")) computedUsage = "Training";
+            else if (branchUsages.includes("Pending")) computedUsage = "Pending";
+            else if (branchUsages.every(s => s === "Canceled")) computedUsage = "Canceled";
+            else computedUsage = "Inactive";
+
+            computedInstall = mappedBranches.every(b => b.status === "Completed") ? "Completed" : "Pending";
+
+            // Write computed statuses back to customers table for backward compat
+            await db.from('customers').update({
+                usage_status: computedUsage,
+                installation_status: computedInstall,
+            }).eq('id', customerId);
+        }
+
         const savedCustomer: Customer = {
             ...result,
             id: Number(finalData.id),
@@ -797,17 +1041,9 @@ export async function saveCustomer(customerData: Partial<Customer>): Promise<Api
             subdomain: finalData.subdomain,
             productType: finalData.product_type as ProductType,
             package: finalData.package,
-            usageStatus: finalData.usage_status as UsageStatus,
-            installationStatus: finalData.installation_status as InstallationStatus,
-            branches: (branchesData || []).map(b => ({
-                id: Number(b.id),
-                name: String(b.name),
-                isMain: Boolean(b.is_main),
-                status: b.status as any,
-                address: b.address,
-                contractStart: b.contract_start,
-                csOwner: b.cs_owner ? String(b.cs_owner) : undefined
-            }))
+            usageStatus: computedUsage,
+            installationStatus: computedInstall,
+            branches: mappedBranches,
         } as Customer;
 
         log.info("saveCustomer: Complete! Customer saved successfully:", savedCustomer.id);
@@ -820,6 +1056,7 @@ export async function saveCustomer(customerData: Partial<Customer>): Promise<Api
 
 export async function deleteCustomer(id: number): Promise<ApiResponse<{ deleted: boolean }>> {
     try {
+        await requireAuth();
         const { error } = await db.from('customers').delete().eq('id', id);
         if (error) throw error;
         return createSuccess({ deleted: true });
@@ -831,6 +1068,7 @@ export async function deleteCustomer(id: number): Promise<ApiResponse<{ deleted:
 // Installation persistence
 export async function saveInstallation(instData: Partial<Installation>): Promise<ApiResponse<Installation>> {
     try {
+        await requireAuth();
         const { id, ...rest } = instData;
         const dbData = {
             customer_id: rest.customerId && rest.customerId > 0 ? rest.customerId : null,
@@ -888,6 +1126,7 @@ export async function saveInstallation(instData: Partial<Installation>): Promise
 
 export async function updateInstallationStatus(id: number, status: string, modifiedBy?: string): Promise<ApiResponse<Installation | null>> {
     try {
+        await requireAuth();
         const { data, error } = await db.from('installations').update({
             status,
             modified_by: modifiedBy,
@@ -962,6 +1201,7 @@ export async function getActivities(params?: PaginationParams): Promise<Activity
 
 export async function saveActivity(activityData: Partial<Activity>): Promise<ApiResponse<Activity>> {
     try {
+        await requireAuth();
         const { id, ...rest } = activityData;
         const dbData = {
             customer_id: rest.customerId,
@@ -1019,6 +1259,7 @@ export async function saveActivity(activityData: Partial<Activity>): Promise<Api
 
 export async function deleteActivity(id: number): Promise<ApiResponse<{ deleted: boolean }>> {
     try {
+        await requireAuth();
         const { error } = await db.from('activities').delete().eq('id', id);
         if (error) throw error;
         return createSuccess({ deleted: true });
@@ -1068,6 +1309,7 @@ export async function getLeads(params?: PaginationParams): Promise<Lead[]> {
 
 export async function saveLead(leadData: Partial<Lead>): Promise<ApiResponse<Lead>> {
     try {
+        await requireAuth();
         const { id, ...rest } = leadData;
         const dbData = {
             lead_number: rest.leadNumber,
@@ -1125,6 +1367,7 @@ export async function saveLead(leadData: Partial<Lead>): Promise<ApiResponse<Lea
 
 export async function deleteLead(id: number): Promise<ApiResponse<{ deleted: boolean }>> {
     try {
+        await requireAuth();
         const { error } = await db.from('leads').delete().eq('id', id);
         if (error) throw error;
         return createSuccess({ deleted: true });
@@ -1135,6 +1378,7 @@ export async function deleteLead(id: number): Promise<ApiResponse<{ deleted: boo
 
 export async function importLeads(data: Partial<Lead>[]): Promise<ApiResponse<{ count: number }>> {
     try {
+        await requireAuth();
         const dbData = data.map(row => ({
             lead_number: row.leadNumber,
             product: row.product,
@@ -1215,6 +1459,7 @@ export async function getBusinessMetrics(): Promise<ApiResponse<BusinessMetrics>
 
 export async function saveBusinessMetrics(metrics: Partial<BusinessMetrics>): Promise<ApiResponse<BusinessMetrics>> {
     try {
+        await requireAuth();
         const dbData = {
             new_sales: metrics.newSales,
             renewal: metrics.renewal,
@@ -1280,6 +1525,7 @@ export async function getFollowUpLogs(customerId?: number): Promise<FollowUpLog[
 
 export async function saveFollowUpLog(logData: Partial<FollowUpLog>): Promise<ApiResponse<FollowUpLog>> {
     try {
+        await requireAuth();
         const dbData = {
             customer_id: logData.customerId,
             customer_name: logData.customerName,
@@ -1325,6 +1571,7 @@ export async function saveFollowUpLog(logData: Partial<FollowUpLog>): Promise<Ap
 
 export async function updateFollowUpLog(id: number, logData: Partial<FollowUpLog>): Promise<ApiResponse<FollowUpLog>> {
     try {
+        await requireAuth();
         const dbData: Record<string, any> = {};
 
         if (logData.feedback !== undefined) dbData.feedback = logData.feedback;
@@ -1368,6 +1615,7 @@ export async function updateFollowUpLog(id: number, logData: Partial<FollowUpLog
 
 export async function deleteFollowUpLog(id: number): Promise<ApiResponse<{ deleted: boolean }>> {
     try {
+        await requireAuth();
         const { error } = await db.from('follow_up_logs').delete().eq('id', id);
         if (error) throw error;
         return createSuccess({ deleted: true });

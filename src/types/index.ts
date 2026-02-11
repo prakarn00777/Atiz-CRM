@@ -69,6 +69,7 @@ export interface Branch {
     isMain: boolean;
     address?: string;
     status?: "Pending" | "Completed";
+    usageStatus?: UsageStatus;
     contractStart?: string;
     csOwner?: string;
 }

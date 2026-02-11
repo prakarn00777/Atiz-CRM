@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { Search, Filter, Users } from "lucide-react";
 import CustomSelect from "./CustomSelect";
 import { Customer } from "@/types";
@@ -15,6 +15,38 @@ interface CustomerTableProps {
 const CustomerTable = React.memo(function CustomerTable({ customers, onEdit, onDelete }: CustomerTableProps) {
     const [searchInput, setSearchInput] = useState("");
     const [searchTerm, setSearchTerm] = useState("");
+
+    // Menu state at parent level (single menu open at a time)
+    const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+    const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
+
+    const handleToggleMenu = useCallback((customerId: number, pos: { top: number; left: number }) => {
+        setOpenMenuId(prev => prev === customerId ? null : customerId);
+        setMenuPosition(pos);
+    }, []);
+
+    const handleCloseMenu = useCallback(() => setOpenMenuId(null), []);
+
+    // Close menu on click-outside, scroll, or Escape
+    useEffect(() => {
+        if (openMenuId === null) return;
+
+        const handleClickOutside = () => setOpenMenuId(null);
+        const handleScroll = () => setOpenMenuId(null);
+        const handleEscape = (e: KeyboardEvent) => {
+            if (e.key === "Escape") setOpenMenuId(null);
+        };
+
+        document.addEventListener("click", handleClickOutside);
+        document.addEventListener("scroll", handleScroll, true);
+        document.addEventListener("keydown", handleEscape);
+
+        return () => {
+            document.removeEventListener("click", handleClickOutside);
+            document.removeEventListener("scroll", handleScroll, true);
+            document.removeEventListener("keydown", handleEscape);
+        };
+    }, [openMenuId]);
     const [usageStatusFilter, setUsageStatusFilter] = useState("all");
 
     // Debounce search input - only update searchTerm after 300ms of no typing
@@ -169,6 +201,10 @@ const CustomerTable = React.memo(function CustomerTable({ customers, onEdit, onD
                                         rowNumber={(currentPage - 1) * itemsPerPage + index + 1}
                                         onEdit={onEdit}
                                         onDelete={onDelete}
+                                        isMenuOpen={openMenuId === c.id}
+                                        menuPosition={openMenuId === c.id ? menuPosition : null}
+                                        onToggleMenu={handleToggleMenu}
+                                        onCloseMenu={handleCloseMenu}
                                     />
                                 ))
                             ) : (

@@ -285,19 +285,23 @@ const CustomerModal = React.memo(function CustomerModal({
                     <CustomSelect name="product" defaultValue={editingCustomer?.productType || "Dr.Ease"} options={[{ value: "Dr.Ease", label: "Dr.Ease" }, { value: "EasePos", label: "EasePos" }]} />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs font-medium text-text-muted">สถานะการใช้งาน</label>
-                    <CustomSelect
-                      name="usageStatus"
-                      options={[
-                        { value: "Training", label: "รอการเทรนนิ่ง" },
-                        { value: "Pending", label: "รอการใช้งาน" },
-                        { value: "Active", label: "ใช้งานแล้ว" },
-                        { value: "Canceled", label: "ยกเลิก" },
-                      ]}
-                      value={modalUsageStatus}
-                      onChange={(val) => setModalUsageStatus(val as UsageStatus)}
-                      placeholder="เลือกสถานะ..."
-                    />
+                    <label className="text-xs font-medium text-text-muted">สถานะการใช้งาน <span className="text-text-muted/50">(จากสาขา)</span></label>
+                    {(() => {
+                      const active = branchInputs.filter(b => (b.usageStatus || "Active") === "Active").length;
+                      const total = branchInputs.length;
+                      const label = active === total ? "ใช้งานแล้ว" :
+                        active > 0 ? `${active}/${total} ใช้งาน` :
+                        branchInputs.every(b => b.usageStatus === "Canceled") ? "ยกเลิกทั้งหมด" : "ไม่ได้ใช้งาน";
+                      const color = active === total ? "text-emerald-600 bg-emerald-500/10 border-emerald-500/20" :
+                        active > 0 ? "text-amber-600 bg-amber-500/10 border-amber-500/20" :
+                        "text-rose-500 bg-rose-500/10 border-rose-500/20";
+                      return (
+                        <div className={`h-9 flex items-center px-3 rounded-lg border text-xs font-medium ${color}`}>
+                          {label}
+                          <span className="ml-auto text-text-muted/50 text-[10px]">แก้ไขที่แท็บสาขา</span>
+                        </div>
+                      );
+                    })()}
                   </div>
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-text-muted">แพ็คเกจ</label>
@@ -360,17 +364,23 @@ const CustomerModal = React.memo(function CustomerModal({
                               </div>
                             </div>
                           </div>
-                          <div className={`absolute right-3 top-3 w-1.5 h-1.5 rounded-full ${branch.status === "Completed" ? "bg-emerald-500" : "bg-text-muted/40"}`} />
+                          <div className={`absolute right-3 top-3 w-1.5 h-1.5 rounded-full ${
+                            (branch.usageStatus || "Active") === "Active" ? "bg-emerald-500" :
+                            (branch.usageStatus || "Active") === "Training" ? "bg-indigo-500" :
+                            (branch.usageStatus || "Active") === "Canceled" ? "bg-rose-500" :
+                            (branch.usageStatus || "Active") === "Inactive" ? "bg-gray-400" :
+                            "bg-amber-500"
+                          }`} />
                         </button>
                       ))}
                     </div>
                   </div>
 
                   {/* Right: Branch Details */}
-                  <div className="flex-1 pl-2">
+                  <div className="flex-1 pl-2 overflow-y-auto custom-scrollbar">
                     {branchInputs[activeBranchIndex] ? (
                       <div className="h-full flex flex-col animate-in fade-in slide-in-from-right-2 duration-200">
-                        <div className="flex items-center justify-between mb-6 pb-4 border-b border-border-light">
+                        <div className="flex items-center justify-between mb-4 pb-3 border-b border-border-light shrink-0">
                           <div>
                             <h4 className="text-sm font-semibold text-text-main">รายละเอียดสาขา</h4>
                             <p className="text-[10px] text-text-muted">แก้ไขข้อมูลและจัดการสถานะของสาขาที่เลือก</p>
@@ -408,23 +418,35 @@ const CustomerModal = React.memo(function CustomerModal({
                             <div className="h-9 flex items-center">
                               {(() => {
                                 const activeBranch = branchInputs[activeBranchIndex];
-                                const inst = installations.find(i =>
-                                  i.customerId === editingCustomer?.id &&
-                                  ((activeBranch.isMain && i.installationType === "new") ||
-                                    (!activeBranch.isMain && i.installationType === "branch" && i.branchName === activeBranch.name))
+                                const status = activeBranch.status || "Pending";
+                                return (
+                                  <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border shadow-sm ${getStatusStyle(status)}`}>
+                                    {getStatusIcon(status)}
+                                    {status}
+                                  </div>
                                 );
-
-                                if (inst) {
-                                  return (
-                                    <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border shadow-sm ${getStatusStyle(inst.status)}`}>
-                                      {getStatusIcon(inst.status)}
-                                      {inst.status}
-                                    </div>
-                                  );
-                                }
-                                return null;
                               })()}
                             </div>
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-medium text-text-muted">สถานะการใช้งาน (Usage Status)</label>
+                            <CustomSelect
+                              name={`branchUsageStatus-${activeBranchIndex}`}
+                              value={branchInputs[activeBranchIndex].usageStatus || "Active"}
+                              onChange={(val) => {
+                                const updated = [...branchInputs];
+                                updated[activeBranchIndex] = { ...updated[activeBranchIndex], usageStatus: val as UsageStatus };
+                                setBranchInputs(updated);
+                              }}
+                              options={[
+                                { value: "Training", label: "รอการเทรนนิ่ง" },
+                                { value: "Pending", label: "รอการใช้งาน" },
+                                { value: "Active", label: "ใช้งานแล้ว" },
+                                { value: "Canceled", label: "ยกเลิก" },
+                                { value: "Inactive", label: "ไม่ได้ใช้งาน" },
+                              ]}
+                            />
                           </div>
 
                           <div className="grid grid-cols-2 gap-4">

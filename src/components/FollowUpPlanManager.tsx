@@ -211,14 +211,16 @@ const FollowUpPlanManager = React.memo(function FollowUpPlanManager({ customers,
         today.setHours(0, 0, 0, 0);
 
         customers.forEach(customer => {
-            if (customer.usageStatus === "Canceled" || customer.usageStatus === "Inactive") return;
-
             // Iterate through branches (if no branches, treat customer as one virtual branch)
             const branchList = customer.branches && customer.branches.length > 0
                 ? customer.branches
-                : [{ name: "สำนักงานใหญ่", isMain: true }];
+                : [{ name: "สำนักงานใหญ่", isMain: true, usageStatus: customer.usageStatus }];
 
             branchList.forEach(branch => {
+                // Skip canceled/inactive branches
+                const branchUsage = branch.usageStatus || customer.usageStatus || "Active";
+                if (branchUsage === "Canceled" || branchUsage === "Inactive") return;
+
                 const branchContractStart = branch.contractStart || customer.contractStart;
                 if (!branchContractStart) return;
 
