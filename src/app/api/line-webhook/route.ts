@@ -7,8 +7,8 @@ import { db } from '@/lib/db';
 
 const CRM_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://atizcrm.vercel.app';
 
-// Case lookup pattern: #c0001, #C-0045, #c45, etc.
-const CASE_PATTERN = /^#c-?(\d+)$/i;
+// Case lookup pattern: #C-0001, #c-0045, etc. (dash required)
+const CASE_PATTERN = /^#c-(\d+)$/i;
 
 // Trigger keywords (case-insensitive)
 const TRIGGER_KEYWORDS = ['#dailyreport'];
