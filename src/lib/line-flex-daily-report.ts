@@ -1,4 +1,9 @@
-// LINE Flex Message builder for Daily Report
+// LINE Flex Message builder for Daily Report — Theme #7053E1
+
+const BRAND = '#7053E1';
+const BRAND_LIGHT = '#EDE9FB';
+const TEXT_DARK = '#2D2D2D';
+const TEXT_SUB = '#888888';
 
 export interface TicketsData {
     total: number;
@@ -8,7 +13,7 @@ export interface TicketsData {
 }
 
 export interface RenewalData {
-    monthLabel: string;     // e.g. "ก.พ. 69"
+    monthLabel: string;
     totalCount: number;
     drEaseCount: number;
     easePosCount: number;
@@ -29,225 +34,104 @@ export interface FollowUpData {
 }
 
 export interface DailyReportData {
-    date: string;           // e.g. "12/02/2026"
+    date: string;
     tickets: TicketsData;
     renewal: RenewalData | null;
     followUp: FollowUpData;
 }
 
-/** Build LINE Flex Message JSON for daily report */
 export function buildDailyReportFlex(data: DailyReportData): object {
-    const sections: object[] = [];
+    const body: object[] = [];
 
-    // --- Header ---
-    sections.push({
-        type: 'box',
-        layout: 'horizontal',
-        contents: [
-            {
-                type: 'text',
-                text: '📊 Daily Report',
-                weight: 'bold',
-                size: 'lg',
-                color: '#1a1a2e',
-                flex: 0,
-            },
-            {
-                type: 'text',
-                text: data.date,
-                size: 'sm',
-                color: '#888888',
-                align: 'end',
-            },
-        ],
-        paddingBottom: '12px',
-    });
+    // --- Tickets ---
+    body.push(
+        sectionTitle('🎫 Tickets'),
+        row(`รวม ${data.tickets.total} เคส`, ''),
+    );
+    if (data.tickets.resolved > 0) body.push(row('แก้ไขแล้ว', `${data.tickets.resolved}`, '#27ae60'));
+    if (data.tickets.inProgress > 0) body.push(row('กำลังดำเนินการ', `${data.tickets.inProgress}`, '#f39c12'));
+    if (data.tickets.reported > 0) body.push(row('แจ้งเคสใหม่', `${data.tickets.reported}`, '#e74c3c'));
 
-    // --- Separator ---
-    sections.push({ type: 'separator', color: '#e0e0e0' });
+    body.push(sep());
 
-    // --- Section 1: Tickets ---
-    sections.push({
-        type: 'box',
-        layout: 'vertical',
-        contents: [
-            {
-                type: 'text',
-                text: '🎫 Tickets',
-                weight: 'bold',
-                size: 'md',
-                color: '#1a1a2e',
-            },
-            {
-                type: 'text',
-                text: `รวม ${data.tickets.total} เคส`,
-                size: 'sm',
-                color: '#555555',
-                margin: 'sm',
-            },
-            ...buildTicketRows(data.tickets),
-        ],
-        paddingTop: '12px',
-        paddingBottom: '12px',
-    });
-
-    // --- Separator ---
-    sections.push({ type: 'separator', color: '#e0e0e0' });
-
-    // --- Section 2: Renewal ---
+    // --- Renewal ---
     if (data.renewal) {
-        sections.push({
-            type: 'box',
-            layout: 'vertical',
-            contents: [
-                {
-                    type: 'text',
-                    text: `🔄 Renewal ${data.renewal.monthLabel}`,
-                    weight: 'bold',
-                    size: 'md',
-                    color: '#1a1a2e',
-                },
-                {
-                    type: 'text',
-                    text: `(${data.renewal.totalCount} ราย | ${data.renewal.drEaseCount}/${data.renewal.easePosCount})`,
-                    size: 'xs',
-                    color: '#888888',
-                    margin: 'sm',
-                },
-                buildRenewalRow('✅', 'ต่อแล้ว', data.renewal.renewed, data.renewal.renewedDrEase, data.renewal.renewedEasePos, '#27ae60'),
-                buildRenewalRow('⏳', 'รอ', data.renewal.pending, data.renewal.pendingDrEase, data.renewal.pendingEasePos, '#f39c12'),
-                buildRenewalRow('❌', 'ไม่ต่อ', data.renewal.notRenewed, data.renewal.notRenewedDrEase, data.renewal.notRenewedEasePos, '#e74c3c'),
-            ],
-            paddingTop: '12px',
-            paddingBottom: '12px',
-        });
-
-        sections.push({ type: 'separator', color: '#e0e0e0' });
+        const r = data.renewal;
+        body.push(
+            sectionTitle(`🔄 Renewal ${r.monthLabel}`),
+            {
+                type: 'text', text: `${r.totalCount} ราย (${r.drEaseCount}/${r.easePosCount})`,
+                size: 'xs', color: TEXT_SUB, margin: 'sm',
+            },
+            row(`✅ ต่อแล้ว ${r.renewed}`, `${r.renewedDrEase}/${r.renewedEasePos}`, '#27ae60'),
+            row(`⏳ รอ ${r.pending}`, `${r.pendingDrEase}/${r.pendingEasePos}`, '#f39c12'),
+            row(`❌ ไม่ต่อ ${r.notRenewed}`, `${r.notRenewedDrEase}/${r.notRenewedEasePos}`, '#e74c3c'),
+        );
+        body.push(sep());
     }
 
-    // --- Section 3: Follow-up ---
-    sections.push({
-        type: 'box',
-        layout: 'vertical',
-        contents: [
-            {
-                type: 'text',
-                text: '📞 Follow-up',
-                weight: 'bold',
-                size: 'md',
-                color: '#1a1a2e',
-            },
-            {
-                type: 'text',
-                text: `ต้องติดตาม/โทร ${data.followUp.totalPending} ราย`,
-                size: 'sm',
-                color: '#555555',
-                margin: 'sm',
-            },
-            ...data.followUp.byStaff.map(staff => ({
-                type: 'box' as const,
-                layout: 'horizontal' as const,
-                contents: [
-                    {
-                        type: 'text' as const,
-                        text: `• ${staff.name}`,
-                        size: 'sm' as const,
-                        color: '#555555',
-                        flex: 3,
-                    },
-                    {
-                        type: 'text' as const,
-                        text: `${staff.count} ราย`,
-                        size: 'sm' as const,
-                        color: staff.count > 0 ? '#1a1a2e' : '#aaaaaa',
-                        align: 'end' as const,
-                        weight: staff.count > 0 ? 'bold' as const : 'regular' as const,
-                        flex: 1,
-                    },
-                ],
-                margin: 'sm' as const,
-            })),
-        ],
-        paddingTop: '12px',
-    });
+    // --- Follow-up ---
+    body.push(
+        sectionTitle('📞 Follow-up'),
+        row(`ต้องติดตาม`, `${data.followUp.totalPending} ราย`, BRAND),
+    );
+    for (const s of data.followUp.byStaff) {
+        body.push(row(s.name, `${s.count}`, s.count > 0 ? TEXT_DARK : '#cccccc'));
+    }
 
     return {
         type: 'flex',
         altText: `📊 Daily Report ${data.date}`,
         contents: {
             type: 'bubble',
-            size: 'mega',
+            size: 'kilo',
             header: {
                 type: 'box',
-                layout: 'vertical',
+                layout: 'horizontal',
                 contents: [
-                    {
-                        type: 'text',
-                        text: 'Atiz CRM',
-                        color: '#ffffff',
-                        size: 'xs',
-                    },
+                    { type: 'text', text: '📊 Daily Report', weight: 'bold', size: 'sm', color: '#ffffff', flex: 0 },
+                    { type: 'text', text: data.date, size: 'xs', color: '#ffffffcc', align: 'end' },
                 ],
-                backgroundColor: '#1a1a2e',
-                paddingAll: '12px',
+                backgroundColor: BRAND,
+                paddingAll: '14px',
             },
             body: {
                 type: 'box',
                 layout: 'vertical',
-                contents: sections,
-                paddingAll: '16px',
-                backgroundColor: '#ffffff',
+                contents: body,
+                paddingAll: '14px',
+                spacing: 'xs',
             },
         },
     };
 }
 
-function buildTicketRows(tickets: TicketsData): object[] {
-    const rows: { label: string; count: number; color: string }[] = [];
-
-    if (tickets.resolved > 0) {
-        rows.push({ label: '✅ แก้ไขแล้ว', count: tickets.resolved, color: '#27ae60' });
-    }
-    if (tickets.inProgress > 0) {
-        rows.push({ label: '🔧 กำลังดำเนินการ', count: tickets.inProgress, color: '#f39c12' });
-    }
-    if (tickets.reported > 0) {
-        rows.push({ label: '🆕 แจ้งเคสใหม่', count: tickets.reported, color: '#e74c3c' });
-    }
-
-    return rows.map(r => ({
-        type: 'box',
-        layout: 'horizontal',
-        contents: [
-            { type: 'text', text: r.label, size: 'sm', color: '#555555', flex: 3 },
-            { type: 'text', text: `${r.count} เคส`, size: 'sm', color: r.color, align: 'end', weight: 'bold', flex: 1 },
-        ],
+function sectionTitle(text: string): object {
+    return {
+        type: 'text',
+        text,
+        weight: 'bold',
+        size: 'sm',
+        color: BRAND,
         margin: 'sm',
-    }));
+    };
 }
 
-function buildRenewalRow(icon: string, label: string, total: number, drEase: number, easePos: number, color: string): object {
+function row(label: string, value: string, valueColor = TEXT_DARK): object {
+    if (!value) {
+        return { type: 'text', text: label, size: 'xs', color: TEXT_SUB, margin: 'xs' };
+    }
     return {
         type: 'box',
         layout: 'horizontal',
         contents: [
-            {
-                type: 'text',
-                text: `${icon} ${label} ${total}`,
-                size: 'sm',
-                color,
-                weight: 'bold',
-                flex: 2,
-            },
-            {
-                type: 'text',
-                text: `(${drEase}/${easePos})`,
-                size: 'xs',
-                color: '#888888',
-                align: 'end',
-                flex: 1,
-            },
+            { type: 'text', text: label, size: 'xs', color: TEXT_SUB, flex: 3 },
+            { type: 'text', text: value, size: 'xs', color: valueColor, align: 'end', weight: 'bold', flex: 1 },
         ],
-        margin: 'sm',
+        margin: 'xs',
     };
+}
+
+function sep(): object {
+    return { type: 'separator', color: '#f0f0f0', margin: 'md' };
 }
