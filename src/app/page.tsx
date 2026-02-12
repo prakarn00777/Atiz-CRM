@@ -19,12 +19,13 @@ import GoogleSheetLeadManager from "@/components/GoogleSheetLeadManager";
 import DemoManager from "@/components/DemoManager";
 import SalesManager from "@/components/SalesManager";
 import RenewalsManager from "@/components/RenewalsManager";
+import RenewalRateManager from "@/components/RenewalRateManager";
 import FollowUpPlanManager from "@/components/FollowUpPlanManager";
 import CustomerModal from "@/components/modals/CustomerModal";
 import IssueModal from "@/components/modals/IssueModal";
 import LeadModal from "@/components/modals/LeadModal";
 import ActivityModal from "@/components/modals/ActivityModal";
-import { Customer, Branch, Installation, Issue, UsageStatus, Activity as CSActivity, ActivityType, SentimentType, Lead, GoogleSheetLead, MasterDemoLead, BusinessMetrics, NewSalesRecord, RenewalsRecord } from "@/types";
+import { Customer, Branch, Installation, Issue, UsageStatus, Activity as CSActivity, ActivityType, SentimentType, Lead, GoogleSheetLead, MasterDemoLead, BusinessMetrics, NewSalesRecord, RenewalsRecord, RenewalRateRecord } from "@/types";
 import { useNotification } from "@/components/NotificationProvider";
 import { useTheme } from "@/components/ThemeProvider";
 import { db } from "@/lib/db";
@@ -160,10 +161,12 @@ export default function CRMPage() {
   const [googleSheetDemos, setGoogleSheetDemos] = useState<MasterDemoLead[]>([]);
   const [newSalesData, setNewSalesData] = useState<NewSalesRecord[]>([]);
   const [renewalsData, setRenewalsData] = useState<RenewalsRecord[]>([]);
+  const [renewalRateData, setRenewalRateData] = useState<RenewalRateRecord[]>([]);
   const [isGoogleSheetLeadsLoading, setGoogleSheetLeadsLoading] = useState(true);
   const [isGoogleSheetDemosLoading, setGoogleSheetDemosLoading] = useState(true);
   const [isNewSalesLoading, setNewSalesLoading] = useState(true);
   const [isRenewalsLoading, setRenewalsLoading] = useState(true);
+  const [isRenewalRateLoading, setRenewalRateLoading] = useState(true);
   const [businessMetrics, setBusinessMetrics] = useState<BusinessMetrics | undefined>(undefined);
   const [isLeadModalOpen, setLeadModalOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
@@ -353,12 +356,28 @@ export default function CRMPage() {
     }
   }, []);
 
+  const fetchRenewalRateData = useCallback(async () => {
+    try {
+      setRenewalRateLoading(true);
+      const response = await fetch('/api/renewal-rate');
+      const result = await response.json();
+      if (result.success) {
+        setRenewalRateData(result.data);
+      }
+    } catch (error: any) {
+      console.error('Error fetching Renewal Rate data:', error);
+    } finally {
+      setRenewalRateLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchGoogleSheetLeads();
     fetchGoogleSheetDemos();
     fetchNewSalesData();
     fetchRenewalsData();
-  }, [fetchGoogleSheetLeads, fetchGoogleSheetDemos, fetchNewSalesData, fetchRenewalsData]);
+    fetchRenewalRateData();
+  }, [fetchGoogleSheetLeads, fetchGoogleSheetDemos, fetchNewSalesData, fetchRenewalsData, fetchRenewalRateData]);
 
   useEffect(() => {
     if (mounted) {
@@ -1317,6 +1336,7 @@ export default function CRMPage() {
                   googleSheetDemos={googleSheetDemos}
                   newSalesData={newSalesData}
                   renewalsData={renewalsData}
+                  renewalRateData={renewalRateData}
                   businessMetrics={businessMetrics}
                   user={user}
                   onViewChange={setView}
@@ -1412,6 +1432,12 @@ export default function CRMPage() {
                   renewals={renewalsData}
                   isLoading={isRenewalsLoading}
                   onRefresh={fetchRenewalsData}
+                />
+              ) : currentView === "renewal_rate" ? (
+                <RenewalRateManager
+                  renewalRates={renewalRateData}
+                  isLoading={isRenewalRateLoading}
+                  onRefresh={fetchRenewalRateData}
                 />
               ) : currentView === "cs_followup" ? (
                 <FollowUpPlanManager

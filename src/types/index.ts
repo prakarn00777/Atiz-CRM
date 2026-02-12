@@ -234,6 +234,17 @@ export interface RenewalsRecord {
     pendingAmount: number;      // รอคำตอบจากลูกค้า
 }
 
+// Renewal Rate from Google Sheets (Sheet8) — by product
+export interface RenewalRateRecord {
+    id: string;
+    month: string;          // เดือน (ม.ค., ก.พ., ...)
+    year: string;           // ปี (2566, 2567, ...)
+    product: string;        // Dr.Ease / EasePos
+    renewed: number;        // จำนวนต่อสัญญา
+    notRenewed: number;     // จำนวนไม่ต่อ
+    pending: number;        // รอคำตอบ
+}
+
 // ============================================
 // User & Role Types
 // ============================================

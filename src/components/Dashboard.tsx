@@ -90,7 +90,7 @@ import {
 } from 'recharts';
 import ParticlesBackground from "./ParticlesBackground";
 import { useTheme } from "./ThemeProvider";
-import type { Customer, Installation, Issue, Lead, Activity as CSActivity, GoogleSheetLead, MasterDemoLead, BusinessMetrics, NewSalesRecord, RenewalsRecord } from "@/types";
+import type { Customer, Installation, Issue, Lead, Activity as CSActivity, GoogleSheetLead, MasterDemoLead, BusinessMetrics, NewSalesRecord, RenewalsRecord, RenewalRateRecord } from "@/types";
 
 import SegmentedControl from "./SegmentedControl";
 import CustomSelect from "./CustomSelect";
@@ -106,6 +106,7 @@ interface DashboardProps {
     googleSheetDemos?: MasterDemoLead[];
     newSalesData?: NewSalesRecord[];
     renewalsData?: RenewalsRecord[];
+    renewalRateData?: RenewalRateRecord[];
     businessMetrics?: BusinessMetrics;
     user: any;
     onViewChange: (view: string) => void;
@@ -135,7 +136,7 @@ const parseLocalISO = (isoStr: string) => {
     return new Date(isoStr);
 };
 
-const Dashboard = React.memo(function Dashboard({ customers, installations, issues, activities, leads, googleSheetLeads = [], googleSheetDemos = [], newSalesData = [], renewalsData = [], businessMetrics, user, onViewChange }: DashboardProps) {
+const Dashboard = React.memo(function Dashboard({ customers, installations, issues, activities, leads, googleSheetLeads = [], googleSheetDemos = [], newSalesData = [], renewalsData = [], renewalRateData = [], businessMetrics, user, onViewChange }: DashboardProps) {
     const dashboardRef = useRef<HTMLDivElement>(null);
     const { theme } = useTheme();
     const [activeTab, setActiveTab] = useState<'cs' | 'business'>('cs');
@@ -1538,11 +1539,29 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
                                 Growth & Usage
                             </h3>
                             <div className={`flex-1 min-h-0 mt-3 ${isFullscreen ? 'grid grid-rows-4 gap-2.5' : 'space-y-2.5 overflow-y-auto custom-scrollbar'}`}>
-                                {/* Renewal Rate — Big Number + Progress Bar */}
+                                {/* Renewal Rate — Big Number + Progress Bar (from Sheet8, current month only) */}
                                 {(() => {
-                                    const rate = businessMetrics?.renewalRate ?? 50;
+                                    const thaiMonths = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+                                    const now = new Date();
+                                    const currentThaiMonth = thaiMonths[now.getMonth()];
+                                    const currentThaiYear = String(now.getFullYear() + 543);
+                                    const currentMonthData = renewalRateData.filter(r => r.month === currentThaiMonth && r.year === currentThaiYear);
+                                    const totalRenewed = currentMonthData.reduce((s, r) => s + (r.renewed || 0), 0);
+                                    const totalNotRenewed = currentMonthData.reduce((s, r) => s + (r.notRenewed || 0), 0);
+                                    const totalDecided = totalRenewed + totalNotRenewed;
+                                    const rate = totalDecided > 0 ? parseFloat(((totalRenewed / totalDecided) * 100).toFixed(1)) : 0;
+                                    const drData = currentMonthData.filter(r => r.product === 'Dr.Ease');
+                                    const easeData = currentMonthData.filter(r => r.product !== 'Dr.Ease');
+                                    const drRenewed = drData.reduce((s, r) => s + (r.renewed || 0), 0);
+                                    const drNotRenewed = drData.reduce((s, r) => s + (r.notRenewed || 0), 0);
+                                    const drDecided = drRenewed + drNotRenewed;
+                                    const drRate = drDecided > 0 ? ((drRenewed / drDecided) * 100).toFixed(1) : "-";
+                                    const easeRenewed = easeData.reduce((s, r) => s + (r.renewed || 0), 0);
+                                    const easeNotRenewed = easeData.reduce((s, r) => s + (r.notRenewed || 0), 0);
+                                    const easeDecided = easeRenewed + easeNotRenewed;
+                                    const easeRate = easeDecided > 0 ? ((easeRenewed / easeDecided) * 100).toFixed(1) : "-";
                                     return (
-                                        <div className={`rounded-xl bg-bg-hover/40 border border-border-light hover:border-purple-500/30 transition-all ${isFullscreen ? 'p-4' : 'p-3'}`}>
+                                        <div className={`rounded-xl bg-bg-hover/40 border border-border-light hover:border-purple-500/30 transition-all cursor-pointer ${isFullscreen ? 'p-4' : 'p-3'}`} onClick={() => onViewChange('renewal_rate')}>
                                             <div className="flex items-center justify-between mb-1.5">
                                                 <div className="flex items-center gap-1.5">
                                                     <Repeat className={`text-purple-500 ${isFullscreen ? 'w-4 h-4' : 'w-3.5 h-3.5'}`} />
@@ -1550,12 +1569,25 @@ const Dashboard = React.memo(function Dashboard({ customers, installations, issu
                                                 </div>
                                             </div>
                                             <div className={`font-bold text-text-main tabular-nums leading-none ${isFullscreen ? 'text-3xl mb-3' : 'text-2xl mb-2'}`}>{rate}%</div>
-                                            <div className={`rounded-full bg-bg-hover overflow-hidden ${isFullscreen ? 'h-1.5' : 'h-1'}`}>
-                                                <div className="h-full rounded-full bg-purple-500 transition-all duration-1000" style={{ width: `${rate}%` }} />
-                                            </div>
-                                            <div className={`flex items-center justify-between mt-1.5 ${isFullscreen ? 'text-xs' : 'text-[10px]'}`}>
-                                                <span className="text-text-muted">Dr.Ease <span className="font-semibold text-text-main tabular-nums">{(() => { const t = customers.length || 1; const d = customers.filter(c => c.productType === 'Dr.Ease').length; return ((d / t) * 100).toFixed(1); })()}%</span></span>
-                                                <span className="text-text-muted">Ease <span className="font-semibold text-text-main tabular-nums">{(() => { const t = customers.length || 1; const d = customers.filter(c => c.productType === 'Dr.Ease').length; return (((t - d) / t) * 100).toFixed(1); })()}%</span></span>
+                                            <div className={`space-y-2 ${isFullscreen ? 'mt-2' : 'mt-1.5'}`}>
+                                                <div>
+                                                    <div className={`flex items-center justify-between mb-1 ${isFullscreen ? 'text-xs' : 'text-[10px]'}`}>
+                                                        <span className="font-semibold" style={{ color: '#6239FC' }}>Dr.Ease</span>
+                                                        <span className="text-text-main font-bold tabular-nums">{drRate}{drRate !== "-" ? "%" : ""}</span>
+                                                    </div>
+                                                    <div className={`rounded-full bg-bg-hover overflow-hidden ${isFullscreen ? 'h-1.5' : 'h-1'}`}>
+                                                        <div className="h-full rounded-full transition-all duration-1000" style={{ backgroundColor: '#6239FC', width: `${drRate !== "-" ? Math.min(parseFloat(String(drRate)), 100) : 0}%` }} />
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <div className={`flex items-center justify-between mb-1 ${isFullscreen ? 'text-xs' : 'text-[10px]'}`}>
+                                                        <span className="font-semibold" style={{ color: '#F76D85' }}>EasePos</span>
+                                                        <span className="text-text-main font-bold tabular-nums">{easeRate}{easeRate !== "-" ? "%" : ""}</span>
+                                                    </div>
+                                                    <div className={`rounded-full bg-bg-hover overflow-hidden ${isFullscreen ? 'h-1.5' : 'h-1'}`}>
+                                                        <div className="h-full rounded-full transition-all duration-1000" style={{ backgroundColor: '#F76D85', width: `${easeRate !== "-" ? Math.min(parseFloat(String(easeRate)), 100) : 0}%` }} />
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     );
