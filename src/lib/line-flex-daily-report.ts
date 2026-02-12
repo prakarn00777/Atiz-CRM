@@ -46,7 +46,7 @@ export function buildDailyReportFlex(data: DailyReportData): object {
     // --- Tickets ---
     body.push(
         sectionTitle('🎫 Tickets'),
-        row(`รวม ${data.tickets.total} เคส`, ''),
+        row('รวม', `${data.tickets.total} เคส`, BRAND),
     );
     if (data.tickets.resolved > 0) body.push(row('แก้ไขแล้ว', `${data.tickets.resolved}`, '#27ae60'));
     if (data.tickets.inProgress > 0) body.push(row('กำลังดำเนินการ', `${data.tickets.inProgress}`, '#f39c12'));
@@ -62,10 +62,13 @@ export function buildDailyReportFlex(data: DailyReportData): object {
             {
                 type: 'box', layout: 'horizontal', margin: 'sm',
                 contents: [
-                    { type: 'text', text: `${r.totalCount} ราย`, size: 'xs', color: TEXT_SUB, flex: 0 },
-                    { type: 'text', text: `${r.drEaseCount}`, size: 'xs', color: BRAND, weight: 'bold', align: 'end', flex: 0, margin: 'md' },
-                    { type: 'text', text: '/', size: 'xs', color: TEXT_SUB, align: 'center', flex: 0 },
+                    { type: 'text', text: 'รวม', size: 'xs', color: TEXT_SUB, flex: 3 },
+                    { type: 'text', text: `${r.totalCount}`, size: 'xs', color: TEXT_DARK, weight: 'bold', flex: 0 },
+                    { type: 'text', text: '(', size: 'xs', color: TEXT_SUB, flex: 0, margin: 'sm' },
+                    { type: 'text', text: `${r.drEaseCount}`, size: 'xs', color: BRAND, weight: 'bold', flex: 0 },
+                    { type: 'text', text: '/', size: 'xs', color: TEXT_SUB, flex: 0 },
                     { type: 'text', text: `${r.easePosCount}`, size: 'xs', color: EASEPOS, weight: 'bold', flex: 0 },
+                    { type: 'text', text: ')', size: 'xs', color: TEXT_SUB, flex: 0 },
                 ],
             },
             renewalRow('✅ ต่อแล้ว', r.renewed, r.renewedDrEase, r.renewedEasePos, '#27ae60'),
