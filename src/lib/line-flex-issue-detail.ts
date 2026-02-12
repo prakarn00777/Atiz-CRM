@@ -36,22 +36,16 @@ export function buildIssueDetailFlex(data: IssueDetailData): object {
         ? `${data.customerName} (${data.branchName})`
         : data.customerName;
 
-    // Build buttons row
-    const buttons: object[] = [{
-        type: 'button',
-        action: { type: 'uri', label: 'ดูเคส', uri: `${data.crmBaseUrl}?tab=issues&issueId=${data.issueId}` },
-        style: 'primary', color: BRAND, height: 'sm', flex: 1,
-    }];
+    // Build pill-style link buttons
+    const pills: object[] = [
+        pill('ดูเคส', `${data.crmBaseUrl}?tab=issues&issueId=${data.issueId}`, BRAND, '#ffffff'),
+    ];
 
     if (data.customerSubdomain) {
         const url = data.customerSubdomain.startsWith('http')
             ? data.customerSubdomain
             : `https://${data.customerSubdomain}`;
-        buttons.push({
-            type: 'button',
-            action: { type: 'uri', label: 'ระบบลูกค้า', uri: url },
-            style: 'secondary', height: 'sm', flex: 1,
-        });
+        pills.push(pill('ระบบลูกค้า', url, '#E8E3F3', BRAND));
     }
 
     return {
@@ -82,15 +76,32 @@ export function buildIssueDetailFlex(data: IssueDetailData): object {
                             { type: 'text', text: `${sevIcon} ${data.severity}`, size: 'xs', color: TEXT_SUB, align: 'end', flex: 0 },
                         ],
                     },
-                    // Buttons
+                    // Link pills
                     {
                         type: 'box', layout: 'horizontal', margin: 'lg', spacing: 'sm',
-                        contents: buttons,
+                        contents: pills,
                     },
                 ],
                 paddingAll: '14px',
                 spacing: 'none',
             },
         },
+    };
+}
+
+function pill(label: string, uri: string, bg: string, textColor: string): object {
+    return {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+            { type: 'text', text: label, size: 'xxs', color: textColor, align: 'center', weight: 'bold' },
+        ],
+        backgroundColor: bg,
+        cornerRadius: '12px',
+        paddingAll: '6px',
+        action: { type: 'uri', label, uri },
+        flex: 0,
+        paddingStart: '12px',
+        paddingEnd: '12px',
     };
 }
