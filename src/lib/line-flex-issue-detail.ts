@@ -1,4 +1,4 @@
-// LINE Flex Message builder for Issue Detail — Minimal compact
+// LINE Flex Message builder for Issue Detail — Compact kilo
 
 const BRAND = '#7053E1';
 const TEXT_DARK = '#2D2D2D';
@@ -59,31 +59,36 @@ export function buildIssueDetailFlex(data: IssueDetailData): object {
         altText: `🎫 ${data.caseNumber} ${data.title}`,
         contents: {
             type: 'bubble',
-            size: 'nano',
+            size: 'kilo',
             body: {
                 type: 'box',
                 layout: 'vertical',
                 contents: [
-                    // Line 1: case number + severity + status
+                    // Row 1: case number + status
                     {
                         type: 'box', layout: 'horizontal',
                         contents: [
-                            { type: 'text', text: `🎫 ${data.caseNumber}`, size: 'xs', color: BRAND, weight: 'bold', flex: 0 },
-                            { type: 'text', text: `${sevIcon} ${data.severity}`, size: 'xxs', color: TEXT_SUB, align: 'end', flex: 0, margin: 'md' },
-                            { type: 'text', text: data.status, size: 'xxs', color: statColor, weight: 'bold', align: 'end', flex: 0, margin: 'sm' },
+                            { type: 'text', text: `🎫 ${data.caseNumber}`, size: 'sm', color: BRAND, weight: 'bold', flex: 0 },
+                            { type: 'text', text: data.status, size: 'xs', color: statColor, weight: 'bold', align: 'end' },
                         ],
                     },
-                    // Line 2: title
-                    { type: 'text', text: data.title, size: 'xxs', color: TEXT_DARK, weight: 'bold', margin: 'xs', wrap: true, maxLines: 2 },
-                    // Line 3: customer
-                    { type: 'text', text: customer, size: 'xxs', color: TEXT_SUB, margin: 'xs', wrap: true, maxLines: 1 },
+                    // Row 2: title
+                    { type: 'text', text: data.title, size: 'xs', color: TEXT_DARK, weight: 'bold', margin: 'sm', wrap: true, maxLines: 2 },
+                    // Row 3: customer + severity
+                    {
+                        type: 'box', layout: 'horizontal', margin: 'sm',
+                        contents: [
+                            { type: 'text', text: customer, size: 'xs', color: TEXT_SUB, flex: 3, wrap: true, maxLines: 1 },
+                            { type: 'text', text: `${sevIcon} ${data.severity}`, size: 'xs', color: TEXT_SUB, align: 'end', flex: 0 },
+                        ],
+                    },
                     // Buttons
                     {
-                        type: 'box', layout: 'horizontal', margin: 'md', spacing: 'xs',
+                        type: 'box', layout: 'horizontal', margin: 'lg', spacing: 'sm',
                         contents: buttons,
                     },
                 ],
-                paddingAll: '12px',
+                paddingAll: '14px',
                 spacing: 'none',
             },
         },
