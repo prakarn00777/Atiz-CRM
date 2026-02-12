@@ -1,7 +1,7 @@
 // LINE Flex Message builder for Daily Report — Theme #7053E1
 
 const BRAND = '#7053E1';
-const BRAND_LIGHT = '#EDE9FB';
+const EASEPOS = '#F76D85';
 const TEXT_DARK = '#2D2D2D';
 const TEXT_SUB = '#888888';
 
@@ -58,14 +58,19 @@ export function buildDailyReportFlex(data: DailyReportData): object {
     if (data.renewal) {
         const r = data.renewal;
         body.push(
-            sectionTitle(`🔄 Renewal ${r.monthLabel}`),
+            sectionTitle('🔄 Renewal'),
             {
-                type: 'text', text: `${r.totalCount} ราย (${r.drEaseCount}/${r.easePosCount})`,
-                size: 'xs', color: TEXT_SUB, margin: 'sm',
+                type: 'box', layout: 'horizontal', margin: 'sm',
+                contents: [
+                    { type: 'text', text: `${r.totalCount} ราย`, size: 'xs', color: TEXT_SUB, flex: 0 },
+                    { type: 'text', text: `${r.drEaseCount}`, size: 'xs', color: BRAND, weight: 'bold', align: 'end', flex: 0, margin: 'md' },
+                    { type: 'text', text: '/', size: 'xs', color: TEXT_SUB, align: 'center', flex: 0 },
+                    { type: 'text', text: `${r.easePosCount}`, size: 'xs', color: EASEPOS, weight: 'bold', flex: 0 },
+                ],
             },
-            row(`✅ ต่อแล้ว ${r.renewed}`, `${r.renewedDrEase}/${r.renewedEasePos}`, '#27ae60'),
-            row(`⏳ รอ ${r.pending}`, `${r.pendingDrEase}/${r.pendingEasePos}`, '#f39c12'),
-            row(`❌ ไม่ต่อ ${r.notRenewed}`, `${r.notRenewedDrEase}/${r.notRenewedEasePos}`, '#e74c3c'),
+            renewalRow('✅ ต่อแล้ว', r.renewed, r.renewedDrEase, r.renewedEasePos, '#27ae60'),
+            renewalRow('⏳ รอ', r.pending, r.pendingDrEase, r.pendingEasePos, '#f39c12'),
+            renewalRow('❌ ไม่ต่อ', r.notRenewed, r.notRenewedDrEase, r.notRenewedEasePos, '#e74c3c'),
         );
         body.push(sep());
     }
@@ -130,6 +135,18 @@ function row(label: string, value: string, valueColor = TEXT_DARK): object {
             { type: 'text', text: value, size: 'xs', color: valueColor, align: 'end', weight: 'bold', flex: 1 },
         ],
         margin: 'xs',
+    };
+}
+
+function renewalRow(label: string, total: number, drEase: number, easePos: number, labelColor: string): object {
+    return {
+        type: 'box', layout: 'horizontal', margin: 'xs',
+        contents: [
+            { type: 'text', text: `${label} ${total}`, size: 'xs', color: labelColor, weight: 'bold', flex: 3 },
+            { type: 'text', text: `${drEase}`, size: 'xs', color: BRAND, align: 'end', weight: 'bold', flex: 0 },
+            { type: 'text', text: '/', size: 'xs', color: TEXT_SUB, align: 'center', flex: 0 },
+            { type: 'text', text: `${easePos}`, size: 'xs', color: EASEPOS, weight: 'bold', flex: 0 },
+        ],
     };
 }
 
