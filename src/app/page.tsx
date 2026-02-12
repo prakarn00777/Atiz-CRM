@@ -388,7 +388,7 @@ export default function CRMPage() {
   // Deep link: ?tab=issues&issueId=123 → switch to issues tab and open modal
   const deepLinkHandled = useRef(false);
   useEffect(() => {
-    if (isInitialLoading || !issues.length || deepLinkHandled.current) return;
+    if (!issues.length || deepLinkHandled.current) return;
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
     const tab = params.get('tab');
@@ -409,7 +409,7 @@ export default function CRMPage() {
       }
       window.history.replaceState({}, '', window.location.pathname);
     }
-  }, [isInitialLoading, issues]);
+  }, [issues]);
 
   useEffect(() => {
     setMounted(true);
