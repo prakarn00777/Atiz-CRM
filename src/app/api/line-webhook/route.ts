@@ -5,7 +5,7 @@ import { getRenewalRate, RenewalRateRow } from '@/lib/google-sheets-renewal-rate
 import { db } from '@/lib/db';
 
 // Trigger keywords (case-insensitive)
-const TRIGGER_KEYWORDS = ['daily report', 'สรุป', 'report', 'daily'];
+const TRIGGER_KEYWORDS = ['#dailyreport'];
 
 // Thai month names mapping (1-indexed)
 const THAI_MONTHS = ['', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
