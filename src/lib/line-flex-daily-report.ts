@@ -90,7 +90,7 @@ export function buildDailyReportFlex(data: DailyReportData): object {
                 layout: 'horizontal',
                 contents: [
                     { type: 'text', text: '📊 Daily Report', weight: 'bold', size: 'sm', color: '#ffffff', flex: 0 },
-                    { type: 'text', text: data.date, size: 'xs', color: '#ffffffcc', align: 'end' },
+                    { type: 'text', text: data.date, size: 'xs', color: '#D4C8F5', align: 'end' },
                 ],
                 backgroundColor: BRAND,
                 paddingAll: '14px',
