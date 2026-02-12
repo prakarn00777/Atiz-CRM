@@ -81,7 +81,7 @@ export function buildDailyReportFlex(data: DailyReportData): object {
     // --- Follow-up ---
     body.push(
         sectionTitle('📞 Follow-up'),
-        row(`ต้องติดตาม`, `${data.followUp.totalPending} ราย`, BRAND),
+        row(`ต้องติดตาม`, `${data.followUp.totalPending} ราย`, TEXT_DARK),
     );
     for (const s of data.followUp.byStaff) {
         if (!s.name) continue; // skip empty names
