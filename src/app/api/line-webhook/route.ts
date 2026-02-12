@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifySignature, replyMessage } from '@/lib/line-client';
 import { buildDailyReportFlex, DailyReportData, RenewalData } from '@/lib/line-flex-daily-report';
+import { buildIssueDetailFlex, IssueDetailData } from '@/lib/line-flex-issue-detail';
 import { getRenewalRate, RenewalRateRow } from '@/lib/google-sheets-renewal-rate';
 import { db } from '@/lib/db';
+
+const CRM_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://atizcrm.vercel.app';
+
+// Case lookup pattern: #c0001, #C-0045, #c45, etc.
+const CASE_PATTERN = /^#c-?(\d+)$/i;
 
 // Trigger keywords (case-insensitive)
 const TRIGGER_KEYWORDS = ['#dailyreport'];
@@ -66,12 +72,33 @@ export async function POST(req: NextRequest) {
             const text = (event.message.text || '').trim().toLowerCase();
             console.log('[LINE] Message text:', text);
 
-            if (!TRIGGER_KEYWORDS.some(kw => text === kw)) {
-                console.log('[LINE] No trigger match for:', text);
+            // --- Check case lookup trigger (#c0001) ---
+            const caseMatch = text.match(CASE_PATTERN);
+            if (caseMatch) {
+                const caseNum = parseInt(caseMatch[1], 10);
+                const caseNumber = `C-${String(caseNum).padStart(4, '0')}`;
+                console.log('[LINE] Case lookup:', caseNumber);
+
+                const issueData = await getIssueByCase(caseNumber);
+                if (issueData) {
+                    const flexMessage = buildIssueDetailFlex(issueData);
+                    await replyMessage(event.replyToken, [flexMessage]);
+                    console.log('[LINE] Issue detail sent for', caseNumber);
+                } else {
+                    await replyMessage(event.replyToken, [{
+                        type: 'text',
+                        text: `ไม่พบเคส ${caseNumber}`,
+                    }]);
+                }
                 continue;
             }
 
-            console.log('[LINE] Trigger matched! Gathering data...');
+            // --- Check daily report trigger ---
+            if (!TRIGGER_KEYWORDS.some(kw => text === kw)) {
+                continue;
+            }
+
+            console.log('[LINE] Daily report trigger matched!');
 
             // Gather all data in parallel
             const [tickets, renewal, followUp] = await Promise.all([
@@ -79,8 +106,6 @@ export async function POST(req: NextRequest) {
                 getRenewalData(),
                 getFollowUpData(),
             ]);
-
-            console.log('[LINE] Data gathered:', { tickets, renewalExists: !!renewal, followUp });
 
             const now = new Date();
             const reportData: DailyReportData = {
@@ -91,9 +116,8 @@ export async function POST(req: NextRequest) {
             };
 
             const flexMessage = buildDailyReportFlex(reportData);
-            console.log('[LINE] Sending reply...');
             await replyMessage(event.replyToken, [flexMessage]);
-            console.log('[LINE] Reply sent successfully!');
+            console.log('[LINE] Daily report sent!');
         }
 
         return NextResponse.json({ success: true });
@@ -104,6 +128,40 @@ export async function POST(req: NextRequest) {
 }
 
 // --- Data aggregation functions ---
+
+async function getIssueByCase(caseNumber: string): Promise<IssueDetailData | null> {
+    try {
+        const { data, error } = await db
+            .from('issues')
+            .select('id, case_number, title, customer_id, branch_name, severity, status, assigned_to, created_at, customers(name, subdomain)')
+            .eq('case_number', caseNumber)
+            .single();
+
+        if (error || !data) return null;
+
+        const customer = data.customers as any;
+        const createdDate = data.created_at
+            ? new Date(data.created_at).toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: 'numeric' })
+            : undefined;
+
+        return {
+            caseNumber: data.case_number,
+            title: data.title,
+            customerName: customer?.name || 'ไม่ระบุ',
+            branchName: data.branch_name || undefined,
+            severity: data.severity,
+            status: data.status,
+            assignedTo: data.assigned_to || undefined,
+            createdAt: createdDate,
+            customerSubdomain: customer?.subdomain || undefined,
+            crmBaseUrl: CRM_BASE_URL,
+            issueId: data.id,
+        };
+    } catch (err) {
+        console.error('[LINE] Error fetching issue:', err);
+        return null;
+    }
+}
 
 async function getTicketsData() {
     try {

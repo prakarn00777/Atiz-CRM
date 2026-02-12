@@ -385,6 +385,32 @@ export default function CRMPage() {
     }
   }, [currentView, mounted]);
 
+  // Deep link: ?tab=issues&issueId=123 → switch to issues tab and open modal
+  const deepLinkHandled = useRef(false);
+  useEffect(() => {
+    if (isInitialLoading || !issues.length || deepLinkHandled.current) return;
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
+    const issueId = params.get('issueId');
+    if (tab === 'issues' && issueId) {
+      deepLinkHandled.current = true;
+      setView('issues');
+      const issue = issues.find(i => i.id === Number(issueId));
+      if (issue) {
+        setEditingIssue(issue);
+        setSelectedCustomerId(issue.customerId);
+        setSelectedCustomerName(issue.customerName);
+        setSelectedBranchName(issue.branchName || "");
+        setSelectedFiles(typeof issue.attachments === 'string' ? JSON.parse(issue.attachments || "[]") : (issue.attachments || []));
+        setModalMode('edit');
+        setModalIssueStatus(issue.status);
+        setIssueModalOpen(true);
+      }
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, [isInitialLoading, issues]);
+
   useEffect(() => {
     setMounted(true);
     requestPermission();
@@ -757,6 +783,23 @@ export default function CRMPage() {
       setShowConfetti(true);
       setTimeout(() => setShowConfetti(false), 9000);
       setToast({ message: "🎉 ยินดี! แก้ไขเคสเสร็จสิ้นแล้ว", type: "success" });
+
+      // Desktop notification with Ricardo icon
+      if ("Notification" in window && Notification.permission === "granted") {
+        new Notification("เคสเสร็จสิ้นแล้ว! 🎉", {
+          body: `เคส [${data.caseNumber}] ${data.title} — แก้ไขเรียบร้อย`,
+          icon: "/images/LOGO ATIZ-02.png",
+        });
+      } else if ("Notification" in window && Notification.permission !== "denied") {
+        Notification.requestPermission().then((perm) => {
+          if (perm === "granted") {
+            new Notification("เคสเสร็จสิ้นแล้ว! 🎉", {
+              body: `เคส [${data.caseNumber}] ${data.title} — แก้ไขเรียบร้อย`,
+              icon: "/images/LOGO ATIZ-02.png",
+            });
+          }
+        });
+      }
     } else {
       setToast({ message: "บันทึกข้อมูลเคสเรียบร้อยแล้ว", type: "success" });
     }
