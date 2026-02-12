@@ -76,6 +76,7 @@ export function buildDailyReportFlex(data: DailyReportData): object {
         row(`ต้องติดตาม`, `${data.followUp.totalPending} ราย`, BRAND),
     );
     for (const s of data.followUp.byStaff) {
+        if (!s.name) continue; // skip empty names
         body.push(row(s.name, `${s.count}`, s.count > 0 ? TEXT_DARK : '#cccccc'));
     }
 
