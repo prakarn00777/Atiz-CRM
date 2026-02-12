@@ -1,20 +1,17 @@
-// LINE Flex Message builder for Issue Detail — Theme #7053E1
+// LINE Flex Message builder for Issue Detail — Minimal compact
 
 const BRAND = '#7053E1';
 const TEXT_DARK = '#2D2D2D';
 const TEXT_SUB = '#888888';
 
-const SEVERITY_MAP: Record<string, { label: string; color: string }> = {
-    Critical: { label: 'Critical', color: '#e74c3c' },
-    High: { label: 'High', color: '#e67e22' },
-    Medium: { label: 'Medium', color: '#f39c12' },
-    Low: { label: 'Low', color: '#27ae60' },
+const SEVERITY_ICON: Record<string, string> = {
+    Critical: '🔴', High: '🟠', Medium: '🟡', Low: '🟢',
 };
 
-const STATUS_MAP: Record<string, { color: string }> = {
-    'แจ้งเคส': { color: '#e74c3c' },
-    'กำลังดำเนินการ': { color: '#f39c12' },
-    'เสร็จสิ้น': { color: '#27ae60' },
+const STATUS_COLOR: Record<string, string> = {
+    'แจ้งเคส': '#e74c3c',
+    'กำลังดำเนินการ': '#f39c12',
+    'เสร็จสิ้น': '#27ae60',
 };
 
 export interface IssueDetailData {
@@ -32,113 +29,63 @@ export interface IssueDetailData {
 }
 
 export function buildIssueDetailFlex(data: IssueDetailData): object {
-    const sev = SEVERITY_MAP[data.severity] || { label: data.severity, color: TEXT_SUB };
-    const stat = STATUS_MAP[data.status] || { color: TEXT_SUB };
+    const sevIcon = SEVERITY_ICON[data.severity] || '';
+    const statColor = STATUS_COLOR[data.status] || TEXT_SUB;
 
-    const customerDisplay = data.branchName
+    const customer = data.branchName
         ? `${data.customerName} (${data.branchName})`
         : data.customerName;
 
-    const body: object[] = [
-        // Case number + status
-        {
-            type: 'box', layout: 'horizontal', margin: 'none',
-            contents: [
-                { type: 'text', text: data.caseNumber, size: 'sm', color: BRAND, weight: 'bold', flex: 0 },
-                { type: 'text', text: data.status, size: 'xs', color: stat.color, weight: 'bold', align: 'end' },
-            ],
-        },
-        // Title
-        { type: 'text', text: data.title, size: 'xs', color: TEXT_DARK, weight: 'bold', margin: 'sm', wrap: true },
-        // Separator
-        { type: 'separator', color: '#f0f0f0', margin: 'md' },
-        // Details
-        row('ลูกค้า', customerDisplay),
-        row('ระดับ', sev.label, sev.color),
-    ];
-
-    if (data.assignedTo) {
-        body.push(row('ผู้รับผิดชอบ', data.assignedTo));
-    }
-
-    if (data.createdAt) {
-        body.push(row('วันที่แจ้ง', data.createdAt));
-    }
-
-    // Buttons
-    const actions: object[] = [];
-
-    // Case detail link (CRM deep link)
-    actions.push({
+    // Build buttons row
+    const buttons: object[] = [{
         type: 'button',
-        action: {
-            type: 'uri',
-            label: 'ดูเคส',
-            uri: `${data.crmBaseUrl}?tab=issues&issueId=${data.issueId}`,
-        },
-        style: 'primary',
-        color: BRAND,
-        height: 'sm',
-    });
+        action: { type: 'uri', label: 'ดูเคส', uri: `${data.crmBaseUrl}?tab=issues&issueId=${data.issueId}` },
+        style: 'primary', color: BRAND, height: 'sm', flex: 1,
+    }];
 
-    // Customer system link
     if (data.customerSubdomain) {
         const url = data.customerSubdomain.startsWith('http')
             ? data.customerSubdomain
             : `https://${data.customerSubdomain}`;
-        actions.push({
+        buttons.push({
             type: 'button',
-            action: {
-                type: 'uri',
-                label: 'เข้าระบบลูกค้า',
-                uri: url,
-            },
-            style: 'secondary',
-            height: 'sm',
+            action: { type: 'uri', label: 'ระบบลูกค้า', uri: url },
+            style: 'secondary', height: 'sm', flex: 1,
         });
     }
 
     return {
         type: 'flex',
-        altText: `🎫 ${data.caseNumber} — ${data.title}`,
+        altText: `🎫 ${data.caseNumber} ${data.title}`,
         contents: {
             type: 'bubble',
-            size: 'kilo',
-            header: {
-                type: 'box',
-                layout: 'horizontal',
-                contents: [
-                    { type: 'text', text: '🎫 Issue Detail', weight: 'bold', size: 'sm', color: '#ffffff', flex: 0 },
-                ],
-                backgroundColor: BRAND,
-                paddingAll: '14px',
-            },
+            size: 'nano',
             body: {
                 type: 'box',
                 layout: 'vertical',
-                contents: body,
-                paddingAll: '14px',
-                spacing: 'xs',
-            },
-            footer: {
-                type: 'box',
-                layout: 'vertical',
-                contents: actions,
-                spacing: 'xs',
-                paddingAll: '14px',
+                contents: [
+                    // Line 1: case number + severity + status
+                    {
+                        type: 'box', layout: 'horizontal',
+                        contents: [
+                            { type: 'text', text: `🎫 ${data.caseNumber}`, size: 'xs', color: BRAND, weight: 'bold', flex: 0 },
+                            { type: 'text', text: `${sevIcon} ${data.severity}`, size: 'xxs', color: TEXT_SUB, align: 'end', flex: 0, margin: 'md' },
+                            { type: 'text', text: data.status, size: 'xxs', color: statColor, weight: 'bold', align: 'end', flex: 0, margin: 'sm' },
+                        ],
+                    },
+                    // Line 2: title
+                    { type: 'text', text: data.title, size: 'xxs', color: TEXT_DARK, weight: 'bold', margin: 'xs', wrap: true, maxLines: 2 },
+                    // Line 3: customer
+                    { type: 'text', text: customer, size: 'xxs', color: TEXT_SUB, margin: 'xs', wrap: true, maxLines: 1 },
+                    // Buttons
+                    {
+                        type: 'box', layout: 'horizontal', margin: 'md', spacing: 'xs',
+                        contents: buttons,
+                    },
+                ],
+                paddingAll: '12px',
+                spacing: 'none',
             },
         },
-    };
-}
-
-function row(label: string, value: string, valueColor = TEXT_DARK): object {
-    return {
-        type: 'box',
-        layout: 'horizontal',
-        contents: [
-            { type: 'text', text: label, size: 'xs', color: TEXT_SUB, flex: 2 },
-            { type: 'text', text: value, size: 'xs', color: valueColor, weight: 'bold', flex: 3, wrap: true },
-        ],
-        margin: 'sm',
     };
 }
