@@ -46,7 +46,7 @@ export function buildDailyReportFlex(data: DailyReportData): object {
     // --- Tickets ---
     body.push(
         sectionTitle('🎫 Tickets'),
-        row('รวม', `${data.tickets.total} เคส`, BRAND),
+        row('รวม', `${data.tickets.total} เคส`, TEXT_DARK),
     );
     if (data.tickets.resolved > 0) body.push(row('แก้ไขแล้ว', `${data.tickets.resolved}`, '#27ae60'));
     if (data.tickets.inProgress > 0) body.push(row('กำลังดำเนินการ', `${data.tickets.inProgress}`, '#f39c12'));
