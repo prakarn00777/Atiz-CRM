@@ -67,7 +67,7 @@ export function buildIssueDetailFlex(data: IssueDetailData): object {
                         ],
                     },
                     // Row 2: title
-                    { type: 'text', text: data.title, size: 'xs', color: TEXT_DARK, weight: 'bold', margin: 'sm', wrap: true, maxLines: 2 },
+                    { type: 'text', text: data.title, size: 'xs', color: TEXT_DARK, weight: 'bold', margin: 'sm', wrap: true },
                     // Row 3: customer + severity
                     {
                         type: 'box', layout: 'horizontal', margin: 'sm',
