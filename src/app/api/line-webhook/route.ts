@@ -10,10 +10,27 @@ const TRIGGER_KEYWORDS = ['daily report', 'สรุป', 'report', 'daily'];
 // Thai month names mapping (1-indexed)
 const THAI_MONTHS = ['', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 
-// GET — health check (test in browser)
-export async function GET() {
+// GET — health check + debug preview
+export async function GET(req: NextRequest) {
     const hasToken = !!process.env.LINE_CHANNEL_ACCESS_TOKEN;
     const hasSecret = !!process.env.LINE_CHANNEL_SECRET;
+    const debug = req.nextUrl.searchParams.get('debug');
+
+    if (debug === 'flex') {
+        // Return sample Flex JSON for testing in LINE Flex Simulator
+        const [tickets, renewal, followUp] = await Promise.all([
+            getTicketsData(),
+            getRenewalData(),
+            getFollowUpData(),
+        ]);
+        const now = new Date();
+        const data: DailyReportData = {
+            date: `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getFullYear()}`,
+            tickets, renewal, followUp,
+        };
+        const flex = buildDailyReportFlex(data);
+        return NextResponse.json({ flex, data });
+    }
 
     return NextResponse.json({
         status: 'ok',
