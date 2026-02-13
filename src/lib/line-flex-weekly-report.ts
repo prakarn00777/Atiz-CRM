@@ -134,8 +134,6 @@ export function buildWeeklyReportFlex(data: WeeklyReportData): object {
         body.push(
             sectionTitle(`📄 Renewals (${ra.monthLabel})`),
             row('ต่อสัญญา', `${ra.renewedAmount.toLocaleString()} บาท`, TEXT_DARK),
-            row('ไม่ต่อ', `${ra.notRenewedAmount.toLocaleString()} บาท`, TEXT_DARK),
-            row('รอคำตอบ', `${ra.pendingAmount.toLocaleString()} บาท`, TEXT_DARK),
         );
     }
 
