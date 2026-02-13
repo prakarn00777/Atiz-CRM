@@ -38,14 +38,14 @@ export function buildIssueDetailFlex(data: IssueDetailData): object {
 
     // Build pill-style link buttons
     const pills: object[] = [
-        pill('ดูเคส', `${data.crmBaseUrl}?tab=issues&issueId=${data.issueId}`, BRAND, '#ffffff'),
+        pill('View Case', `${data.crmBaseUrl}?tab=issues&issueId=${data.issueId}`, BRAND, '#ffffff'),
     ];
 
     if (data.customerSubdomain) {
         const url = data.customerSubdomain.startsWith('http')
             ? data.customerSubdomain
             : `https://${data.customerSubdomain}`;
-        pills.push(pill('ระบบลูกค้า', url, '#E8E3F3', BRAND));
+        pills.push(pill('Open System', url, '#E8E3F3', BRAND));
     }
 
     return {

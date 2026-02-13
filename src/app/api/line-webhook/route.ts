@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifySignature, replyMessage } from '@/lib/line-client';
 import { buildDailyReportFlex, DailyReportData, RenewalData } from '@/lib/line-flex-daily-report';
+import { buildWeeklyReportFlex, WeeklyReportData, getWeekRange } from '@/lib/line-flex-weekly-report';
 import { buildIssueDetailFlex, IssueDetailData } from '@/lib/line-flex-issue-detail';
 import { getRenewalRate, RenewalRateRow } from '@/lib/google-sheets-renewal-rate';
+import { getNewSales } from '@/lib/google-sheets-sales';
+import { getRenewals } from '@/lib/google-sheets-renewals';
 import { db } from '@/lib/db';
 
 const CRM_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://atizcrm.vercel.app';
@@ -11,7 +14,8 @@ const CRM_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://atizcrm.vercel
 const CASE_PATTERN = /#c-(\d+)/i;
 
 // Trigger keywords (case-insensitive)
-const TRIGGER_KEYWORDS = ['#dailyreport'];
+const DAILY_KEYWORDS = ['#dailyreport'];
+const WEEKLY_KEYWORDS = ['#weeklyreport'];
 
 // Thai month names mapping (1-indexed)
 const THAI_MONTHS = ['', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
@@ -38,11 +42,26 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ flex, data });
     }
 
+    if (debug === 'weekly') {
+        const { start, end, label } = getWeekRange();
+        const [tickets, renewal, newSales, renewalsAmount, newCustomers, followUp] = await Promise.all([
+            getWeeklyTicketsData(start, end),
+            getRenewalData(),
+            getWeeklyNewSalesData(),
+            getWeeklyRenewalsAmountData(),
+            getWeeklyNewCustomersData(start, end),
+            getWeeklyFollowUpData(start, end),
+        ]);
+        const data: WeeklyReportData = { weekRange: label, tickets, renewal, newSales, renewalsAmount, newCustomers, followUp };
+        const flex = buildWeeklyReportFlex(data);
+        return NextResponse.json({ flex, data });
+    }
+
     return NextResponse.json({
         status: 'ok',
         line_configured: hasToken && hasSecret,
         env: { hasToken, hasSecret },
-        triggers: TRIGGER_KEYWORDS,
+        triggers: [...DAILY_KEYWORDS, ...WEEKLY_KEYWORDS],
     });
 }
 
@@ -93,8 +112,27 @@ export async function POST(req: NextRequest) {
                 continue;
             }
 
+            // --- Check weekly report trigger ---
+            if (WEEKLY_KEYWORDS.some(kw => text === kw)) {
+                console.log('[LINE] Weekly report trigger matched!');
+                const { start, end, label } = getWeekRange();
+                const [wTickets, wRenewal, wNewSales, wRenewalsAmount, wNewCustomers, wFollowUp] = await Promise.all([
+                    getWeeklyTicketsData(start, end),
+                    getRenewalData(),
+                    getWeeklyNewSalesData(),
+                    getWeeklyRenewalsAmountData(),
+                    getWeeklyNewCustomersData(start, end),
+                    getWeeklyFollowUpData(start, end),
+                ]);
+                const weeklyData: WeeklyReportData = { weekRange: label, tickets: wTickets, renewal: wRenewal, newSales: wNewSales, renewalsAmount: wRenewalsAmount, newCustomers: wNewCustomers, followUp: wFollowUp };
+                const weeklyFlex = buildWeeklyReportFlex(weeklyData);
+                await replyMessage(event.replyToken, [weeklyFlex]);
+                console.log('[LINE] Weekly report sent!');
+                continue;
+            }
+
             // --- Check daily report trigger ---
-            if (!TRIGGER_KEYWORDS.some(kw => text === kw)) {
+            if (!DAILY_KEYWORDS.some(kw => text === kw)) {
                 continue;
             }
 
@@ -276,5 +314,160 @@ async function getFollowUpData() {
     } catch (err) {
         console.error('[LINE] Error fetching follow-up:', err);
         return { totalPending: 0, byStaff: [] };
+    }
+}
+
+// --- Weekly data functions (Saturday–Friday range) ---
+
+async function getWeeklyTicketsData(start: Date, end: Date) {
+    try {
+        const { data, error } = await db
+            .from('issues')
+            .select('id, status, created_at')
+            .gte('created_at', start.toISOString())
+            .lte('created_at', end.toISOString());
+
+        if (error) throw error;
+
+        const issues = data || [];
+        return {
+            total: issues.length,
+            resolved: issues.filter(i => i.status === 'เสร็จสิ้น').length,
+            inProgress: issues.filter(i => i.status === 'กำลังดำเนินการ').length,
+            reported: issues.filter(i => i.status === 'แจ้งเคส').length,
+        };
+    } catch (err) {
+        console.error('[LINE] Error fetching weekly tickets:', err);
+        return { total: 0, resolved: 0, inProgress: 0, reported: 0 };
+    }
+}
+
+async function getWeeklyNewCustomersData(start: Date, end: Date) {
+    try {
+        const { data, error } = await db
+            .from('customers')
+            .select('id, product_type, created_at')
+            .gte('created_at', start.toISOString())
+            .lte('created_at', end.toISOString());
+
+        if (error) throw error;
+
+        const customers = data || [];
+        return {
+            total: customers.length,
+            drEase: customers.filter(c => c.product_type === 'Dr.Ease').length,
+            easePos: customers.filter(c => c.product_type === 'EasePos').length,
+        };
+    } catch (err) {
+        console.error('[LINE] Error fetching weekly new customers:', err);
+        return { total: 0, drEase: 0, easePos: 0 };
+    }
+}
+
+async function getWeeklyFollowUpData(start: Date, end: Date) {
+    try {
+        const { data, error } = await db
+            .from('follow_up_logs')
+            .select('id, cs_owner, outcome, created_at')
+            .gte('created_at', start.toISOString())
+            .lte('created_at', end.toISOString());
+
+        if (error) throw error;
+
+        const logs = data || [];
+
+        const staffMap: Record<string, number> = {};
+        for (const log of logs) {
+            const owner = String(log.cs_owner);
+            staffMap[owner] = (staffMap[owner] || 0) + 1;
+        }
+
+        const byStaff = Object.entries(staffMap)
+            .map(([name, count]) => ({ name, count }))
+            .sort((a, b) => b.count - a.count);
+
+        return {
+            totalThisWeek: logs.length,
+            byStaff,
+        };
+    } catch (err) {
+        console.error('[LINE] Error fetching weekly follow-up:', err);
+        return { totalThisWeek: 0, byStaff: [] };
+    }
+}
+
+async function getWeeklyNewSalesData() {
+    try {
+        const rows = await getNewSales();
+        if (!rows.length) return null;
+
+        const now = new Date();
+        const thaiMonth = THAI_MONTHS[now.getMonth() + 1];
+        const thaiYear = String(now.getFullYear() + 543);
+
+        let currentRows = rows.filter(r => r.month === thaiMonth && r.year === thaiYear);
+        if (!currentRows.length) {
+            // Fallback: latest month
+            const latestYear = rows.reduce((max, r) => r.year > max ? r.year : max, '0');
+            const latestRows = rows.filter(r => r.year === latestYear);
+            const latestMonth = latestRows.reduce((max, r) => {
+                const idx = THAI_MONTHS.indexOf(r.month);
+                return idx > THAI_MONTHS.indexOf(max) ? r.month : max;
+            }, latestRows[0]?.month || '');
+            currentRows = rows.filter(r => r.month === latestMonth && r.year === latestYear);
+            if (!currentRows.length) return null;
+        }
+
+        const label = `${currentRows[0].month} ${currentRows[0].year.slice(-2)}`;
+        const totalAmount = currentRows.reduce((sum, r) => sum + r.amount, 0);
+
+        // Group by salesName
+        const salesMap: Record<string, number> = {};
+        for (const r of currentRows) {
+            if (!r.salesName) continue;
+            salesMap[r.salesName] = (salesMap[r.salesName] || 0) + r.amount;
+        }
+        const bySales = Object.entries(salesMap)
+            .map(([name, amount]) => ({ name, amount }))
+            .sort((a, b) => b.amount - a.amount);
+
+        return { monthLabel: label, totalAmount, bySales };
+    } catch (err) {
+        console.error('[LINE] Error fetching weekly new sales:', err);
+        return null;
+    }
+}
+
+async function getWeeklyRenewalsAmountData() {
+    try {
+        const rows = await getRenewals();
+        if (!rows.length) return null;
+
+        const now = new Date();
+        const thaiMonth = THAI_MONTHS[now.getMonth() + 1];
+        const thaiYear = String(now.getFullYear() + 543);
+
+        let currentRows = rows.filter(r => r.month === thaiMonth && r.year === thaiYear);
+        if (!currentRows.length) {
+            // Fallback: latest month
+            const latestYear = rows.reduce((max, r) => r.year > max ? r.year : max, '0');
+            const latestRows = rows.filter(r => r.year === latestYear);
+            const latestMonth = latestRows.reduce((max, r) => {
+                const idx = THAI_MONTHS.indexOf(r.month);
+                return idx > THAI_MONTHS.indexOf(max) ? r.month : max;
+            }, latestRows[0]?.month || '');
+            currentRows = rows.filter(r => r.month === latestMonth && r.year === latestYear);
+            if (!currentRows.length) return null;
+        }
+
+        const label = `${currentRows[0].month} ${currentRows[0].year.slice(-2)}`;
+        const renewedAmount = currentRows.reduce((sum, r) => sum + r.renewedAmount, 0);
+        const notRenewedAmount = currentRows.reduce((sum, r) => sum + r.notRenewedAmount, 0);
+        const pendingAmount = currentRows.reduce((sum, r) => sum + r.pendingAmount, 0);
+
+        return { monthLabel: label, renewedAmount, notRenewedAmount, pendingAmount };
+    } catch (err) {
+        console.error('[LINE] Error fetching weekly renewals amount:', err);
+        return null;
     }
 }
