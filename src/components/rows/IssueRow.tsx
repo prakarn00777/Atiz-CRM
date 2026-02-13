@@ -106,8 +106,8 @@ const IssueRow = React.memo(function IssueRow({
       </td>
       {/* Case Name + Type tag + Attachment icon */}
       <td className="px-3 py-3 text-left">
-        <div className="flex items-center gap-2">
-          <div className="font-normal text-text-main text-xs truncate" title={issue.title}>
+        <div className="flex items-start gap-2">
+          <div className="font-normal text-text-main text-xs line-clamp-2 min-w-0" title={issue.title}>
             {issue.title}
           </div>
           <span className={`inline-flex px-1.5 py-0.5 rounded text-[9px] font-semibold whitespace-nowrap flex-shrink-0 ${getTypeColor(issue.type)}`}>

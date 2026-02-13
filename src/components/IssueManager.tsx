@@ -181,7 +181,7 @@ const IssueManager = React.memo(function IssueManager({ issues, customers: _cust
 
             <div className="glass-card overflow-hidden border-indigo-500/5 flex flex-col h-[calc(100vh-175px)]">
                 <div className="overflow-auto custom-scrollbar flex-1">
-                    <table className="w-full text-left border-collapse relative">
+                    <table className="w-full text-left border-collapse relative table-fixed">
                         <thead className="sticky top-0 z-10 bg-card-bg shadow-sm backdrop-blur-xl">
                             <tr className="bg-bg-hover text-text-muted text-xs uppercase tracking-wider border-b border-border-light">
                                 <th className="px-3 py-3 font-semibold w-[6%] text-center">Id</th>
