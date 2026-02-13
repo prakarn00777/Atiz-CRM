@@ -100,32 +100,6 @@ export function buildWeeklyReportFlex(data: WeeklyReportData): object {
         body.push(sep());
     }
 
-    // --- New Sales ---
-    if (data.newSales) {
-        const s = data.newSales;
-        body.push(
-            sectionTitle(`💰 New Sales (${s.monthLabel})`),
-            row('ยอดรวม', `${s.totalAmount.toLocaleString()} บาท`, TEXT_DARK),
-        );
-        for (const sale of s.bySales) {
-            if (!sale.name) continue;
-            body.push(row(sale.name, `${sale.amount.toLocaleString()}`, TEXT_DARK));
-        }
-        body.push(sep());
-    }
-
-    // --- Renewals Amount ---
-    if (data.renewalsAmount) {
-        const ra = data.renewalsAmount;
-        body.push(
-            sectionTitle(`📄 Renewals (${ra.monthLabel})`),
-            row('ต่อสัญญา', `${ra.renewedAmount.toLocaleString()} บาท`, '#27ae60'),
-            row('ไม่ต่อ', `${ra.notRenewedAmount.toLocaleString()} บาท`, '#e74c3c'),
-            row('รอคำตอบ', `${ra.pendingAmount.toLocaleString()} บาท`, '#f39c12'),
-        );
-        body.push(sep());
-    }
-
     // --- New Customers ---
     if (data.newCustomers.total > 0) {
         body.push(
@@ -142,6 +116,28 @@ export function buildWeeklyReportFlex(data: WeeklyReportData): object {
         sectionTitle('📞 Follow-up สัปดาห์นี้'),
         row('รวม', `${data.followUp.totalThisWeek} ราย`, TEXT_DARK),
     );
+
+    body.push(sep());
+
+    // --- New Sales ---
+    if (data.newSales) {
+        body.push(
+            sectionTitle(`💰 New Sales (${data.newSales.monthLabel})`),
+            row('ยอดรวม', `${data.newSales.totalAmount.toLocaleString()} บาท`, TEXT_DARK),
+        );
+        body.push(sep());
+    }
+
+    // --- Renewals Amount ---
+    if (data.renewalsAmount) {
+        const ra = data.renewalsAmount;
+        body.push(
+            sectionTitle(`📄 Renewals (${ra.monthLabel})`),
+            row('ต่อสัญญา', `${ra.renewedAmount.toLocaleString()} บาท`, TEXT_DARK),
+            row('ไม่ต่อ', `${ra.notRenewedAmount.toLocaleString()} บาท`, TEXT_DARK),
+            row('รอคำตอบ', `${ra.pendingAmount.toLocaleString()} บาท`, TEXT_DARK),
+        );
+    }
 
     return {
         type: 'flex',
@@ -190,7 +186,7 @@ function row(label: string, value: string, valueColor = TEXT_DARK): object {
         layout: 'horizontal',
         contents: [
             { type: 'text', text: label, size: 'xs', color: TEXT_SUB, flex: 3 },
-            { type: 'text', text: value, size: 'xs', color: valueColor, align: 'end', weight: 'bold', flex: 1 },
+            { type: 'text', text: value, size: 'xs', color: valueColor, align: 'end', weight: 'bold', flex: 2 },
         ],
         margin: 'xs',
     };
