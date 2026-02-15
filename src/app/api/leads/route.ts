@@ -5,7 +5,9 @@ import { getLeads } from '@/lib/google-sheets';
 export async function GET() {
     try {
         const leads = await getLeads();
-        return NextResponse.json({ success: true, data: leads });
+        // Filter out rows missing date (empty/header rows)
+        const validLeads = leads.filter(l => l.date && l.date.trim() !== '');
+        return NextResponse.json({ success: true, data: validLeads });
     } catch (error: any) {
         console.error('API Error fetching leads:', error);
         return NextResponse.json(
