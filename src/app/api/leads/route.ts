@@ -5,8 +5,15 @@ import { getLeads } from '@/lib/google-sheets';
 export async function GET() {
     try {
         const leads = await getLeads();
-        // Filter out rows missing date (empty/header rows)
-        const validLeads = leads.filter(l => l.date && l.date.trim() !== '');
+        // Filter out placeholder rows: must have date AND at least one real data field
+        const validLeads = leads.filter(l => {
+            if (!l.date || l.date.trim() === '') return false;
+            // Require at least one substantive field (sheet has pre-filled dates for future rows)
+            return (l.customerName && l.customerName.trim() !== '') ||
+                   (l.product && l.product.trim() !== '') ||
+                   (l.salesName && l.salesName.trim() !== '') ||
+                   (l.clinicName && l.clinicName.trim() !== '');
+        });
         return NextResponse.json({ success: true, data: validLeads });
     } catch (error: any) {
         console.error('API Error fetching leads:', error);
