@@ -539,11 +539,13 @@ async function getOutreachReportData(): Promise<OutreachReportData> {
         easeQualified: days.reduce((s, d) => s + d.easeQualified, 0),
     };
 
-    // Demos for current month — filter by date dd/m/yyyy
+    // Demos for current month — only count completed demos
     const monthDemos = demoRows.filter(r => {
         if (!r.date) return false;
         const parts = r.date.split('/');
-        return parseInt(parts[1]) === currentMonth && parseInt(parts[2]) === currentYear;
+        if (parseInt(parts[1]) !== currentMonth || parseInt(parts[2]) !== currentYear) return false;
+        const st = (r.demoStatus || '').toLowerCase();
+        return st.includes('demo แล้ว') || st.includes('เสร็จ');
     });
     const demoMap: Record<string, number> = {};
     for (const d of monthDemos) {
