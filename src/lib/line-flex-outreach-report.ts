@@ -61,20 +61,16 @@ export function buildOutreachReportFlex(data: OutreachReportData): object {
     body.push(summaryRow('Dr.Ease', `${data.summary.drContacted} ทัก, ${data.summary.drQualified} ลีด`, BRAND));
     body.push(summaryRow('Ease', `${data.summary.easeContacted} ทัก, ${data.summary.easeQualified} ลีด`, EASEPOS));
 
-    // --- Demos ---
-    if (data.demos.length > 0) {
-        body.push(sep());
-        body.push(sectionTitle('🎯 เดโม่เดือนนี้'));
-        for (const d of data.demos) {
-            body.push(summaryRow(d.name, `${d.count}`, TEXT_DARK));
-        }
+    // --- Demos (always show all salespeople) ---
+    body.push(sep());
+    body.push(sectionTitle('🎯 เดโม่เดือนนี้'));
+    for (const d of data.demos) {
+        body.push(summaryRow(d.name, `${d.count}`, TEXT_DARK));
     }
 
-    // --- Leads ---
-    if (data.totalLeads > 0) {
-        body.push(sep());
-        body.push(summaryRow('🏢 ลีดบริษัทเดือนนี้', `${data.totalLeads} ลีด`, TEXT_DARK));
-    }
+    // --- Company Leads ---
+    body.push(sep());
+    body.push(summaryRow('🏢 ลีดบริษัทเดือนนี้', `${data.totalLeads} ลีด`, TEXT_DARK));
 
     return {
         type: 'flex',

@@ -539,7 +539,8 @@ async function getOutreachReportData(): Promise<OutreachReportData> {
         easeQualified: days.reduce((s, d) => s + d.easeQualified, 0),
     };
 
-    // Demos for current month — only count completed demos
+    // Demos for current month — only count completed demos, show only Yo & Aoey
+    const SALES_NAMES = ['Yo', 'Aoey'];
     const monthDemos = demoRows.filter(r => {
         if (!r.date) return false;
         const parts = r.date.split('/');
@@ -548,19 +549,22 @@ async function getOutreachReportData(): Promise<OutreachReportData> {
         return st.includes('demo แล้ว') || st.includes('เสร็จ');
     });
     const demoMap: Record<string, number> = {};
+    for (const name of SALES_NAMES) demoMap[name] = 0;
     for (const d of monthDemos) {
-        const name = d.salesName || '?';
-        demoMap[name] = (demoMap[name] || 0) + 1;
+        const name = d.salesName || '';
+        if (SALES_NAMES.some(s => s.toLowerCase() === name.toLowerCase())) {
+            const matched = SALES_NAMES.find(s => s.toLowerCase() === name.toLowerCase())!;
+            demoMap[matched] = (demoMap[matched] || 0) + 1;
+        }
     }
-    const demos = Object.entries(demoMap)
-        .map(([name, count]) => ({ name, count }))
-        .sort((a, b) => b.count - a.count);
+    const demos = SALES_NAMES.map(name => ({ name, count: demoMap[name] }));
 
-    // Leads for current month
+    // Company leads for current month — source = "บริษัทหา"
     const monthLeads = leadRows.filter(r => {
         if (!r.date) return false;
         const parts = r.date.split('/');
-        return parseInt(parts[1]) === currentMonth && parseInt(parts[2]) === currentYear;
+        if (parseInt(parts[1]) !== currentMonth || parseInt(parts[2]) !== currentYear) return false;
+        return (r.source || '').trim() === 'บริษัทหา';
     });
 
     return {
