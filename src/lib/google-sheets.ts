@@ -89,7 +89,7 @@ export async function getLeads(): Promise<LeadRow[]> {
 
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${targetSheet}!A:I`, // Adjusted for 9-column Master Sheet
+      range: `${targetSheet}!A:M`,
     });
 
     const rows = response.data.values;
@@ -104,19 +104,19 @@ export async function getLeads(): Promise<LeadRow[]> {
       .filter(row => row.some(cell => cell)) // Filter out completely empty rows
       .map((row, index) => ({
         id: String(index + 2),
-        leadIndex: row[0] || '',      // ลีดที่ (Col A)
+        leadIndex: row[0] || '',      // ลำดับลีด (Col A)
         leadNumber: row[1] || '',     // เลขที่ลีด (Col B)
         date: row[2] || '',           // วันที่ (Col C)
         product: row[3] || '',        // Product (Col D)
-        source: '',                   // Simplified out in Master
-        leadType: '',                 // Simplified out in Master
-        salesName: row[4] || '',      // เซลล์ (Col E)
-        customerName: row[5] || '',   // ชื่อลูกค้า (Col F)
-        phone: row[6] || '',          // เบอร์โทร (Col G)
-        quotationStatus: row[7] || '',// สถานะ Demo/ใบเสนอราคา (Col H)
-        quotation: '',                // Simplified out
-        clinicName: row[8] || '',     // ชื่อคลินิก/ธุรกิจ (Col I)
-        notes: '',                    // Simplified out
+        source: row[4] || '',         // ลีด (Col E)
+        leadType: row[5] || '',       // ประเภทลีด (Col F)
+        salesName: row[6] || '',      // เซลล์ (Col G)
+        customerName: row[7] || '',   // ชื่อลูกค้า (Col H)
+        phone: row[8] || '',          // เบอร์โทร (Col I)
+        quotationStatus: row[9] || '',// สถานะใบเสนอราคา (Col J)
+        quotation: row[10] || '',     // ใบเสนอราคา (Col K)
+        clinicName: row[11] || '',    // ชื่อคลินิก/ธุรกิจ (Col L)
+        notes: row[12] || '',         // Note (Col M)
       }));
   } catch (error) {
     console.error('Error fetching leads from Google Sheets:', error);

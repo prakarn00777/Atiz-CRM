@@ -5,12 +5,7 @@ import { getLeads } from '@/lib/google-sheets';
 export async function GET() {
     try {
         const leads = await getLeads();
-        // Filter out rows that are missing mandatory fields
-        const validLeads = leads.filter(l =>
-            l.date && l.date.trim() !== '' &&
-            l.customerName && l.customerName.trim() !== ''
-        );
-        return NextResponse.json({ success: true, data: validLeads });
+        return NextResponse.json({ success: true, data: leads });
     } catch (error: any) {
         console.error('API Error fetching leads:', error);
         return NextResponse.json(
