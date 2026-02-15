@@ -3,9 +3,13 @@ import { verifySignature, replyMessage } from '@/lib/line-client';
 import { buildDailyReportFlex, DailyReportData, RenewalData } from '@/lib/line-flex-daily-report';
 import { buildWeeklyReportFlex, WeeklyReportData, getWeekRange } from '@/lib/line-flex-weekly-report';
 import { buildIssueDetailFlex, IssueDetailData } from '@/lib/line-flex-issue-detail';
+import { buildOutreachReportFlex, OutreachReportData } from '@/lib/line-flex-outreach-report';
 import { getRenewalRate, RenewalRateRow } from '@/lib/google-sheets-renewal-rate';
 import { getNewSales } from '@/lib/google-sheets-sales';
 import { getRenewals } from '@/lib/google-sheets-renewals';
+import { getOutreach } from '@/lib/google-sheets-outreach';
+import { getMasterDemos } from '@/lib/google-sheets-master';
+import { getLeads } from '@/lib/google-sheets';
 import { db } from '@/lib/db';
 
 const CRM_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://atizcrm.vercel.app';
@@ -16,6 +20,7 @@ const CASE_PATTERN = /#c-(\d+)/i;
 // Trigger keywords (case-insensitive)
 const DAILY_KEYWORDS = ['#dailyreport'];
 const WEEKLY_KEYWORDS = ['#weeklyreport'];
+const OUTREACH_KEYWORDS = ['#outreach'];
 
 // Thai month names mapping (1-indexed)
 const THAI_MONTHS = ['', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
@@ -57,11 +62,17 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ flex, data });
     }
 
+    if (debug === 'outreach') {
+        const data = await getOutreachReportData();
+        const flex = buildOutreachReportFlex(data);
+        return NextResponse.json({ flex, data });
+    }
+
     return NextResponse.json({
         status: 'ok',
         line_configured: hasToken && hasSecret,
         env: { hasToken, hasSecret },
-        triggers: [...DAILY_KEYWORDS, ...WEEKLY_KEYWORDS],
+        triggers: [...DAILY_KEYWORDS, ...WEEKLY_KEYWORDS, ...OUTREACH_KEYWORDS],
     });
 }
 
@@ -128,6 +139,16 @@ export async function POST(req: NextRequest) {
                 const weeklyFlex = buildWeeklyReportFlex(weeklyData);
                 await replyMessage(event.replyToken, [weeklyFlex]);
                 console.log('[LINE] Weekly report sent!');
+                continue;
+            }
+
+            // --- Check outreach report trigger ---
+            if (OUTREACH_KEYWORDS.some(kw => text === kw)) {
+                console.log('[LINE] Outreach report trigger matched!');
+                const outreachData = await getOutreachReportData();
+                const outreachFlex = buildOutreachReportFlex(outreachData);
+                await replyMessage(event.replyToken, [outreachFlex]);
+                console.log('[LINE] Outreach report sent!');
                 continue;
             }
 
@@ -470,4 +491,81 @@ async function getWeeklyRenewalsAmountData() {
         console.error('[LINE] Error fetching weekly renewals amount:', err);
         return null;
     }
+}
+
+// --- Outreach report data ---
+
+const THAI_MONTH_FULL: Record<number, string> = {
+    1: 'มกราคม', 2: 'กุมภาพันธ์', 3: 'มีนาคม', 4: 'เมษายน',
+    5: 'พฤษภาคม', 6: 'มิถุนายน', 7: 'กรกฎาคม', 8: 'สิงหาคม',
+    9: 'กันยายน', 10: 'ตุลาคม', 11: 'พฤศจิกายน', 12: 'ธันวาคม',
+};
+
+async function getOutreachReportData(): Promise<OutreachReportData> {
+    const now = new Date();
+    const currentMonth = now.getMonth() + 1; // 1-indexed
+    const currentYear = now.getFullYear();
+    const thaiYear = String(currentYear + 543);
+    const monthName = THAI_MONTH_FULL[currentMonth];
+
+    // Fetch all data in parallel
+    const [outreachRows, demoRows, leadRows] = await Promise.all([
+        getOutreach(),
+        getMasterDemos().catch(() => []),
+        getLeads().catch(() => []),
+    ]);
+
+    // Filter outreach for current month
+    const monthOutreach = outreachRows.filter(r => r.month === monthName);
+
+    // Build daily data
+    const days = monthOutreach.map(r => {
+        const parts = r.date.split('/');
+        const day = parseInt(parts[0]) || 0;
+        return {
+            day,
+            drContacted: r.contactedDr,
+            drQualified: r.qualifiedDr,
+            easeContacted: r.contactedEase,
+            easeQualified: r.qualifiedEase,
+        };
+    }).sort((a, b) => a.day - b.day);
+
+    // Summary
+    const summary = {
+        drContacted: days.reduce((s, d) => s + d.drContacted, 0),
+        drQualified: days.reduce((s, d) => s + d.drQualified, 0),
+        easeContacted: days.reduce((s, d) => s + d.easeContacted, 0),
+        easeQualified: days.reduce((s, d) => s + d.easeQualified, 0),
+    };
+
+    // Demos for current month — filter by date dd/m/yyyy
+    const monthDemos = demoRows.filter(r => {
+        if (!r.date) return false;
+        const parts = r.date.split('/');
+        return parseInt(parts[1]) === currentMonth && parseInt(parts[2]) === currentYear;
+    });
+    const demoMap: Record<string, number> = {};
+    for (const d of monthDemos) {
+        const name = d.salesName || '?';
+        demoMap[name] = (demoMap[name] || 0) + 1;
+    }
+    const demos = Object.entries(demoMap)
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => b.count - a.count);
+
+    // Leads for current month
+    const monthLeads = leadRows.filter(r => {
+        if (!r.date) return false;
+        const parts = r.date.split('/');
+        return parseInt(parts[1]) === currentMonth && parseInt(parts[2]) === currentYear;
+    });
+
+    return {
+        monthLabel: `${monthName} ${thaiYear}`,
+        days,
+        summary,
+        demos,
+        totalLeads: monthLeads.length,
+    };
 }

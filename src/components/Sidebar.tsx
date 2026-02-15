@@ -40,6 +40,7 @@ const mainMenus = [
             { id: "sales", label: "Sales" },
             { id: "renewals", label: "Renewals" },
             { id: "renewal_rate", label: "Renewal Rate" },
+            { id: "outreach", label: "Outreach" },
         ]
     },
 ];
@@ -129,7 +130,8 @@ const Sidebar = memo(function Sidebar({ currentView, setView, userRole, onQuickA
                             userRole?.permissions?.[child.id]?.read ||
                             (child.id === 'cs_followup' && userRole?.permissions?.['customers']?.read) ||
                             (child.id === 'renewals' && userRole?.permissions?.['sales']?.read) ||
-                            (child.id === 'renewal_rate' && userRole?.permissions?.['sales']?.read)
+                            (child.id === 'renewal_rate' && userRole?.permissions?.['sales']?.read) ||
+                            (child.id === 'outreach' && userRole?.permissions?.['sales']?.read)
                         );
 
                         if (visibleChildren.length === 0) return null;

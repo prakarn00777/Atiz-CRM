@@ -20,12 +20,13 @@ import DemoManager from "@/components/DemoManager";
 import SalesManager from "@/components/SalesManager";
 import RenewalsManager from "@/components/RenewalsManager";
 import RenewalRateManager from "@/components/RenewalRateManager";
+import OutreachManager from "@/components/OutreachManager";
 import FollowUpPlanManager from "@/components/FollowUpPlanManager";
 import CustomerModal from "@/components/modals/CustomerModal";
 import IssueModal from "@/components/modals/IssueModal";
 import LeadModal from "@/components/modals/LeadModal";
 import ActivityModal from "@/components/modals/ActivityModal";
-import { Customer, Branch, Installation, Issue, UsageStatus, Activity as CSActivity, ActivityType, SentimentType, Lead, GoogleSheetLead, MasterDemoLead, BusinessMetrics, NewSalesRecord, RenewalsRecord, RenewalRateRecord } from "@/types";
+import { Customer, Branch, Installation, Issue, UsageStatus, Activity as CSActivity, ActivityType, SentimentType, Lead, GoogleSheetLead, MasterDemoLead, BusinessMetrics, NewSalesRecord, RenewalsRecord, RenewalRateRecord, OutreachRecord } from "@/types";
 import { useNotification } from "@/components/NotificationProvider";
 import { useTheme } from "@/components/ThemeProvider";
 import { db } from "@/lib/db";
@@ -162,11 +163,13 @@ export default function CRMPage() {
   const [newSalesData, setNewSalesData] = useState<NewSalesRecord[]>([]);
   const [renewalsData, setRenewalsData] = useState<RenewalsRecord[]>([]);
   const [renewalRateData, setRenewalRateData] = useState<RenewalRateRecord[]>([]);
+  const [outreachData, setOutreachData] = useState<OutreachRecord[]>([]);
   const [isGoogleSheetLeadsLoading, setGoogleSheetLeadsLoading] = useState(true);
   const [isGoogleSheetDemosLoading, setGoogleSheetDemosLoading] = useState(true);
   const [isNewSalesLoading, setNewSalesLoading] = useState(true);
   const [isRenewalsLoading, setRenewalsLoading] = useState(true);
   const [isRenewalRateLoading, setRenewalRateLoading] = useState(true);
+  const [isOutreachLoading, setOutreachLoading] = useState(true);
   const [businessMetrics, setBusinessMetrics] = useState<BusinessMetrics | undefined>(undefined);
   const [isLeadModalOpen, setLeadModalOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
@@ -371,13 +374,29 @@ export default function CRMPage() {
     }
   }, []);
 
+  const fetchOutreachData = useCallback(async () => {
+    try {
+      setOutreachLoading(true);
+      const response = await fetch('/api/outreach');
+      const result = await response.json();
+      if (result.success) {
+        setOutreachData(result.data);
+      }
+    } catch (error: any) {
+      console.error('Error fetching Outreach data:', error);
+    } finally {
+      setOutreachLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchGoogleSheetLeads();
     fetchGoogleSheetDemos();
     fetchNewSalesData();
     fetchRenewalsData();
     fetchRenewalRateData();
-  }, [fetchGoogleSheetLeads, fetchGoogleSheetDemos, fetchNewSalesData, fetchRenewalsData, fetchRenewalRateData]);
+    fetchOutreachData();
+  }, [fetchGoogleSheetLeads, fetchGoogleSheetDemos, fetchNewSalesData, fetchRenewalsData, fetchRenewalRateData, fetchOutreachData]);
 
   useEffect(() => {
     if (mounted) {
@@ -1481,6 +1500,12 @@ export default function CRMPage() {
                   renewalRates={renewalRateData}
                   isLoading={isRenewalRateLoading}
                   onRefresh={fetchRenewalRateData}
+                />
+              ) : currentView === "outreach" ? (
+                <OutreachManager
+                  outreach={outreachData}
+                  isLoading={isOutreachLoading}
+                  onRefresh={fetchOutreachData}
                 />
               ) : currentView === "cs_followup" ? (
                 <FollowUpPlanManager

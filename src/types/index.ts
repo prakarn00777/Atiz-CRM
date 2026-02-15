@@ -245,6 +245,18 @@ export interface RenewalRateRecord {
     pending: number;        // รอคำตอบ
 }
 
+// Outreach from Google Sheets (Sheet9) — daily lead outreach
+export interface OutreachRecord {
+    id: string;
+    index: string;          // ลำดับ
+    date: string;           // วันที่ (dd/mm/yyyy)
+    month: string;          // เดือน (มกราคม, กุมภาพันธ์, ...)
+    contactedDr: number;    // ทัก Dr.Ease
+    qualifiedDr: number;    // ลืด Dr.Ease
+    contactedEase: number;  // ทัก EasePOS
+    qualifiedEase: number;  // ลืด EasePOS
+}
+
 // ============================================
 // User & Role Types
 // ============================================
