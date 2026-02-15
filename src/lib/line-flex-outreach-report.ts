@@ -74,7 +74,7 @@ export function buildOutreachReportFlex(data: OutreachReportData): object {
 
     return {
         type: 'flex',
-        altText: `📊 Outreach Report ${data.monthLabel}`,
+        altText: `📊 Lead Report ${data.monthLabel}`,
         contents: {
             type: 'bubble',
             size: 'kilo',
@@ -83,7 +83,7 @@ export function buildOutreachReportFlex(data: OutreachReportData): object {
                 backgroundColor: '#7053E1',
                 paddingAll: 'lg',
                 contents: [
-                    { type: 'text', text: '📊 Outreach Report', color: '#FFFFFF', weight: 'bold', size: 'md' },
+                    { type: 'text', text: '📊 Lead Report', color: '#FFFFFF', weight: 'bold', size: 'md' },
                     { type: 'text', text: data.monthLabel, color: '#FFFFFFCC', size: 'xs', margin: 'xs' },
                 ],
             },

@@ -20,7 +20,7 @@ const CASE_PATTERN = /#c-(\d+)/i;
 // Trigger keywords (case-insensitive)
 const DAILY_KEYWORDS = ['#dailyreport'];
 const WEEKLY_KEYWORDS = ['#weeklyreport'];
-const OUTREACH_KEYWORDS = ['#outreach'];
+const OUTREACH_KEYWORDS = ['#lead'];
 
 // Thai month names mapping (1-indexed)
 const THAI_MONTHS = ['', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
@@ -144,11 +144,11 @@ export async function POST(req: NextRequest) {
 
             // --- Check outreach report trigger ---
             if (OUTREACH_KEYWORDS.some(kw => text === kw)) {
-                console.log('[LINE] Outreach report trigger matched!');
+                console.log('[LINE] Lead report trigger matched!');
                 const outreachData = await getOutreachReportData();
                 const outreachFlex = buildOutreachReportFlex(outreachData);
                 await replyMessage(event.replyToken, [outreachFlex]);
-                console.log('[LINE] Outreach report sent!');
+                console.log('[LINE] Lead report sent!');
                 continue;
             }
 
